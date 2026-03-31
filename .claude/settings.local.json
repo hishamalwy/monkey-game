@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/hisham.alwy/Desktop/Monkey -not -path */node_modules* -not -path */dist* -type f)",
+      "Bash(npm install:*)",
+      "Bash(wmic logicaldisk:*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}
