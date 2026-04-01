@@ -44,6 +44,8 @@ export const playSound = (type) => {
     gain.gain.setValueAtTime(0.4, now);
     gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
     osc.start(now); osc.stop(now + 0.5);
+  } else if (type === 'horn') {
+    previewHorn(getHornType());
   }
 };
 

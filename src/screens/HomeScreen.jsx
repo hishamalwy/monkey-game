@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import UserAvatar from '../components/ui/UserAvatar';
 import BottomNav from '../components/BottomNav';
 import Toast from '../components/ui/Toast';
 import { joinRoom } from '../firebase/rooms';
@@ -58,9 +59,10 @@ export default function HomeScreen({ nav }) {
             <div className="card" style={{
                position: 'absolute', top: -12, right: -12, zIndex: 10,
                background: 'var(--bg-green)', padding: '4px 12px',
-               transform: 'rotate(8deg)', fontSize: '0.85rem', fontWeight: 900
+               transform: 'rotate(8deg)', fontSize: '0.85rem', fontWeight: 900,
+               whiteSpace: 'nowrap'
             }}>
-              هلا والله!
+              هلا {userProfile?.username || 'والله'}!
             </div>
             <div className="card" style={{ padding: 'var(--space-sm)', transform: 'rotate(-3deg)', width: 150, position: 'relative' }}>
               <div style={{ background: '#FFC89D', border: 'var(--brutal-border)', overflow: 'hidden' }}>

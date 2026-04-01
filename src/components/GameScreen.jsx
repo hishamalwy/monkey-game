@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import UserAvatar from './ui/UserAvatar';
 
 // Standard English to Default Arabic keyboard mapping
 const EN_TO_AR = {
@@ -86,17 +87,22 @@ export default function GameScreen({
           padding: '6px 20px', display: 'flex', alignItems: 'center', gap: 10,
         }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--bg-pink)', fontWeight: 900 }}>دور:</span>
-          <span className="truncate" style={{
-            fontSize: '1rem', color: 'var(--bg-dark-purple)', fontWeight: 900, maxWidth: 130,
-            ...(isAiTurn ? { opacity: 0.6 } : {}),
-          }}>
-            {currentPlayer?.name}
-            {isAiTurn && (
-              <span style={{ fontSize: '0.75rem', marginRight: 6, color: 'rgba(28,16,63,0.45)' }}>
-                يفكر…
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {currentPlayer?.avatarId !== undefined && (
+              <UserAvatar avatarId={currentPlayer.avatarId} size={28} style={{ border: 'none' }} />
             )}
-          </span>
+            <span className="truncate" style={{
+              fontSize: '1rem', color: 'var(--bg-dark-purple)', fontWeight: 900, maxWidth: 130,
+              ...(isAiTurn ? { opacity: 0.6 } : {}),
+            }}>
+              {currentPlayer?.name}
+              {isAiTurn && (
+                <span style={{ fontSize: '0.75rem', marginRight: 6, color: 'rgba(28,16,63,0.45)' }}>
+                  يفكر…
+                </span>
+              )}
+            </span>
+          </div>
         </div>
 
         {/* Timer bar */}

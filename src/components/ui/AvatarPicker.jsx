@@ -1,24 +1,26 @@
-const AVATARS = ['🐵', '🦊', '🐺', '🦁', '🐯', '🐻'];
+const AVATARS = [0, 1, 2, 3, 4];
 
 export default function AvatarPicker({ selected, onChange }) {
   return (
     <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-      {AVATARS.map((emoji, idx) => (
+      {AVATARS.map((idx) => (
         <button
           key={idx}
           onClick={() => onChange(idx)}
           style={{
-            width: 52, height: 52, borderRadius: '50%',
-            fontSize: 26,
-            background: selected === idx ? 'rgba(233,30,140,0.12)' : 'var(--color-card)',
-            border: selected === idx ? '3px solid var(--color-primary)' : '2px solid rgba(28,16,64,0.12)',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.15s ease',
-            boxShadow: selected === idx ? '0 0 0 4px var(--color-primary-glow)' : 'none',
+            width: 70, height: 70, borderRadius: '50%',
+            overflow: 'hidden',
+            background: selected === idx ? 'var(--bg-pink)' : '#FFF',
+            border: selected === idx ? '4px solid var(--bg-dark-purple)' : 'var(--brutal-border)',
+            boxShadow: selected === idx ? 'var(--brutal-shadow)' : 'none',
+            cursor: 'pointer', padding: 0, transition: 'all 0.1s ease',
           }}
         >
-          {emoji}
+          <img
+            src={`${import.meta.env.BASE_URL}avatars/${idx}.jpg`}
+            alt={`avatar-${idx}`}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
         </button>
       ))}
     </div>
@@ -26,4 +28,4 @@ export default function AvatarPicker({ selected, onChange }) {
 }
 
 export const AVATAR_EMOJIS = AVATARS;
-
+export const getAvatarUrl = (idx) => `${import.meta.env.BASE_URL}avatars/${idx ?? 0}.jpg`;

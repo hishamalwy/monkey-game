@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getLeaderboard } from '../firebase/leaderboard';
-import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
+import UserAvatar from '../components/ui/UserAvatar';
 import BottomNav from '../components/BottomNav';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
@@ -75,12 +75,7 @@ export default function LeaderboardScreen({ nav }) {
                   </div>
 
                   {/* Avatar */}
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%', background: 'var(--color-bg)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-                  }}>
-                    {AVATAR_EMOJIS[u.avatarId ?? 0]}
-                  </div>
+                  <UserAvatar avatarId={u.avatarId ?? 0} size={40} />
 
                   {/* Name */}
                   <div style={{ flex: 1 }}>

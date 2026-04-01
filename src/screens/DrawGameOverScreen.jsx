@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
+import UserAvatar from '../components/ui/UserAvatar';
 import { useState, useEffect } from 'react';
 import { listenToRoom, leaveRoom } from '../firebase/rooms';
 
@@ -79,9 +79,7 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
         padding: '32px 24px', width: '100%', maxWidth: 400,
         textAlign: 'center', position: 'relative', zIndex: 10,
       }}>
-        <div style={{ fontSize: 52, marginBottom: 8 }}>
-          {AVATAR_EMOJIS[winner?.avatarId ?? 0]}
-        </div>
+        <UserAvatar avatarId={winner?.avatarId ?? 0} size={80} style={{ margin: '0 auto 10px' }} />
         <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 4px' }}>
           {winner?.username}
         </h1>
@@ -111,7 +109,7 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
               <span style={{ fontWeight: 900, color: 'var(--color-muted)', width: 22, fontSize: 14 }}>
                 #{i + 1}
               </span>
-              <span style={{ fontSize: 20 }}>{AVATAR_EMOJIS[p.avatarId ?? 0]}</span>
+              <UserAvatar avatarId={p.avatarId ?? 0} size={36} />
               <span style={{ flex: 1, fontWeight: 900, color: 'var(--bg-dark-purple)', textAlign: 'right', fontSize: 14 }}>
                 {p.username}
               </span>

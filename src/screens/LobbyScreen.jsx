@@ -3,17 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import { listenToRoom, setReady, startGame, leaveRoom } from '../firebase/rooms';
 import { startDrawGame } from '../firebase/drawRooms';
 import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
+import UserAvatar from '../components/ui/UserAvatar';
 import Toast from '../components/ui/Toast';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 // Placeholder avatars for empty slots (animals not in AVATAR_EMOJIS)
 const SLOT_PLACEHOLDERS = ['🦉', '🦊', '🐢', '🐸', '🦋', '🐬', '🦚'];
 
-// Mask a username for privacy: "hisham.3lwy" → "hisham***"
-function maskName(name = '') {
-  if (name.length <= 5) return name;
-  return name.slice(0, 5) + '***';
-}
+
 
 function PlayerRow({ player, isHost, isMe }) {
   const ready = player.isReady;
@@ -26,15 +23,7 @@ function PlayerRow({ player, isHost, isMe }) {
       marginBottom: -4, // overlap borders for seamless list
     }}>
       {/* Avatar circle */}
-      <div style={{
-        width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
-        background: 'var(--bg-yellow)',
-        border: '3px solid var(--bg-dark-purple)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 26,
-      }}>
-        {AVATAR_EMOJIS[player.avatarId ?? 0]}
-      </div>
+      <UserAvatar avatarId={player.avatarId ?? 0} size={54} />
 
       {/* Name + host badge */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -43,7 +32,7 @@ function PlayerRow({ player, isHost, isMe }) {
           display: 'flex', alignItems: 'center', gap: 6,
           direction: 'ltr', textAlign: 'left',
         }}>
-          {maskName(player.username)}
+          {player.username}
           {isMe && <span style={{ fontSize: 10, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 5px', fontFamily: 'Cairo, sans-serif' }}>أنت</span>}
           {isHost && <span style={{ fontSize: 10, background: 'var(--bg-dark-purple)', color: 'var(--bg-yellow)', padding: '1px 5px', fontFamily: 'Cairo, sans-serif' }}>مضيف</span>}
         </div>

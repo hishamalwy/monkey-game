@@ -12,6 +12,10 @@ function checkGameOver(players, playerOrder) {
   return playerOrder.filter(uid => players[uid] && (players[uid].quarterMonkeys || 0) < MONKEY_LIMIT);
 }
 
+export async function triggerHorn(roomCode) {
+  await updateGameState(roomCode, { 'gameState.lastHornAt': Date.now() });
+}
+
 export function useRoom(roomCode) {
   const [room, setRoom] = useState(null);
   const [computedTimer, setComputedTimer] = useState(null);
@@ -23,11 +27,20 @@ export function useRoom(roomCode) {
     if (!roomCode) return;
     const unsub = listenToRoom(roomCode, (data) => {
       setRoom(data);
-      // reset penalty guard when a new round starts
-      if (data?.status === 'playing') penaltyFiredRef.current = false;
+      // Reset penalty guard when turn of current player or game status changes
+      if (data?.gameState?.currentPlayerUid !== room?.gameState?.currentPlayerUid || data?.status !== room?.status) {
+        penaltyFiredRef.current = false;
+      }
+      
+      // Listen for horn event
+      if (data?.gameState?.lastHornAt && data.gameState.lastHornAt !== room?.gameState?.lastHornAt) {
+        if (data.gameState.currentPlayerUid !== uid) { // only play if it's not my own manual trigger
+           playSound('horn'); // I should define 'horn' sound or just use existing
+        }
+      }
     });
     return unsub;
-  }, [roomCode]);
+  }, [roomCode, room?.gameState?.currentPlayerUid, room?.status, uid]);
 
   // Client-side timer
   useEffect(() => {
@@ -208,7 +221,9 @@ export function useRoom(roomCode) {
     pressLetter,
     pressDelete,
     pressChallenge,
+    pressChallenge,
     confirmNextRound,
+    triggerHorn: () => triggerHorn(roomCode),
     leaveRoom: doLeaveRoom,
   };
 }

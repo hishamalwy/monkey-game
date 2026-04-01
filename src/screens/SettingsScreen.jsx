@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import AvatarPicker, { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
+import AvatarPicker from '../components/ui/AvatarPicker';
+import UserAvatar from '../components/ui/UserAvatar';
 import BottomNav from '../components/BottomNav';
 import { doc, updateDoc, collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -79,9 +80,7 @@ export default function SettingsScreen({ nav }) {
 
         {/* Profile Card */}
         <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: 52, marginBottom: 8 }}>
-            {AVATAR_EMOJIS[userProfile?.avatarId ?? 0]}
-          </div>
+          <UserAvatar avatarId={userProfile?.avatarId ?? 0} size={84} style={{ margin: '0 auto 10px' }} />
           <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--bg-dark-purple)', marginBottom: 12 }}>
             {userProfile?.username}
           </div>

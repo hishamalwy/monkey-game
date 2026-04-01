@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRoom } from '../hooks/useRoom';
-import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
+import UserAvatar from '../components/ui/UserAvatar';
 import { recordWin, recordLoss } from '../firebase/leaderboard';
 
 // Generate confetti pieces with stable values
@@ -74,9 +74,7 @@ export default function GameOverScreen({ nav, roomCode }) {
         textAlign: 'center', boxShadow: '0 16px 60px rgba(28,16,64,0.2)',
         position: 'relative', zIndex: 10,
       }}>
-        <div style={{ fontSize: 56, marginBottom: 12 }}>
-          {AVATAR_EMOJIS[winner?.avatarId ?? 0]}
-        </div>
+        <UserAvatar avatarId={winner?.avatarId ?? 0} size={80} style={{ margin: '0 auto 12px' }} />
 
         <h1 style={{ fontSize: 30, fontWeight: 900, color: 'var(--color-header)', margin: '0 0 8px' }}>
           {winner?.username}
@@ -107,7 +105,7 @@ export default function GameOverScreen({ nav, roomCode }) {
                 border: i === 0 ? '2px solid var(--color-success)' : '2px solid transparent',
               }}>
                 <span style={{ fontWeight: 900, color: 'var(--color-muted)', width: 20 }}>#{i + 1}</span>
-                <span style={{ fontSize: 20 }}>{AVATAR_EMOJIS[p.avatarId ?? 0]}</span>
+                <UserAvatar avatarId={p.avatarId ?? 0} size={36} />
                 <span style={{ flex: 1, fontWeight: 700, color: 'var(--color-header)', textAlign: 'right' }}>
                   {p.username}
                 </span>

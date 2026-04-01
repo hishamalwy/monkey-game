@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRoom } from '../hooks/useRoom';
-import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
+import UserAvatar from '../components/ui/UserAvatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 export default function RoundResultScreen({ nav, roomCode }) {
@@ -76,7 +76,7 @@ export default function RoundResultScreen({ nav, roomCode }) {
                 background: isLoser ? 'rgba(233,30,140,0.08)' : 'rgba(28,16,64,0.04)',
                 border: isLoser ? '2px solid var(--color-primary)' : '2px solid transparent',
               }}>
-                <span style={{ fontSize: 22 }}>{AVATAR_EMOJIS[p.avatarId ?? 0]}</span>
+                <UserAvatar avatarId={p.avatarId ?? 0} size={36} />
                 <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: 'var(--color-header)', textAlign: 'right' }}>
                   {p.username}
                 </span>

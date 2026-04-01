@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
+import UserAvatar from '../components/ui/UserAvatar';
 import { listenToRoom } from '../firebase/rooms';
 import {
   chooseDrawWord, submitDrawGuess, addStroke, clearDrawCanvas,
@@ -9,23 +9,54 @@ import {
 import Toast from '../components/ui/Toast';
 
 const COLORS = [
-  '#1C1040', '#FFFFFF', '#FF006E', '#4361EE',
-  '#39FF14', '#FFE300', '#FF6B00', '#8B4513',
+  '#1C1040', '#FFFFFF', '#6B7280', '#D1D5DB', // Dark, White, Gray, Light Gray
+  '#FF006E', '#4361EE', '#39FF14', '#FFE300', // Pink, Blue, Green, Yellow
+  '#FF6B00', '#8B4513', '#7209B7', '#480CA8', // Orange, Brown, Purple, Deep Purple
+  '#F72585', '#4CC9F0', '#B5179E', '#560BAD', // Hot Pink, Sky Blue, Magenta, Indigo
+  '#E63946', '#A8DADC', '#457B9D', '#1D3557', // Red, Aqua, Steel, Navy
 ];
-const BRUSH_SIZES = { thin: 3, medium: 8, thick: 18 };
+const BRUSH_SIZES = { thin: 3, medium: 8, thick: 18, fat: 40 };
 
 function drawStrokeOnCtx(ctx, stroke, W, H) {
   if (!stroke.points || stroke.points.length < 2) return;
+  const pts = stroke.points;
   ctx.beginPath();
-  ctx.strokeStyle = stroke.tool === 'eraser' ? '#FFFFFF' : stroke.color;
+  ctx.strokeStyle = stroke.tool === 'eraser' ? (stroke.bgFill || '#FFFFFF') : stroke.color;
   ctx.lineWidth = BRUSH_SIZES[stroke.size] || 8;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.moveTo(stroke.points[0].x * W, stroke.points[0].y * H);
-  for (let i = 1; i < stroke.points.length; i++) {
-    ctx.lineTo(stroke.points[i].x * W, stroke.points[i].y * H);
+
+  if (stroke.type === 'line') {
+    ctx.moveTo(pts[0].x * W, pts[0].y * H);
+    ctx.lineTo(pts[pts.length - 1].x * W, pts[pts.length - 1].y * H);
+    ctx.stroke();
+  } else if (stroke.type === 'rect') {
+    const x = pts[0].x * W, y = pts[0].y * H;
+    const w = (pts[pts.length - 1].x - pts[0].x) * W;
+    const h = (pts[pts.length - 1].y - pts[0].y) * H;
+    ctx.strokeRect(x, y, w, h);
+  } else if (stroke.type === 'circle') {
+    const x1 = pts[0].x * W, y1 = pts[0].y * H;
+    const x2 = pts[pts.length - 1].x * W, y2 = pts[pts.length - 1].y * H;
+    const r = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    ctx.arc(x1, y1, r, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (stroke.type === 'triangle') {
+    const x1 = pts[0].x * W, y1 = pts[0].y * H;
+    const x2 = pts[pts.length - 1].x * W, y2 = pts[pts.length - 1].y * H;
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x1 - (x2 - x1), y2);
+    ctx.closePath();
+    ctx.stroke();
+  } else {
+    // Normal pen/eraser
+    ctx.moveTo(pts[0].x * W, pts[0].y * H);
+    for (let i = 1; i < pts.length; i++) {
+      ctx.lineTo(pts[i].x * W, pts[i].y * H);
+    }
+    ctx.stroke();
   }
-  ctx.stroke();
 }
 
 export default function DrawGameScreen({ nav, roomCode }) {
@@ -40,9 +71,10 @@ export default function DrawGameScreen({ nav, roomCode }) {
   const isDrawingRef = useRef(false);
   const currentStrokeRef = useRef(null);
   const lastStrokesLen = useRef(0);
-  const [tool, setTool] = useState('pen');
+  const [tool, setTool] = useState('pen'); // pen, eraser, line, rect, circle, triangle
   const [color, setColor] = useState('#1C1040');
   const [brushSize, setBrushSize] = useState('medium');
+  const chatRef = useRef(null);
 
   const navRef = useRef(nav);
   useEffect(() => { navRef.current = nav; });
@@ -71,7 +103,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
     canvas.width = size || 300;
     canvas.height = size || 300;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = ds?.bgFill || '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     lastStrokesLen.current = 0;
   }, [ds?.roundStatus]);
@@ -81,17 +113,16 @@ export default function DrawGameScreen({ nav, roomCode }) {
     if (!canvas || !ds?.strokes) return;
     const strokes = ds.strokes;
 
-    // Full redraw if strokes were cleared, count went down, OR background changed
     const ctx = canvas.getContext('2d');
     const hasBgChange = ds.bgFill !== (canvas.dataset.lastBg || null);
 
     if (strokes.length < lastStrokesLen.current || hasBgChange) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = ds.bgFill || '#FFFFFF';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       strokes.forEach(s => drawStrokeOnCtx(ctx, s, canvas.width, canvas.height));
       canvas.dataset.lastBg = ds.bgFill || '';
     } else {
-      // Incremental: only draw new strokes
       for (let i = lastStrokesLen.current; i < strokes.length; i++) {
         drawStrokeOnCtx(ctx, strokes[i], canvas.width, canvas.height);
       }
@@ -114,48 +145,10 @@ export default function DrawGameScreen({ nav, roomCode }) {
     return () => clearInterval(id);
   }, [ds?.roundEndsAt, ds?.roundStatus, isHost, roomCode]);
 
-  // --- Choosing phase timer (for drawer) ---
+  // --- Auto scroll chat ---
   useEffect(() => {
-    if (!ds || ds.roundStatus !== 'choosing' || !isDrawer) return;
-    setChooseTimer(10);
-    const start = Date.now();
-    const id = setInterval(() => {
-      const rem = Math.max(0, 10 - Math.floor((Date.now() - start) / 1000));
-      setChooseTimer(rem);
-      if (rem <= 0) {
-        clearInterval(id);
-        const first = ds.wordOptions?.[0];
-        if (first) chooseDrawWord(roomCode, first).catch(() => {});
-      }
-    }, 1000);
-    return () => clearInterval(id);
-  }, [ds?.roundStatus, ds?.drawerUid, roomCode]);
-
-  // --- Hint reveal (host only, at 30%, 55%, 80% elapsed) ---
-  useEffect(() => {
-    if (!ds || ds.roundStatus !== 'drawing' || !isHost || !ds.roundEndsAt) return;
-    const drawTime = (room?.drawTime || 80) * 1000;
-    const startTime = ds.roundEndsAt - drawTime;
-    const revealAtPct = [0.3, 0.55, 0.8];
-
-    const id = setInterval(() => {
-      const elapsed = (Date.now() - startTime) / drawTime;
-      const expected = revealAtPct.filter(t => elapsed >= t).length;
-      if (expected > (ds.hintRevealCount || 0)) {
-        revealHint(roomCode).catch(() => {});
-      }
-    }, 5000);
-    return () => clearInterval(id);
-  }, [ds?.roundStatus, ds?.roundEndsAt, ds?.hintRevealCount, isHost, roomCode]);
-
-  // --- All guessers done → end round (host) ---
-  useEffect(() => {
-    if (!ds || ds.roundStatus !== 'drawing' || !isHost || !room) return;
-    const guessers = (room.playerOrder || []).filter(uid => uid !== ds.drawerUid);
-    if (guessers.length > 0 && (ds.guessersDone?.length || 0) >= guessers.length) {
-      endDrawRound(roomCode).catch(() => {});
-    }
-  }, [ds?.guessersDone?.length]); // eslint-disable-line
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+  }, [ds?.messages]);
 
   // --- Auto-advance after reveal (host, 4.5s) ---
   useEffect(() => {
@@ -190,34 +183,34 @@ export default function DrawGameScreen({ nav, roomCode }) {
     e.preventDefault();
     const pos = getCanvasPos(e);
     const pts = currentStrokeRef.current.points;
-    pts.push(pos);
+    
+    if (['line', 'rect', 'circle', 'triangle'].includes(tool)) {
+      currentStrokeRef.current.points = [pts[0], pos];
+    } else {
+      pts.push(pos);
+    }
 
     const canvas = canvasRef.current;
     if (canvas && pts.length >= 2) {
       const ctx = canvas.getContext('2d');
-      ctx.beginPath();
-      ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
-      ctx.lineWidth = BRUSH_SIZES[brushSize] || 8;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      const prev = pts[pts.length - 2];
-      const curr = pts[pts.length - 1];
-      ctx.moveTo(prev.x * canvas.width, prev.y * canvas.height);
-      ctx.lineTo(curr.x * canvas.width, curr.y * canvas.height);
-      ctx.stroke();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = ds.bgFill || '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ds.strokes.forEach(s => drawStrokeOnCtx(ctx, s, canvas.width, canvas.height));
+      drawStrokeOnCtx(ctx, { ...currentStrokeRef.current, type: tool }, canvas.width, canvas.height);
     }
-  }, [isDrawer, tool, color, brushSize, getCanvasPos]);
+  }, [isDrawer, tool, color, brushSize, getCanvasPos, ds?.strokes, ds?.bgFill]);
 
   const handlePointerUp = useCallback(async () => {
     if (!isDrawer || !isDrawingRef.current || !currentStrokeRef.current) return;
     isDrawingRef.current = false;
-    const stroke = currentStrokeRef.current;
+    const stroke = { ...currentStrokeRef.current, type: tool, bgFill: ds.bgFill };
     currentStrokeRef.current = null;
     if (stroke.points.length >= 2) {
       lastStrokesLen.current = (ds?.strokes?.length || 0) + 1;
       await addStroke(roomCode, stroke).catch(() => {});
     }
-  }, [isDrawer, roomCode, ds?.strokes?.length]);
+  }, [isDrawer, roomCode, ds?.strokes?.length, tool, ds?.bgFill]);
 
   const handleSendGuess = async () => {
     const text = guessInput.trim();
@@ -227,140 +220,11 @@ export default function DrawGameScreen({ nav, roomCode }) {
     await submitDrawGuess(roomCode, myUid, userProfile.username, text, room?.drawTime || 80);
   };
 
-  // --- Loading ---
-  if (!room || !ds) {
-    return (
-      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
-        🎨
-      </div>
-    );
-  }
+  if (!room || !ds) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎨</div>;
 
   const players = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
   const drawerPlayer = room.players[ds.drawerUid];
   const myAlreadyGuessed = (ds.guessersDone || []).includes(myUid);
-  const scoreTarget = room.scoreTarget || 40;
-
-  // ── CHOOSING ──
-  if (ds.roundStatus === 'choosing') {
-    return (
-      <div style={{
-        width: '100%', height: '100%',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: 24, gap: 20,
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 52 }}>{isDrawer ? '🎨' : AVATAR_EMOJIS[drawerPlayer?.avatarId ?? 0]}</div>
-          <h2 style={{ fontSize: 20, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '12px 0 4px' }}>
-            {isDrawer ? 'اختار كلمة ترسمها!' : `${drawerPlayer?.username || '...'} يختار...`}
-          </h2>
-          {isDrawer && (
-            <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0, fontWeight: 700 }}>
-              عندك {chooseTimer} ثانية
-            </p>
-          )}
-        </div>
-
-        {isDrawer ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 360 }}>
-            {(ds.wordOptions || []).map((word, i) => (
-              <button
-                key={i}
-                onClick={() => chooseDrawWord(roomCode, word).catch(() => {})}
-                className="btn btn-white"
-                style={{ padding: '16px', fontSize: 22, fontWeight: 900, letterSpacing: 3 }}
-              >
-                {word}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[0, 1, 2].map(i => (
-              <div key={i} style={{
-                width: 12, height: 12, borderRadius: '50%',
-                background: 'var(--bg-pink)',
-                animation: `pop 0.7s ${i * 0.2}s ease-in-out infinite`,
-              }} />
-            ))}
-          </div>
-        )}
-
-        <div style={{ fontSize: 13, color: 'var(--color-muted)', fontWeight: 700 }}>
-          جولة {ds.currentRound} من {ds.totalRounds}
-        </div>
-      </div>
-    );
-  }
-
-  // ── REVEAL ──
-  if (ds.roundStatus === 'reveal') {
-    const sortedPlayers = [...players].sort(
-      (a, b) => (ds.scores[b.uid] || 0) - (ds.scores[a.uid] || 0)
-    );
-    return (
-      <div className="slide-up" style={{
-        width: '100%', height: '100%',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: 20, gap: 16,
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: '0 0 8px', fontWeight: 700 }}>
-            الكلمة كانت
-          </p>
-          <div style={{
-            fontSize: 34, fontWeight: 900, color: 'var(--bg-dark-purple)',
-            border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)',
-            background: 'var(--bg-yellow)', padding: '10px 28px',
-            letterSpacing: 4,
-          }}>
-            {ds.chosenWord}
-          </div>
-        </div>
-
-        <div style={{ width: '100%', maxWidth: 380 }}>
-          {sortedPlayers.map((p, i) => {
-            const roundPts = ds.roundScores?.[p.uid] || 0;
-            const total = ds.scores?.[p.uid] || 0;
-            return (
-              <div key={p.uid} className="slide-up" style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 16px',
-                background: i === 0 ? 'var(--bg-yellow)' : '#FFF',
-                border: 'var(--brutal-border)', marginBottom: -4,
-                animationDelay: `${i * 0.08}s`,
-              }}>
-                <span style={{ fontSize: 22 }}>{AVATAR_EMOJIS[p.avatarId ?? 0]}</span>
-                <span style={{ flex: 1, fontWeight: 900, fontSize: 15, color: 'var(--bg-dark-purple)' }}>
-                  {p.username}
-                </span>
-                {roundPts > 0 && (
-                  <span style={{
-                    fontSize: 12, color: '#FFF', fontWeight: 900,
-                    background: 'var(--bg-dark-purple)', padding: '2px 8px',
-                  }}>
-                    +{roundPts}
-                  </span>
-                )}
-                <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--bg-dark-purple)', minWidth: 52, textAlign: 'left' }}>
-                  {total}
-                </span>
-              </div>
-            );
-          })}
-          <div style={{ height: 4 }} />
-        </div>
-
-        <p style={{ fontSize: 13, color: 'var(--color-muted)', fontWeight: 700 }}>
-          الجولة التالية تبدأ تلقائياً...
-        </p>
-      </div>
-    );
-  }
-
-  // ── DRAWING ──
-  const timerColor = timeLeft !== null && timeLeft <= 10 ? 'var(--bg-pink)' : 'var(--bg-dark-purple)';
-  const timerPct = timeLeft !== null ? (timeLeft / (room.drawTime || 80)) * 100 : 100;
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -368,220 +232,77 @@ export default function DrawGameScreen({ nav, roomCode }) {
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 14px', borderBottom: '3px solid var(--bg-dark-purple)',
-        flexShrink: 0,
+        padding: '8px 14px', borderBottom: '3px solid var(--bg-dark-purple)', flexShrink: 0,
       }}>
-        <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--color-muted)' }}>
-          {ds.currentRound}/{ds.totalRounds}
-        </div>
+        <div style={{ fontSize: 13, fontWeight: 900 }}>{ds.currentRound}/{ds.totalRounds}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 18 }}>{AVATAR_EMOJIS[drawerPlayer?.avatarId ?? 0]}</span>
-          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>
-            {isDrawer ? '🎨 ارسم!' : `${drawerPlayer?.username} يرسم`}
-          </span>
+          <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={24} />
+          <span style={{ fontSize: 13, fontWeight: 900 }}>{isDrawer ? '🎨 ارسم!' : `${drawerPlayer?.username} يرسم`}</span>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: timerColor, minWidth: 36, textAlign: 'center' }}>
-          {timeLeft ?? ''}
-        </div>
+        <div style={{ fontSize: 22, fontWeight: 900 }}>{timeLeft ?? ''}</div>
       </div>
 
-      {/* Timer bar */}
-      <div style={{ height: 5, background: '#E5E7EB', flexShrink: 0 }}>
-        <div className="timer-bar" style={{
-          height: '100%',
-          background: timerPct <= 20 ? 'var(--bg-pink)' : 'var(--bg-orange)',
-          width: `${timerPct}%`,
-          transition: 'width 0.5s linear, background 0.3s',
-        }} />
-      </div>
-
-      {/* Score strip */}
-      <div style={{
-        display: 'flex', gap: 4, padding: '4px 10px', overflowX: 'auto',
-        flexShrink: 0, borderBottom: '2px solid rgba(45,27,78,0.12)', alignItems: 'center',
-      }}>
-        {players.map(p => (
-          <div key={p.uid} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            padding: '3px 8px', flexShrink: 0,
-            background: p.uid === ds.drawerUid ? 'var(--bg-pink)' : 'rgba(45,27,78,0.06)',
-            border: '2px solid var(--bg-dark-purple)',
-          }}>
-            <span style={{ fontSize: 14 }}>{AVATAR_EMOJIS[p.avatarId ?? 0]}</span>
-            <span style={{
-              fontSize: 10, fontWeight: 900,
-              color: p.uid === ds.drawerUid ? '#FFF' : 'var(--bg-dark-purple)',
-            }}>
-              {ds.scores?.[p.uid] || 0}
-            </span>
-            {(ds.guessersDone || []).includes(p.uid) && p.uid !== ds.drawerUid && (
-              <span style={{ fontSize: 9 }}>✅</span>
-            )}
-          </div>
-        ))}
-        <span style={{ marginRight: 'auto', fontSize: 10, color: 'var(--color-muted)', fontWeight: 700, flexShrink: 0, paddingRight: 4 }}>
-          هدف: {scoreTarget}
-        </span>
-      </div>
-
-      {/* Hint bar */}
-      <div style={{
-        textAlign: 'center', padding: '5px 16px',
-        fontSize: 20, fontWeight: 900, letterSpacing: 8,
-        color: 'var(--bg-dark-purple)', flexShrink: 0,
-        direction: 'rtl', fontFamily: 'monospace',
-      }}>
-        {isDrawer ? ds.chosenWord : (ds.hint || '')}
-      </div>
-
-      {/* Canvas */}
-      <div style={{
-        flex: 1, padding: '0 10px 4px',
-        display: 'flex', flexDirection: 'column', minHeight: 0,
-      }}>
-        <div style={{
-          flex: 1,
-          border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)',
-          background: '#FFF', position: 'relative', overflow: 'hidden',
-        }}>
-          <canvas
-            ref={canvasRef}
-            style={{
-              display: 'block', width: '100%', height: '100%',
-              touchAction: 'none',
-              cursor: isDrawer ? (tool === 'eraser' ? 'cell' : 'crosshair') : 'default',
-            }}
-            onMouseDown={handlePointerDown}
-            onMouseMove={handlePointerMove}
-            onMouseUp={handlePointerUp}
-            onMouseLeave={handlePointerUp}
-            onTouchStart={handlePointerDown}
-            onTouchMove={handlePointerMove}
-            onTouchEnd={handlePointerUp}
-          />
-          {/* Already guessed overlay */}
-          {!isDrawer && myAlreadyGuessed && (
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(57,255,20,0.12)',
-              pointerEvents: 'none',
-              fontSize: 48,
-            }}>
-              ✅
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Bottom: tools (drawer) or chat (guesser) */}
-      {isDrawer ? (
-        <div style={{ padding: '6px 10px 10px', flexShrink: 0, borderTop: '2px solid rgba(45,27,78,0.1)' }}>
-          {/* Color palette */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+      {/* Shapes & Colors (Drawer Only) */}
+      {isDrawer && ds.roundStatus === 'drawing' && (
+        <div style={{ padding: '6px 10px', borderBottom: '2px solid rgba(0,0,0,0.1)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 8 }}>
             {COLORS.map(c => (
-              <button
-                key={c}
-                onClick={() => { setColor(c); setTool('pen'); }}
-                style={{
-                  width: 26, height: 26, flexShrink: 0,
-                  background: c,
-                  border: `3px solid ${color === c && tool === 'pen' ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
-                  outline: color === c && tool === 'pen' ? '2px solid var(--bg-pink)' : 'none',
-                  cursor: 'pointer',
-                }}
-              />
+              <button key={c} onClick={() => { setColor(c); if (tool === 'eraser') setTool('pen'); }}
+                style={{ height: 18, background: c, border: `2px solid ${color === c ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}` }} />
             ))}
           </div>
-          {/* Tool bar */}
-          <div style={{ display: 'flex', gap: 5, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {[
-              { id: 'thin',   label: '• رفيع' },
-              { id: 'medium', label: '● وسط' },
-              { id: 'thick',  label: '⬤ عريض' },
-            ].map(s => (
-              <button
-                key={s.id}
-                onClick={() => { setBrushSize(s.id); setTool('pen'); }}
-                className={`btn ${brushSize === s.id && tool === 'pen' ? 'btn-pink' : 'btn-white'}`}
-                style={{ padding: '4px 10px', fontSize: 12 }}
-              >
-                {s.label}
+          <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {['pen', 'line', 'rect', 'circle', 'triangle', 'eraser'].map(t => (
+              <button key={t} onClick={() => setTool(t)} className={`btn ${tool === t ? 'btn-pink' : 'btn-white'}`} style={{ padding: '4px 8px' }}>
+                {t === 'pen' ? '✏️' : t === 'line' ? '📏' : t === 'rect' ? '⬜' : t === 'circle' ? '⭕' : t === 'triangle' ? '△' : '🧹'}
               </button>
             ))}
-            <button
-              onClick={() => setTool('eraser')}
-              className={`btn ${tool === 'eraser' ? 'btn-pink' : 'btn-white'}`}
-              style={{ padding: '4px 12px', fontSize: 14 }}
-            >
-              🧹
-            </button>
-            <button
-              onClick={() => clearDrawCanvas(roomCode).catch(() => {})}
-              className="btn btn-white"
-              style={{ padding: '4px 12px', fontSize: 13 }}
-            >
-              🗑️
-            </button>
-            <button
-              onClick={() => fillBackground(roomCode, color).catch(() => {})}
-              className="btn btn-white"
-              style={{ padding: '4px 10px', fontSize: 13 }}
-            >
-              🪣 ملء
-            </button>
+            {['thin', 'medium', 'thick', 'fat'].map(s => (
+              <button key={s} onClick={() => setBrushSize(s)} className={`btn ${brushSize === s ? 'btn-pink' : 'btn-white'}`} style={{ padding: '4px 8px' }}>
+                {s === 'thin' ? '•' : s === 'medium' ? '●' : s === 'thick' ? '⬤' : '⬛'}
+              </button>
+            ))}
+            <button onClick={() => fillBackground(roomCode, color)} className="btn btn-white" style={{ padding: '4px 8px' }}>🪣</button>
+            <button onClick={() => clearDrawCanvas(roomCode)} className="btn btn-white" style={{ padding: '4px 8px' }}>🗑️</button>
           </div>
         </div>
-      ) : (
-        <div style={{ padding: '4px 10px 10px', flexShrink: 0, borderTop: '2px solid rgba(45,27,78,0.1)' }}>
-          {/* Recent messages */}
-          <div style={{ maxHeight: 56, overflowY: 'auto', marginBottom: 5 }}>
-            {[...(ds.messages || [])].sort((a, b) => a.ts - b.ts).slice(-6).map((msg, i) => {
-              const isMe = msg.uid === myUid;
-              const displayText = (msg.isCorrect || msg.isClose) 
-                ? (isMe ? msg.originalText : msg.text) 
-                : msg.text;
-              return (
-                <div key={i} style={{
-                  fontSize: 12, fontWeight: 700, direction: 'rtl', textAlign: 'right',
-                  color: msg.isCorrect ? 'var(--bg-green)' : (msg.isClose ? 'var(--bg-orange)' : 'var(--bg-dark-purple)'),
-                  background: msg.isCorrect ? 'rgba(57,255,20,0.1)' : (msg.isClose ? 'rgba(255,107,0,0.08)' : 'transparent'),
-                  padding: '1px 6px',
-                  borderRadius: 4,
-                  marginBottom: 2,
-                }}>
-                  <span style={{ color: 'var(--color-muted)', fontSize: 10 }}>{msg.username}: </span>
-                  {msg.isCorrect && !isMe ? '✅ ' : (msg.isClose && !isMe ? '🤏 ' : '')}
-                  {displayText}
-                  {msg.isCorrect && isMe && <span style={{ fontSize: 10, color: 'var(--bg-green)', marginRight: 4 }}>(صح! +{msg.points})</span>}
-                </div>
-              );
-            })}
+      )}
+
+      {/* Canvas Area */}
+      <div style={{ flex: 1, position: 'relative', background: '#eee', padding: 10 }}>
+        <div style={{ width: '100%', height: '100%', background: '#fff', border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)', overflow: 'hidden' }}>
+          <canvas ref={canvasRef} style={{ width: '100%', height: '100%', touchAction: 'none' }}
+            onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} />
+          {myAlreadyGuessed && !isDrawer && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(57,255,20,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>✅</div>
+          )}
+        </div>
+      </div>
+
+      {/* Guessing Area */}
+      {!isDrawer && ds.roundStatus === 'drawing' && (
+        <div style={{ padding: 10, borderTop: 'var(--brutal-border)' }}>
+          <div ref={chatRef} style={{ maxHeight: 100, overflowY: 'auto', marginBottom: 8 }}>
+            {(ds.messages || []).map((m, i) => (
+              <div key={i} style={{ fontSize: 13, marginBottom: 2, textAlign: 'right' }}>
+                <span style={{ fontWeight: 900 }}>{m.username}:</span> {m.isCorrect && m.uid !== myUid ? 'خمّن الكلمة! ✅' : m.text}
+              </div>
+            ))}
           </div>
-          {/* Input or done message */}
-          {myAlreadyGuessed ? (
-            <div style={{
-              textAlign: 'center', fontSize: 14, fontWeight: 900,
-              color: 'var(--bg-dark-purple)', padding: '8px',
-              border: 'var(--brutal-border)', background: 'var(--bg-green)',
-            }}>
-              ✅ خمّنت صح! انتظر الباقين
-            </div>
-          ) : (
+          {!myAlreadyGuessed && (
             <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                className="input-field"
-                placeholder="اكتب تخمينك..."
-                value={guessInput}
-                onChange={e => setGuessInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSendGuess()}
-                style={{ flex: 1, direction: 'rtl', fontSize: 15, padding: '8px 12px' }}
-              />
-              <button onClick={handleSendGuess} className="btn btn-pink" style={{ padding: '8px 16px', fontSize: 14 }}>
-                إرسال
-              </button>
+              <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendGuess()}
+                placeholder="اكتب تخمينك..." className="input-field" style={{ flex: 1 }} />
+              <button onClick={handleSendGuess} className="btn btn-pink">إرسال</button>
             </div>
           )}
+        </div>
+      )}
+      
+      {ds.roundStatus === 'reveal' && (
+        <div style={{ padding: 20, textAlign: 'center' }}>
+          <h3>الكلمة كانت: {ds.chosenWord}</h3>
+          <button className="btn btn-yellow" onClick={() => isHost && nextDrawRound(roomCode)}>الجولة التالية</button>
         </div>
       )}
 
