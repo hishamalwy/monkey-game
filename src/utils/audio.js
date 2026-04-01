@@ -4,10 +4,13 @@ export const setHornType = (id) => localStorage.setItem('hornType', id);
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const resume = () => { if (audioCtx.state === 'suspended') audioCtx.resume(); };
 
-// Unlock audio context on first user interaction
-['mousedown', 'touchstart', 'keydown'].forEach(evt => 
-  window.addEventListener(evt, resume, { once: true, passive: true })
+// Keep AudioContext alive on every user interaction (re-suspended after inactivity on mobile)
+['mousedown', 'touchstart', 'keydown', 'pointerdown'].forEach(evt =>
+  window.addEventListener(evt, resume, { passive: true })
 );
+
+// Call this before a button action to warm up AudioContext with zero perceptible delay
+export const warmAudio = () => resume();
 
 export const playSound = (type) => {
   resume();
@@ -79,8 +82,16 @@ export const HORN_TYPES = [
 let hornNodes = null;
 
 export const startHorn = (overrideType) => {
-  resume();
   if (hornNodes) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => _doStartHorn(overrideType));
+    return;
+  }
+  _doStartHorn(overrideType);
+};
+
+function _doStartHorn(overrideType) {
+  if (hornNodes) return; // guard against double-call after async resume
 
   const type = overrideType || getHornType();
   const gain = audioCtx.createGain();
@@ -274,7 +285,7 @@ export const startHorn = (overrideType) => {
     osc.start(now);
     hornNodes = { oscs: [osc], gain };
   }
-};
+}
 
 export const stopHorn = () => {
   if (!hornNodes) return;

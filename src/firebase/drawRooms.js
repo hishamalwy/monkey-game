@@ -40,7 +40,7 @@ function calculateCloseness(guess, word) {
 export async function startDrawGame(roomCode) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
   const room = snap.data();
-  const { playerOrder, wordChoices = 3, category = 'objects' } = room;
+  const { playerOrder, wordChoices = 3, category = 'objects', scoreTarget = 100 } = room;
 
   const drawerUid = playerOrder[0];
   const words = pickWords(category, wordChoices);
@@ -50,7 +50,6 @@ export async function startDrawGame(roomCode) {
     drawState: {
       roundStatus: 'choosing',
       currentRound: 1,
-      totalRounds: playerOrder.length,
       drawerUid,
       wordOptions: words,
       choosingEndsAt: Date.now() + 20000,
@@ -62,7 +61,7 @@ export async function startDrawGame(roomCode) {
       strokes: [],
       messages: [],
       scores: Object.fromEntries(playerOrder.map(uid => [uid, 0])),
-      scoreTarget: 120,
+      scoreTarget,
       roundScores: {},
       guessersDone: [],
       bgFill: null,
@@ -105,13 +104,10 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
   const correct = closeness === 'correct';
   const isClose = closeness === 'close';
 
-  const timeRemaining = ds.roundEndsAt
-    ? Math.max(0, (ds.roundEndsAt - Date.now()) / 1000)
-    : 0;
-  // Award points based on rank: 1st=15, 2nd=12, 3rd=10, others=5
-  const rank = (ds.guessersDone || []).length;
-  const rankPoints = [15, 12, 10, 8, 6, 5];
-  const points = rank < rankPoints.length ? rankPoints[rank] : 5;
+  const players = room.playerOrder || [];
+  const playerCount = players.length;
+  const rank = (ds.guessersDone || []).length; // 0-indexed rank of current correct guesser
+  const points = Math.max(1, playerCount - rank);
 
   const newMessage = {
     uid,
@@ -120,37 +116,37 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
     originalText: guess, 
     isCorrect: correct,
     isClose: isClose,
-    points,
+    points: correct ? points : 0,
     ts: Date.now(),
   };
 
-  const patch = {
-    'drawState.messages': arrayUnion(newMessage),
-  };
+  // Build messages array — never overwrite the same path twice in one patch
+  const messagesToAdd = [newMessage];
+
+  const patch = {};
 
   if (correct) {
-    if (ds.scores) {
-       patch[`drawState.roundScores.${uid}`] = points;
-       patch[`drawState.scores.${uid}`] = (ds.scores[uid] || 0) + points;
-    }
+    patch[`drawState.roundScores.${uid}`] = points;
+    patch[`drawState.scores.${uid}`] = (ds.scores?.[uid] || 0) + points;
     patch['drawState.guessersDone'] = arrayUnion(uid);
-    
+
     // Check if everyone guessed correctly
-    const othersCount = (room.playerOrder?.length || 1) - 1;
+    const othersCount = players.length - 1; // everyone except drawer
     const nowDone = (ds.guessersDone?.length || 0) + 1;
     if (nowDone >= othersCount) {
-       const guessers = (room.playerOrder || []).filter(g => g !== ds.drawerUid);
-       const drawerPoints = Math.round((nowDone / guessers.length) * 75);
-       
-       patch['drawState.messages'] = arrayUnion({
-         uid: 'system', username: 'المنادي', text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now()
-       }, newMessage);
-       
-       patch['drawState.roundStatus'] = 'reveal';
-       patch[`drawState.scores.${ds.drawerUid}`] = (ds.scores[ds.drawerUid] || 0) + drawerPoints;
-       patch[`drawState.roundScores.${ds.drawerUid}`] = drawerPoints;
+      const drawerPoints = nowDone; // +1 per correct guesser
+      messagesToAdd.push({
+        uid: 'system', username: 'المنادي',
+        text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now() + 1,
+      });
+      patch['drawState.roundStatus'] = 'reveal';
+      patch[`drawState.scores.${ds.drawerUid}`] = (ds.scores?.[ds.drawerUid] || 0) + drawerPoints;
+      patch[`drawState.roundScores.${ds.drawerUid}`] = drawerPoints;
     }
   }
+
+  // Single write for messages — no double-path bug
+  patch['drawState.messages'] = arrayUnion(...messagesToAdd);
 
   await updateDoc(doc(db, 'rooms', roomCode), patch);
   return { correct, points };
@@ -220,10 +216,7 @@ export async function endDrawRound(roomCode) {
 
   const guessers = (room.playerOrder || []).filter(uid => uid !== ds.drawerUid);
   const correctCount = ds.guessersDone?.length || 0;
-
-  const drawerPoints = guessers.length > 0
-    ? Math.round((correctCount / guessers.length) * 75) // 75 point max per person
-    : 0;
+  const drawerPoints = correctCount; // +1 point for each person who guessed
 
   const newScores = { ...(ds.scores || {}) };
   newScores[ds.drawerUid] = (newScores[ds.drawerUid] || 0) + drawerPoints;
@@ -264,7 +257,7 @@ export async function nextDrawRound(roomCode) {
 
   if (!ds || ds.roundStatus !== 'reveal') return;
 
-  const { playerOrder, scoreTarget = 120, wordChoices = 3 } = room;
+  const { playerOrder, scoreTarget = 100, wordChoices = 3 } = room;
 
   // Check if anyone hit scoreTarget
   const winner = playerOrder.find(uid => (ds.scores?.[uid] || 0) >= scoreTarget);
@@ -277,6 +270,7 @@ export async function nextDrawRound(roomCode) {
   }
 
   const nextRound = ds.currentRound + 1;
+  // Cycle through players endlessly until scoreTarget is hit
   const drawerUid = playerOrder[(nextRound - 1) % playerOrder.length];
   const words = pickWords(room.category || 'objects', wordChoices);
 
@@ -289,6 +283,8 @@ export async function nextDrawRound(roomCode) {
     'drawState.chosenWord': null,
     'drawState.wordLength': 0,
     'drawState.hint': '',
+    'drawState.hintRevealCount': 0,
+    'drawState.roundEndsAt': null,
     'drawState.strokes': [],
     'drawState.messages': [],
     'drawState.guessersDone': [],

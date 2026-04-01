@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { serverTimestamp, doc, updateDoc, increment, deleteField, onSnapshot, getDoc, deleteDoc } from 'firebase/firestore';
+import { serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { listenToRoom, updateGameState, leaveRoom, resolveChallenge } from '../firebase/rooms';
 import { normalizeArabic } from '../utils/aiLogic';
 import { appCategories } from '../data/categories';
-import { playSound, getHornType, previewHorn } from '../utils/audio';
+import { playSound, getHornType, startHorn, stopHorn } from '../utils/audio';
 
 const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
 
@@ -12,8 +12,10 @@ function checkGameOver(players, playerOrder) {
   return playerOrder.filter(uid => players[uid] && (players[uid].quarterMonkeys || 0) < MONKEY_LIMIT);
 }
 
-export async function syncHornState(roomCode, hornType) {
+export async function syncHornState(roomCode, isHonking, hornType) {
   await updateGameState(roomCode, { 
+    'gameState.isHonking': isHonking,
+    'gameState.honkerUid': isHonking ? auth.currentUser?.uid : null,
     'gameState.lastHornAt': Date.now(),
     'gameState.lastHornType': hornType 
   });
@@ -24,30 +26,39 @@ export function useRoom(roomCode) {
   const [computedTimer, setComputedTimer] = useState(null);
   const timerRef = useRef(null);
   const penaltyFiredRef = useRef(false); // prevent double-fire on timer
-  const lastHornHandledRef = useRef(0); // Track last handled horn timestamp
   const penaltyProcessingRef = useRef(false); // Prevent concurrent penalty updates
+  const remoteHornPlayingRef = useRef(false); // Track whether remote horn is playing
+  const prevPlayerUidRef = useRef(null); // Track previous player for penalty reset
+  const prevStatusRef = useRef(null); // Track previous status for penalty reset
   const uid = auth.currentUser?.uid;
 
   useEffect(() => {
     if (!roomCode) return;
     const unsub = listenToRoom(roomCode, (data) => {
       setRoom(data);
-      // Reset penalty guard when turn of current player or game status changes
-      if (data?.gameState?.currentPlayerUid !== room?.gameState?.currentPlayerUid || data?.status !== room?.status) {
+
+      // Reset penalty guard reliably using refs (not stale room state)
+      const curPlayerUid = data?.gameState?.currentPlayerUid;
+      const curStatus = data?.status;
+      if (curPlayerUid !== prevPlayerUidRef.current || curStatus !== prevStatusRef.current) {
         penaltyFiredRef.current = false;
       }
-      
-      // Listen for horn event
-      if (data?.gameState?.lastHornAt && data.gameState.lastHornAt > lastHornHandledRef.current) {
-        lastHornHandledRef.current = data.gameState.lastHornAt;
-        if (data.gameState.currentPlayerUid !== uid) { 
-           const typeToPlay = data.gameState.lastHornType || 'classic';
-           previewHorn(typeToPlay); 
-        }
+      prevPlayerUidRef.current = curPlayerUid;
+      prevStatusRef.current = curStatus;
+
+      // Horn sync — use ref to avoid stale state comparison
+      const isHonking = data?.gameState?.isHonking;
+      const isRemoteHonker = isHonking && data.gameState.honkerUid !== uid;
+      if (isRemoteHonker && !remoteHornPlayingRef.current) {
+        remoteHornPlayingRef.current = true;
+        startHorn(data.gameState.lastHornType || 'classic');
+      } else if (!isHonking && remoteHornPlayingRef.current) {
+        remoteHornPlayingRef.current = false;
+        stopHorn();
       }
     });
     return unsub;
-  }, [roomCode, room?.gameState?.currentPlayerUid, room?.status, uid]);
+  }, [roomCode, uid]);
 
   // Client-side timer
   useEffect(() => {
@@ -216,15 +227,27 @@ export function useRoom(roomCode) {
     await leaveRoom(roomCode, uid, isHost);
   }, [roomCode, uid, isHost]);
 
-  // ── Timer expiry (only active player writes) ─────────────────
+  // ── Timer expiry — scheduled from real Firestore timestamp ─────────
   useEffect(() => {
-    if (!isMyTurn || !room?.timeLimit || room.timeLimit === 0) return;
-    if (room?.status !== 'playing') return;
-    if (computedTimer === 0 && !penaltyFiredRef.current) {
+    if (!isHost || !room?.timeLimit || room.timeLimit === 0 || room.status !== 'playing') return;
+    const { timeRemainingAtLastAction, lastActionAt } = room.gameState || {};
+    if (!lastActionAt || !timeRemainingAtLastAction) return;
+
+    const expiresAt = lastActionAt.toMillis() + timeRemainingAtLastAction * 1000;
+    const msLeft = expiresAt - Date.now();
+
+    // If the round already expired before we got here, skip — prevents
+    // firing a fresh penalty the instant a new round starts (race fix).
+    if (msLeft <= 0) return;
+
+    const timeoutId = setTimeout(() => {
+      if (penaltyFiredRef.current) return;
       penaltyFiredRef.current = true;
-      applyPenalty(uid, 'انتهى الوقت! ⏰', 'timeout');
-    }
-  }, [computedTimer, isMyTurn, room?.status]);
+      applyPenalty(room.gameState.currentPlayerUid, 'انتهى الوقت! ⏰', 'timeout');
+    }, msLeft);
+
+    return () => clearTimeout(timeoutId);
+  }, [isHost, room?.gameState?.lastActionAt, room?.gameState?.timeRemainingAtLastAction, room?.status]);
 
   const resetToLobby = useCallback(async () => {
     if (!isHost) return;
@@ -245,7 +268,7 @@ export function useRoom(roomCode) {
     pressDelete,
     pressChallenge,
     confirmNextRound,
-    triggerHorn: () => syncHornState(roomCode, getHornType()),
+    triggerHorn: (on) => syncHornState(roomCode, on, getHornType()),
     leaveRoom: doLeaveRoom,
     resetToLobby,
   };

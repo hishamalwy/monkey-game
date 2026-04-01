@@ -110,6 +110,10 @@ export async function updateGameState(code, patch) {
   await updateDoc(doc(db, 'rooms', code), patch);
 }
 
+export async function updateRoomSettings(code, settings) {
+  await updateDoc(doc(db, 'rooms', code), settings);
+}
+
 export async function leaveRoom(code, uid, isHost) {
   const roomRef = doc(db, 'rooms', code);
   const snap = await getDoc(roomRef);

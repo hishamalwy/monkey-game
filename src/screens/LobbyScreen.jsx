@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { listenToRoom, setReady, startGame, leaveRoom } from '../firebase/rooms';
+import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings } from '../firebase/rooms';
 import { startDrawGame } from '../firebase/drawRooms';
+import { appCategories } from '../data/categories';
 import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
 import UserAvatar from '../components/ui/UserAvatar';
 import Toast from '../components/ui/Toast';
@@ -130,6 +131,8 @@ export default function LobbyScreen({ nav, roomCode }) {
   const isHost     = room.hostUid === userProfile?.uid;
   const myPlayer   = room.players[userProfile?.uid];
   const allReady   = players.length >= 2 && players.every(p => p.isReady);
+  // If a game was previously started (gameState exists), lock mode/category
+  const gameStarted = !!(room.gameState || (room.drawState && room.drawState.roundStatus !== 'none'));
 
   const handleReady  = async () => { await setReady(roomCode, userProfile.uid, !myPlayer?.isReady); };
   const handleStart  = async () => {
@@ -159,12 +162,34 @@ export default function LobbyScreen({ nav, roomCode }) {
       }}>
         {/* placeholder for visual balance */}
         <div style={{ width: 90 }} />
-        <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, textAlign: 'center', lineHeight: 1.2 }}>
-          {room.mode === 'draw' ? 'الرسّام الفنان' : 'قرد الكلكس'}<br/>
-          <span style={{ fontSize: 13, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 8px', borderRadius: 4 }}>
-            {room.category === 'objects' ? 'أشياء' : room.category === 'clubs' ? 'أندية' : 'بلاد'}
-          </span>
-        </h1>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.2 }}>
+            {room.mode === 'draw' ? 'الرسّام الفنان' : 'قرد الكلكس'}
+          </h1>
+          {isHost && !gameStarted ? (
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'center' }}>
+              <select
+                value={room.mode}
+                onChange={(e) => updateRoomSettings(roomCode, { mode: e.target.value })}
+                style={{ fontSize: 11, padding: '2px 4px', borderRadius: 4, border: '2px solid var(--bg-dark-purple)', fontWeight: 700 }}
+              >
+                <option value="monkey">قرد</option>
+                <option value="draw">رسم</option>
+              </select>
+              <select
+                value={room.category}
+                onChange={(e) => updateRoomSettings(roomCode, { category: e.target.value })}
+                style={{ fontSize: 11, padding: '2px 4px', borderRadius: 4, border: '2px solid var(--bg-dark-purple)', fontWeight: 700 }}
+              >
+                {appCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </select>
+            </div>
+          ) : (
+             <span style={{ fontSize: 13, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 8px', borderRadius: 4, marginTop: 4, display: 'inline-block' }}>
+               {appCategories.find(c => c.id === room.category)?.name || room.category}
+             </span>
+          )}
+        </div>
         <button
           onClick={() => setShowExitConfirm(true)}
           className="btn btn-yellow"

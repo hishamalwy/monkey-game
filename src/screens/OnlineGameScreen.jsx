@@ -4,11 +4,11 @@ import { useRoom } from '../hooks/useRoom';
 import UserAvatar from '../components/ui/UserAvatar';
 import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { stopHorn, startHorn, getHornType, HORN_TYPES } from '../utils/audio';
+import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio } from '../utils/audio';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 
 export default function OnlineGameScreen({ nav, roomCode }) {
-  const { userProfile } = useAuth();
+  useAuth(); // keeps auth context alive
   const {
     room, players, isMyTurn, computedTimer,
     pressLetter, pressDelete, pressChallenge, leaveRoom, triggerHorn,
@@ -23,13 +23,28 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   const MONKEY_LIMIT = 4;
 
+  // Color ramp: empty → yellow → orange → red → skull
+  const QM_COLORS = ['#D1D5DB', '#FCD34D', '#F97316', '#EF4444', '#1C1040'];
+
   const MonkeySVG = ({ qm }) => {
     const pct = Math.min((qm / 4) * 100, 100);
+    const fillColor = QM_COLORS[Math.min(qm, 4)];
+    const strokeColor = qm >= 4 ? '#fff' : 'var(--bg-dark-purple)';
     return (
-      <svg viewBox="0 0 100 100" width="32" height="32" style={{ overflow: 'visible', margin: '2px 0', opacity: qm === 0 ? 0.35 : 1 }}>
-        <rect x="0" y="0" width="100" height="100" fill="#e0e0e0" mask="url(#global-monkey-mask)" />
-        {qm > 0 && <rect x="0" y={100 - pct} width="100" height="100" fill="var(--bg-dark-purple)" mask="url(#global-monkey-mask)" style={{ transition: 'y 0.5s ease-out' }} />}
-        <g fill="none" stroke="var(--bg-dark-purple)" strokeWidth="6" strokeLinejoin="round" strokeLinecap="round">
+      <svg viewBox="0 0 100 100" width="38" height="38" style={{ overflow: 'visible', display: 'block' }}>
+        {/* Background (empty monkey) */}
+        <rect x="0" y="0" width="100" height="100" fill="#E5E7EB" mask="url(#global-monkey-mask)" />
+        {/* Colored fill rising from bottom */}
+        {qm > 0 && (
+          <rect
+            x="0" y={100 - pct} width="100" height="100"
+            fill={fillColor}
+            mask="url(#global-monkey-mask)"
+            style={{ transition: 'y 0.4s cubic-bezier(0.34,1.56,0.64,1), fill 0.3s ease' }}
+          />
+        )}
+        {/* Outline */}
+        <g fill="none" stroke={strokeColor} strokeWidth="5" strokeLinejoin="round" strokeLinecap="round">
           <path d="M 68 80 Q 95 95 90 60 Q 90 40 75 60" />
           <circle cx="26" cy="36" r="10" />
           <circle cx="74" cy="36" r="10" />
@@ -39,6 +54,20 @@ export default function OnlineGameScreen({ nav, roomCode }) {
       </svg>
     );
   };
+
+  // Quarter-pip indicator  (●●●●)
+  const QuarterPips = ({ qm }) => (
+    <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
+      {[0, 1, 2, 3].map(i => (
+        <div key={i} style={{
+          width: 7, height: 7, borderRadius: '50%',
+          background: i < qm ? QM_COLORS[Math.min(qm, 4)] : '#E5E7EB',
+          border: '1.5px solid rgba(0,0,0,0.12)',
+          transition: 'background 0.3s ease',
+        }} />
+      ))}
+    </div>
+  );
 
   useEffect(() => {
     if (!room) return;
@@ -61,8 +90,8 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   useEffect(() => () => stopHorn(), []);
 
-  const handleHornStart = () => { setIsHonking(true); startHorn(); triggerHorn(); };
-  const handleHornEnd = () => { setIsHonking(false); stopHorn(); };
+  const handleHornStart = () => { warmAudio(); setIsHonking(true); startHorn(); triggerHorn(true); };
+  const handleHornEnd = () => { setIsHonking(false); stopHorn(); triggerHorn(false); };
 
   const handleExit = async () => {
     await leaveRoom();
@@ -106,15 +135,37 @@ export default function OnlineGameScreen({ nav, roomCode }) {
           const eliminated = qm >= MONKEY_LIMIT;
           const isActive = p.uid === currentPlayerUid && !eliminated;
           return (
-            <div key={p.uid} className="card" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 12px', minWidth: 70, flexShrink: 0,
-              background: isActive ? 'var(--bg-pink)' : '#FFF', border: '3px solid var(--bg-dark-purple)',
-              boxShadow: isActive ? '4px 4px 0px var(--bg-dark-purple)' : '2px 2px 0px rgba(0,0,0,0.1)',
-              transform: isActive ? 'translateY(-4px)' : 'none', opacity: eliminated ? 0.45 : 1, transition: 'all 0.3s'
+            <div key={p.uid} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '10px 10px 8px', minWidth: 76, flexShrink: 0,
+              background: isActive ? 'var(--bg-pink)' : eliminated ? '#F3F4F6' : '#FFF',
+              border: `3px solid ${isActive ? 'var(--bg-dark-purple)' : eliminated ? '#D1D5DB' : 'var(--bg-dark-purple)'}`,
+              borderRadius: 4,
+              boxShadow: isActive ? '4px 4px 0px var(--bg-dark-purple)' : '2px 2px 0px rgba(0,0,0,0.08)',
+              transform: isActive ? 'translateY(-5px) scale(1.04)' : 'none',
+              opacity: eliminated ? 0.5 : 1,
+              transition: 'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',
             }}>
-              <UserAvatar avatarId={p.avatarId ?? 0} size={42} style={{ marginBottom: 4 }} />
-              <span style={{ fontSize: 11, fontWeight: 900, color: isActive ? '#FFF' : 'var(--bg-dark-purple)', marginBottom: 6 }}>{eliminated ? '💀' : p.username.slice(0, 8)}</span>
+              <div style={{ position: 'relative', marginBottom: 4 }}>
+                <UserAvatar avatarId={p.avatarId ?? 0} size={40} />
+                {eliminated && (
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: 'rgba(28,16,64,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18,
+                  }}>💀</div>
+                )}
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 900, lineHeight: 1.2, marginBottom: 5,
+                color: isActive ? '#FFF' : 'var(--bg-dark-purple)',
+                maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {p.username}
+              </span>
               <MonkeySVG qm={qm} />
+              <QuarterPips qm={qm} />
             </div>
           );
         })}
