@@ -1,6 +1,7 @@
 import {
   doc, getDoc, setDoc, updateDoc, onSnapshot,
   serverTimestamp, deleteField, arrayUnion, deleteDoc,
+  query, where, getDocs, limit, arrayRemove, collection
 } from 'firebase/firestore';
 import { db } from './config';
 import { normalizeArabic } from '../utils/aiLogic';
@@ -109,30 +110,49 @@ export async function updateGameState(code, patch) {
   await updateDoc(doc(db, 'rooms', code), patch);
 }
 
-export async function leaveRoom(code, uid, isHost, playerOrder) {
+export async function leaveRoom(code, uid, isHost) {
   const roomRef = doc(db, 'rooms', code);
   const snap = await getDoc(roomRef);
   if (!snap.exists()) return;
 
   const room = snap.data();
-  const remainingOrder = (room.playerOrder || []).filter(id => id !== uid);
+  const playerOrder = room.playerOrder || [];
+  const remainingOrder = playerOrder.filter(id => id !== uid);
 
   if (remainingOrder.length === 0) {
-    // Last player — delete room
     await deleteDoc(roomRef);
     return;
   }
 
   const patch = {
     [`players.${uid}`]: deleteField(),
-    playerOrder: remainingOrder,
+    playerOrder: arrayRemove(uid),
   };
 
-  if (isHost) {
+  if (isHost || room.hostUid === uid) {
     patch.hostUid = remainingOrder[0];
   }
 
   await updateDoc(roomRef, patch);
+}
+
+export async function cleanupOldRooms() {
+  try {
+    const dayAgo = new Date();
+    dayAgo.setHours(dayAgo.getHours() - 24);
+    
+    const q = query(
+      collection(db, 'rooms'),
+      where('createdAt', '<', dayAgo),
+      limit(20)
+    );
+    
+    const snap = await getDocs(q);
+    const batch = snap.docs.map(d => deleteDoc(d.ref));
+    await Promise.all(batch);
+  } catch (err) {
+    console.error('Cleanup error:', err);
+  }
 }
 
 export function listenToRoom(code, callback) {

@@ -99,6 +99,7 @@ export default function LobbyScreen({ nav, roomCode }) {
   const [room, setRoom] = useState(null);
   const [toast, setToast] = useState('');
   const [starting, setStarting] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const navRef = useRef(nav);
   useEffect(() => { navRef.current = nav; });
@@ -165,13 +166,27 @@ export default function LobbyScreen({ nav, roomCode }) {
           </span>
         </h1>
         <button
-          onClick={handleLeave}
+          onClick={() => setShowExitConfirm(true)}
           className="btn btn-yellow"
           style={{ padding: '8px 14px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}
         >
           خروج ←
         </button>
       </div>
+
+      {showExitConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card slide-up" style={{ padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
+            <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 12px' }}>تغادر الغرفة؟</h3>
+            <p style={{ fontSize: 14, color: 'var(--bg-dark-purple)', opacity: 0.7, marginBottom: 20 }}>سيتم فصلك من هذه الجولة.</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ flex: 1, padding: 14 }}>لأ</button>
+              <button onClick={handleLeave} className="btn btn-pink" style={{ flex: 1, padding: 14 }}>اخرج</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Room code pill */}
       <div style={{ textAlign: 'center', marginBottom: 8 }}>

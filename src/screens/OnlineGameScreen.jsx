@@ -4,7 +4,8 @@ import { useRoom } from '../hooks/useRoom';
 import UserAvatar from '../components/ui/UserAvatar';
 import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { stopHorn, getHornType, HORN_TYPES } from '../utils/audio';
+import { stopHorn, startHorn, getHornType, HORN_TYPES } from '../utils/audio';
+import { useVisualViewport } from '../hooks/useVisualViewport';
 
 export default function OnlineGameScreen({ nav, roomCode }) {
   const { userProfile } = useAuth();
@@ -12,6 +13,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     room, players, isMyTurn, computedTimer,
     pressLetter, pressDelete, pressChallenge, leaveRoom, triggerHorn,
   } = useRoom(roomCode);
+  const vh = useVisualViewport();
 
   const navRef = useRef(nav);
   useEffect(() => { navRef.current = nav; });
@@ -59,8 +61,8 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   useEffect(() => () => stopHorn(), []);
 
-  const handleHornStart = () => { setIsHonking(true); triggerHorn(); };
-  const handleHornEnd = () => { setIsHonking(false); };
+  const handleHornStart = () => { setIsHonking(true); startHorn(); triggerHorn(); };
+  const handleHornEnd = () => { setIsHonking(false); stopHorn(); };
 
   const handleExit = async () => {
     await leaveRoom();
@@ -77,7 +79,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
       <header style={{ padding: '16px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <h2 className="title-glitch" style={{ margin: 0, fontSize: 24, transform: 'none', lineHeight: 1 }}>كلكس!</h2>

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/ui/UserAvatar';
 import BottomNav from '../components/BottomNav';
 import Toast from '../components/ui/Toast';
-import { joinRoom } from '../firebase/rooms';
+import { joinRoom, cleanupOldRooms } from '../firebase/rooms';
 import hero from '../assets/hero.png';
 
 export default function HomeScreen({ nav }) {
@@ -14,6 +14,10 @@ export default function HomeScreen({ nav }) {
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    cleanupOldRooms();
+  }, []);
 
   const handleJoin = async () => {
     const code = joinCode.trim().toUpperCase();

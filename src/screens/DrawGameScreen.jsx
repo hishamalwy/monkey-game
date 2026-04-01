@@ -5,8 +5,11 @@ import { listenToRoom } from '../firebase/rooms';
 import {
   chooseDrawWord, submitDrawGuess, addStroke, clearDrawCanvas,
   fillBackground, endDrawRound, nextDrawRound, revealHint, undoLastStroke,
+  freezeDrawTime,
 } from '../firebase/drawRooms';
 import Toast from '../components/ui/Toast';
+import { useVisualViewport } from '../hooks/useVisualViewport';
+import { leaveRoom } from '../firebase/rooms';
 
 const COLORS = [
   '#FF006E', '#39FF14', '#FFE300', '#FF6B00', '#4361EE', 
@@ -121,7 +124,9 @@ export default function DrawGameScreen({ nav, roomCode }) {
   const [color, setColor] = useState('#1C1040');
   const [brushSize, setBrushSize] = useState('medium');
   const [isFilled, setIsFilled] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const chatRef = useRef(null);
+  const vh = useVisualViewport();
 
   const navRef = useRef(nav);
   useEffect(() => { navRef.current = nav; });
@@ -231,8 +236,8 @@ export default function DrawGameScreen({ nav, roomCode }) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
-      y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
+      x: Number(Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)).toFixed(4)),
+      y: Number(Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)).toFixed(4)),
     };
   }, []);
 
@@ -253,6 +258,9 @@ export default function DrawGameScreen({ nav, roomCode }) {
     if (['line', 'rect', 'circle', 'triangle'].includes(tool)) {
       currentStrokeRef.current.points = [pts[0], pos];
     } else {
+      const last = pts[pts.length - 1];
+      const dist = Math.sqrt(Math.pow(pos.x - last.x, 2) + Math.pow(pos.y - last.y, 2));
+      if (dist < 0.005) return; // Decimation threshold
       pts.push(pos);
     }
 
@@ -281,9 +289,20 @@ export default function DrawGameScreen({ nav, roomCode }) {
   const handleSendGuess = async () => {
     const text = guessInput.trim();
     if (!text || !ds || ds.roundStatus !== 'drawing') return;
+    if (isDrawer) { setToast('ممنوع تخمن رسمتك! 🤫'); setGuessInput(''); return; }
     if ((ds.guessersDone || []).includes(myUid)) return;
     setGuessInput('');
     await submitDrawGuess(roomCode, myUid, userProfile.username, text, room?.drawTime || 80);
+  };
+
+  const handleExit = async () => {
+    await leaveRoom(roomCode, myUid, isHost);
+    navRef.current.toHome();
+  };
+
+  const handleFreeze = async () => {
+    if (!isDrawer || ds?.powerupUsed) return;
+    await freezeDrawTime(roomCode);
   };
 
 
@@ -295,7 +314,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
   const myAlreadyGuessed = (ds.guessersDone || []).includes(myUid);
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-yellow)', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'var(--bg-yellow)', position: 'relative', overflow: 'hidden' }}>
 
       {/* Modern Floating Header */}
       <div style={{
@@ -306,6 +325,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ padding: '6px 12px', fontSize: 13, border: '2px solid var(--bg-dark-purple)', marginLeft: 8 }}>✕</button>
           <div style={{ position: 'relative' }}>
              <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={36} />
              <div style={{ position: 'absolute', bottom: -2, right: -2, fontSize: 14 }}>🎨</div>
@@ -443,6 +463,14 @@ export default function DrawGameScreen({ nav, roomCode }) {
                 <button onClick={() => setIsFilled(!isFilled)} title="تعبئة الأشكال" style={{ width: 38, height: 38, border: 'none', background: isFilled ? 'var(--bg-yellow)' : 'transparent', borderRadius: 8, fontSize: 18 }}>{isFilled ? '⬛' : '⬜'}</button>
                 <button onClick={() => undoLastStroke(roomCode)} title="تراجع" style={{ width: 38, height: 38, border: 'none', background: 'transparent', fontSize: 18 }}>↩️</button>
                 <button onClick={() => clearDrawCanvas(roomCode)} title="مسح الكل" style={{ width: 38, height: 38, border: 'none', background: 'transparent', fontSize: 18 }}>🗑️</button>
+                <button 
+                  onClick={handleFreeze} 
+                  disabled={ds.powerupUsed}
+                  className={`btn ${ds.powerupUsed ? 'btn-white' : 'btn-yellow'}`} 
+                  style={{ width: 'auto', padding: '0 8px', fontSize: 12, height: 38, opacity: ds.powerupUsed ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 4, borderRadius: 8, boxShadow: 'none' }}
+                >
+                  {ds.powerupUsed ? '⏳' : '❄️'}
+                 </button>
              </div>
              <div style={{ height: 24, width: 2, background: 'rgba(0,0,0,0.1)' }} />
              <button 
@@ -528,6 +556,34 @@ export default function DrawGameScreen({ nav, roomCode }) {
         <div style={{ padding: 20, textAlign: 'center' }}>
           <h3>الكلمة كانت: {ds.chosenWord}</h3>
           <button className="btn btn-yellow" onClick={() => isHost && nextDrawRound(roomCode)}>الجولة التالية</button>
+        </div>
+      )}
+
+      {showExitConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card slide-up" style={{ padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
+            <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 12px' }}>تغادر الغرفة؟</h3>
+            <p style={{ fontSize: 14, color: 'var(--bg-dark-purple)', opacity: 0.7, marginBottom: 20 }}>ستخسر نقاطك الحالية في هذه اللعبة.</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ flex: 1, padding: 14 }}>لأ</button>
+              <button onClick={handleExit} className="btn btn-pink" style={{ flex: 1, padding: 14 }}>اخرج</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showExitConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card slide-up" style={{ padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
+            <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 12px' }}>تغادر الغرفة؟</h3>
+            <p style={{ fontSize: 14, color: 'var(--bg-dark-purple)', opacity: 0.7, marginBottom: 20 }}>ستخسر نقاطك الحالية في هذه اللعبة.</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ flex: 1, padding: 14 }}>لأ</button>
+              <button onClick={handleExit} className="btn btn-pink" style={{ flex: 1, padding: 14 }}>اخرج</button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -4,7 +4,7 @@ import { db, auth } from '../firebase/config';
 import { listenToRoom, updateGameState, leaveRoom, resolveChallenge } from '../firebase/rooms';
 import { normalizeArabic } from '../utils/aiLogic';
 import { appCategories } from '../data/categories';
-import { playSound, getHornType } from '../utils/audio';
+import { playSound, getHornType, previewHorn } from '../utils/audio';
 
 const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
 
@@ -213,8 +213,8 @@ export function useRoom(roomCode) {
 
   // ── Leave room ───────────────────────────────────────────────
   const doLeaveRoom = useCallback(async () => {
-    await leaveRoom(roomCode, uid, isHost, room?.playerOrder);
-  }, [roomCode, uid, isHost, room]);
+    await leaveRoom(roomCode, uid, isHost);
+  }, [roomCode, uid, isHost]);
 
   // ── Timer expiry (only active player writes) ─────────────────
   useEffect(() => {

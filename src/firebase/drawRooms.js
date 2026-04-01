@@ -237,6 +237,26 @@ export async function endDrawRound(roomCode) {
   });
 }
 
+export async function freezeDrawTime(roomCode, extraSeconds = 15) {
+  const snap = await getDoc(doc(db, 'rooms', roomCode));
+  const room = snap.data();
+  const ds = room?.drawState;
+  if (!ds || ds.roundStatus !== 'drawing' || ds.powerupUsed) return;
+
+  const newRoundEndsAt = (ds.roundEndsAt || Date.now()) + (extraSeconds * 1000);
+  
+  await updateDoc(doc(db, 'rooms', roomCode), {
+    'drawState.roundEndsAt': newRoundEndsAt,
+    'drawState.powerupUsed': true,
+    'drawState.messages': arrayUnion({
+      uid: 'system',
+      username: 'المنادي',
+      text: `❄️ تم تجميد الوقت! +${extraSeconds} ثانية إضافية`,
+      ts: Date.now()
+    }),
+  });
+}
+
 export async function nextDrawRound(roomCode) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
   const room = snap.data();
@@ -274,5 +294,6 @@ export async function nextDrawRound(roomCode) {
     'drawState.guessersDone': [],
     'drawState.roundScores': {},
     'drawState.bgFill': null,
+    'drawState.powerupUsed': false,
   });
 }

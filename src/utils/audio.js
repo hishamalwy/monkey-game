@@ -286,7 +286,7 @@ export const stopHorn = () => {
   hornNodes = null;
 };
 
-export const previewHorn = (typeId) => {
+export function previewHorn(typeId) {
   startHorn(typeId);
   setTimeout(() => { stopHorn(); }, 600);
-};
+}
