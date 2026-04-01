@@ -79,7 +79,12 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
       <header style={{ padding: '16px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-        <h2 className="title-glitch" style={{ margin: 0, fontSize: 24, transform: 'none' }}>كلكس!</h2>
+        <div>
+          <h2 className="title-glitch" style={{ margin: 0, fontSize: 24, transform: 'none', lineHeight: 1 }}>كلكس!</h2>
+          <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--bg-pink)' }}>
+             قرد الـ {room.category === 'objects' ? 'أشياء' : room.category === 'clubs' ? 'أندية' : room.category === 'countries' ? 'بلاد' : room.category || 'عام' }
+          </div>
+        </div>
         <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ padding: '8px 16px', fontSize: 14 }}>✕ خروج</button>
       </header>
 

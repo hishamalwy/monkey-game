@@ -9,13 +9,29 @@ import {
 import Toast from '../components/ui/Toast';
 
 const COLORS = [
-  '#1C1040', '#FFFFFF', '#6B7280', '#D1D5DB', // Dark, White, Gray, Light Gray
-  '#FF006E', '#4361EE', '#39FF14', '#FFE300', // Pink, Blue, Green, Yellow
-  '#FF6B00', '#8B4513', '#7209B7', '#480CA8', // Orange, Brown, Purple, Deep Purple
-  '#F72585', '#4CC9F0', '#B5179E', '#560BAD', // Hot Pink, Sky Blue, Magenta, Indigo
-  '#E63946', '#A8DADC', '#457B9D', '#1D3557', // Red, Aqua, Steel, Navy
+  '#FF006E', '#39FF14', '#FFE300', '#FF6B00', '#4361EE', 
+  '#F72585', '#4CC9F0', '#7209B7', '#FFFFFF', '#1C1040'
 ];
-const BRUSH_SIZES = { thin: 3, medium: 8, thick: 18, fat: 40 };
+const BRUSH_SIZES = { thin: 4, medium: 10, thick: 22, fat: 48 };
+
+const ToolIcon = ({ type, active }) => {
+  const color = active ? 'var(--bg-pink)' : 'var(--bg-dark-purple)';
+  if (type === 'pen') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+    </svg>
+  );
+  if (type === 'eraser') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z"/><path d="M17 17L7 7"/>
+    </svg>
+  );
+  if (type === 'line') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5" /></svg>;
+  if (type === 'rect') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>;
+  if (type === 'circle') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"><circle cx="12" cy="12" r="9" /></svg>;
+  if (type === 'triangle') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"><path d="M12 3L2 20h20L12 3z" /></svg>;
+  return null;
+};
 
 function drawStrokeOnCtx(ctx, stroke, W, H) {
   if (!stroke.points || stroke.points.length < 2) return;
@@ -66,6 +82,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
   const [guessInput, setGuessInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(null);
   const [chooseTimer, setChooseTimer] = useState(10);
+  const [hintCooldown, setHintCooldown] = useState(0);
 
   const canvasRef = useRef(null);
   const isDrawingRef = useRef(false);
@@ -147,7 +164,11 @@ export default function DrawGameScreen({ nav, roomCode }) {
 
   // --- Auto scroll chat ---
   useEffect(() => {
-    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    if (chatRef.current) {
+      setTimeout(() => {
+        chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      }, 50);
+    }
   }, [ds?.messages]);
 
   // --- Auto-advance after reveal (host, 4.5s) ---
@@ -156,6 +177,13 @@ export default function DrawGameScreen({ nav, roomCode }) {
     const id = setTimeout(() => nextDrawRound(roomCode).catch(() => {}), 4500);
     return () => clearTimeout(id);
   }, [ds?.roundStatus, isHost, roomCode]);
+
+  // --- Hint Cooldown timer ---
+  useEffect(() => {
+    if (hintCooldown <= 0) return;
+    const id = setInterval(() => setHintCooldown(p => Math.max(0, p - 1)), 1000);
+    return () => clearInterval(id);
+  }, [hintCooldown]);
 
   // --- Canvas pointer helpers ---
   const getCanvasPos = useCallback((e) => {
@@ -220,83 +248,179 @@ export default function DrawGameScreen({ nav, roomCode }) {
     await submitDrawGuess(roomCode, myUid, userProfile.username, text, room?.drawTime || 80);
   };
 
-  if (!room || !ds) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎨</div>;
-
   // --- Choosing phase timer ---
   useEffect(() => {
-    if (ds.roundStatus !== 'choosing') return;
+    if (!ds || ds.roundStatus !== 'choosing') return;
     setChooseTimer(15);
     const id = setInterval(() => {
       setChooseTimer(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(id);
-  }, [ds.roundStatus, ds.currentRound]);
+  }, [ds?.roundStatus, ds?.currentRound]);
+
+  if (!room || !ds) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎨</div>;
 
   const players = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
   const drawerPlayer = room.players[ds.drawerUid];
   const myAlreadyGuessed = (ds.guessersDone || []).includes(myUid);
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-yellow)' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-yellow)', position: 'relative', overflow: 'hidden' }}>
 
-      {/* Header */}
+      {/* Modern Floating Header */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 14px', borderBottom: '3px solid var(--bg-dark-purple)', flexShrink: 0,
+        margin: '12px 14px', padding: '10px 16px', 
+        background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)',
+        border: '3px solid var(--bg-dark-purple)', borderRadius: '20px',
+        boxShadow: '0 8px 0 rgba(45,27,78,0.2), var(--brutal-shadow)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10
       }}>
-        <div style={{ fontSize: 13, fontWeight: 900 }}>{ds.currentRound}/{ds.totalRounds}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={24} />
-          <span style={{ fontSize: 13, fontWeight: 900 }}>{isDrawer ? '🎨 ارسم!' : `${drawerPlayer?.username} يرسم`}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ position: 'relative' }}>
+             <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={36} />
+             <div style={{ position: 'absolute', bottom: -2, right: -2, fontSize: 14 }}>🎨</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-pink)', lineHeight: 1 }}>الرّسام</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>{drawerPlayer?.username}</div>
+          </div>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>{ds.roundStatus === 'choosing' ? chooseTimer : (timeLeft ?? '')}</div>
+        
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-muted)' }}>جولة</div>
+          <div style={{ fontSize: 16, fontWeight: 900 }}>{ds.currentRound}/{ds.totalRounds}</div>
+        </div>
+
+        <div style={{ 
+          width: 50, height: 50, borderRadius: '50%', border: '4px solid var(--bg-dark-purple)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: (timeLeft ?? 0) <= 10 ? 'var(--bg-pink)' : 'white',
+          color: (timeLeft ?? 0) <= 10 ? 'white' : 'var(--bg-dark-purple)',
+          transition: 'all 0.3s ease'
+        }}>
+          <span style={{ fontSize: 18, fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
+            {ds.roundStatus === 'choosing' ? chooseTimer : (timeLeft ?? '')}
+          </span>
+        </div>
       </div>
 
-      {ds.roundStatus === 'choosing' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20, textAlign: 'center' }}>
+      {/* Word Reminder (Drawer) or Hint (Guesser) */}
+      {ds.roundStatus === 'drawing' && (
+        <div style={{ 
+          padding: '4px 14px', textAlign: 'center', background: 'rgba(255,255,255,0.5)',
+          borderBottom: '2px solid var(--bg-dark-purple)', zIndex: 11
+        }}>
           {isDrawer ? (
-            <div className="pop">
-              <h2 style={{ marginBottom: 20 }}>اختر كلمة لترسمها:</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 300 }}>
-                {(ds.wordOptions || []).map(word => (
-                  <button key={word} onClick={() => chooseDrawWord(roomCode, word)} className="btn btn-white" style={{ padding: 16, fontSize: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--color-muted)' }}>أنت ترسم:</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--bg-pink)' }}>{ds.chosenWord}</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <span style={{ fontSize: 24, fontWeight: 900, letterSpacing: '0.15em', fontVariantCaps: 'all-small-caps', color: 'var(--bg-dark-purple)' }}>
+                {ds.hint}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {ds.roundStatus === 'choosing' && (
+        <div className="slide-up" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          {isDrawer ? (
+            <div style={{ width: '100%', maxWidth: 320 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 900, textAlign: 'center', marginBottom: 24, color: 'var(--bg-dark-purple)', textShadow: '2px 2px 0 white' }}>
+                كلماتك لهذا اليوم 🔥
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {(ds.wordOptions || []).map((word, i) => (
+                  <button 
+                    key={word} 
+                    onClick={() => chooseDrawWord(roomCode, word)} 
+                    className="btn btn-white" 
+                    style={{ 
+                      padding: '20px', fontSize: 20, borderRadius: '16px',
+                      animation: `slideUp 0.3s ease ${i * 0.1}s both`
+                    }}
+                  >
                     {word}
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div>
-              <div style={{ fontSize: 64, marginBottom: 20 }}>🤔</div>
-              <h2 style={{ fontWeight: 900 }}>{drawerPlayer?.username} يختار كلمة الآن...</h2>
-              <p style={{ color: 'var(--color-muted)', fontWeight: 700 }}>استعد للتخمين!</p>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 80, marginBottom: 20, animation: 'pop 1s infinite' }}>🤔</div>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>
+                صاحبك بيفكر يورطكم في إيه...
+              </h2>
+              <p style={{ fontSize: 16, color: 'var(--color-muted)', fontWeight: 700, marginTop: 10 }}>
+                {drawerPlayer?.username} بيختار كلمة الآن
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Shapes & Colors (Drawer Only) */}
+      {/* Drawing Phase Tools (Drawer Only) */}
       {isDrawer && ds.roundStatus === 'drawing' && (
-        <div style={{ padding: '6px 10px', borderBottom: '2px solid rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 8 }}>
+        <div style={{ 
+          padding: '0 14px 10px', display: 'flex', flexDirection: 'column', gap: 8, zIndex: 5 
+        }}>
+          {/* Colors */}
+          <div style={{ 
+             display: 'flex', overflowX: 'auto', gap: 8, padding: '4px 2px',
+             scrollbarWidth: 'none'
+          }}>
             {COLORS.map(c => (
-              <button key={c} onClick={() => { setColor(c); if (tool === 'eraser') setTool('pen'); }}
-                style={{ height: 18, background: c, border: `2px solid ${color === c ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}` }} />
+              <button 
+                key={c} 
+                onClick={() => { setColor(c); if (tool === 'eraser') setTool('pen'); }}
+                style={{ 
+                  minWidth: 32, height: 32, borderRadius: '50%', background: c, 
+                  border: color === c ? '4px solid white' : '3px solid var(--bg-dark-purple)',
+                  boxShadow: color === c ? '0 0 10px rgba(0,0,0,0.3)' : 'none',
+                  transform: color === c ? 'scale(1.15)' : 'scale(1)',
+                  transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                }} 
+              />
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {['pen', 'line', 'rect', 'circle', 'triangle', 'eraser'].map(t => (
-              <button key={t} onClick={() => setTool(t)} className={`btn ${tool === t ? 'btn-pink' : 'btn-white'}`} style={{ padding: '4px 8px' }}>
-                {t === 'pen' ? '✏️' : t === 'line' ? '📏' : t === 'rect' ? '⬜' : t === 'circle' ? '⭕' : t === 'triangle' ? '△' : '🧹'}
-              </button>
-            ))}
-            {['thin', 'medium', 'thick', 'fat'].map(s => (
-              <button key={s} onClick={() => setBrushSize(s)} className={`btn ${brushSize === s ? 'btn-pink' : 'btn-white'}`} style={{ padding: '4px 8px' }}>
-                {s === 'thin' ? '•' : s === 'medium' ? '●' : s === 'thick' ? '⬤' : '⬛'}
-              </button>
-            ))}
-            <button onClick={() => fillBackground(roomCode, color)} className="btn btn-white" style={{ padding: '4px 8px' }}>🪣</button>
-            <button onClick={() => clearDrawCanvas(roomCode)} className="btn btn-white" style={{ padding: '4px 8px' }}>🗑️</button>
+          {/* Tools Pill */}
+          <div style={{ 
+            background: 'white', border: '3px solid var(--bg-dark-purple)', borderRadius: '16px',
+            padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            boxShadow: 'var(--brutal-shadow)'
+          }}>
+             <div style={{ display: 'flex', gap: 4 }}>
+                {['pen', 'eraser', 'line', 'rect', 'circle'].map(t => (
+                  <button 
+                    key={t} onClick={() => setTool(t)} 
+                    style={{ 
+                      width: 38, height: 38, borderRadius: '10px', border: 'none',
+                      background: tool === t ? 'var(--bg-yellow)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <ToolIcon type={t} active={tool === t} />
+                  </button>
+                ))}
+             </div>
+             <div style={{ height: 24, width: 2, background: 'rgba(0,0,0,0.1)' }} />
+             <div style={{ display: 'flex', gap: 4 }}>
+                <button onClick={() => fillBackground(roomCode, color)} title="تلوين الخلفية" style={{ width: 38, height: 38, border: 'none', background: 'transparent', fontSize: 18 }}>🪣</button>
+                <button onClick={() => clearDrawCanvas(roomCode)} title="مسح الكل" style={{ width: 38, height: 38, border: 'none', background: 'transparent', fontSize: 18 }}>🗑️</button>
+             </div>
+             <div style={{ height: 24, width: 2, background: 'rgba(0,0,0,0.1)' }} />
+             <button 
+                onClick={() => { revealHint(roomCode); setHintCooldown(12); }} 
+                disabled={ds.hintRevealCount >= (ds.wordLength || 0) - 1 || hintCooldown > 0}
+                className="btn btn-yellow" 
+                style={{ padding: '4px 12px', fontSize: 11, borderRadius: '8px', boxShadow: 'none', height: 38, opacity: (hintCooldown > 0) ? 0.6 : 1 }}
+             >
+                {hintCooldown > 0 ? `انتظر ${hintCooldown}ث` : 'كشف حرف 💡'}
+             </button>
           </div>
         </div>
       )}
@@ -323,19 +447,46 @@ export default function DrawGameScreen({ nav, roomCode }) {
 
       {/* Guessing Area */}
       {!isDrawer && ds.roundStatus === 'drawing' && (
-        <div style={{ padding: 10, borderTop: 'var(--brutal-border)' }}>
-          <div ref={chatRef} style={{ maxHeight: 100, overflowY: 'auto', marginBottom: 8 }}>
+        <div style={{ padding: '0 14px 14px', zIndex: 10 }}>
+          <div 
+             ref={chatRef} 
+             style={{ 
+               backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)',
+               border: '3px solid var(--bg-dark-purple)', borderRadius: '18px 18px 0 0',
+               maxHeight: 120, overflowY: 'auto', padding: '10px 12px',
+               marginBottom: -3, borderBottom: 'none'
+             }}
+          >
             {(ds.messages || []).map((m, i) => (
-              <div key={i} style={{ fontSize: 13, marginBottom: 2, textAlign: 'right' }}>
-                <span style={{ fontWeight: 900 }}>{m.username}:</span> {m.isCorrect && m.uid !== myUid ? 'خمّن الكلمة! ✅' : m.text}
+              <div key={i} style={{ 
+                fontSize: 13, marginBottom: 6, display: 'flex', gap: 6, 
+                flexDirection: 'row-reverse'
+              }}>
+                <span style={{ fontWeight: 900, color: m.isCorrect ? 'var(--bg-green)' : 'var(--bg-dark-purple)' }}>{m.username}:</span> 
+                <span style={{ 
+                  background: m.isCorrect ? 'var(--bg-green)' : 'white',
+                  color: m.isCorrect ? '#1C1040' : 'var(--bg-dark-purple)',
+                  padding: '2px 8px', borderRadius: '10px', border: '1px solid var(--bg-dark-purple)',
+                  fontSize: 12, fontWeight: 700
+                }}>
+                  {m.isCorrect && m.uid !== myUid ? 'خمّن الكلمة! ✅' : m.text}
+                </span>
               </div>
             ))}
           </div>
           {!myAlreadyGuessed && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendGuess()}
-                placeholder="اكتب تخمينك..." className="input-field" style={{ flex: 1 }} />
-              <button onClick={handleSendGuess} className="btn btn-pink">إرسال</button>
+            <div style={{ display: 'flex', gap: 8, background: 'white', padding: 8, border: '3px solid var(--bg-dark-purple)', borderRadius: '0 0 18px 18px', boxShadow: 'var(--brutal-shadow)' }}>
+              <input 
+                value={guessInput} 
+                onChange={e => setGuessInput(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleSendGuess()}
+                placeholder="اكتب تخمينك هنا..." 
+                className="input-field" 
+                style={{ flex: 1, border: 'none', boxShadow: 'none', background: 'transparent', padding: '8px' }} 
+              />
+              <button onClick={handleSendGuess} className="btn btn-pink" style={{ padding: '8px 20px', borderRadius: '12px', boxShadow: 'none' }}>
+                خمّن
+              </button>
             </div>
           )}
         </div>
