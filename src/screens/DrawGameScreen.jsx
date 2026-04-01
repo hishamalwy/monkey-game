@@ -4,7 +4,7 @@ import UserAvatar from '../components/ui/UserAvatar';
 import { listenToRoom } from '../firebase/rooms';
 import {
   chooseDrawWord, submitDrawGuess, addStroke, clearDrawCanvas,
-  fillBackground, endDrawRound, nextDrawRound, revealHint,
+  fillBackground, endDrawRound, nextDrawRound, revealHint, undoLastStroke,
 } from '../firebase/drawRooms';
 import Toast from '../components/ui/Toast';
 
@@ -14,11 +14,16 @@ const COLORS = [
 ];
 const BRUSH_SIZES = { thin: 4, medium: 10, thick: 22, fat: 48 };
 
-const ToolIcon = ({ type, active }) => {
+const ToolIcon = ({ type, active, isFilled }) => {
   const color = active ? 'var(--bg-pink)' : 'var(--bg-dark-purple)';
   if (type === 'pen') return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+    </svg>
+  );
+  if (type === 'glow') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
     </svg>
   );
   if (type === 'eraser') return (
@@ -27,20 +32,39 @@ const ToolIcon = ({ type, active }) => {
     </svg>
   );
   if (type === 'line') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5" /></svg>;
-  if (type === 'rect') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>;
-  if (type === 'circle') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"><circle cx="12" cy="12" r="9" /></svg>;
-  if (type === 'triangle') return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"><path d="M12 3L2 20h20L12 3z" /></svg>;
+  if (type === 'rect') return (
+     <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? 'var(--bg-pink)' : 'none'} stroke={color} strokeWidth="2.5">
+       <rect x="3" y="3" width="18" height="18" rx="2" fill={active && isFilled ? 'var(--bg-pink)' : 'none'} />
+     </svg>
+  );
+  if (type === 'circle') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? 'var(--bg-pink)' : 'none'} stroke={color} strokeWidth="2.5">
+      <circle cx="12" cy="12" r="9" fill={active && isFilled ? 'var(--bg-pink)' : 'none'} />
+    </svg>
+  );
+  if (type === 'triangle') return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill={active ? 'var(--bg-pink)' : 'none'} stroke={color} strokeWidth="2.5">
+      <path d="M12 3L2 20h20L12 3z" fill={active && isFilled ? 'var(--bg-pink)' : 'none'} />
+    </svg>
+  );
   return null;
 };
 
 function drawStrokeOnCtx(ctx, stroke, W, H) {
   if (!stroke.points || stroke.points.length < 2) return;
   const pts = stroke.points;
-  ctx.beginPath();
-  ctx.strokeStyle = stroke.tool === 'eraser' ? (stroke.bgFill || '#FFFFFF') : stroke.color;
   ctx.lineWidth = BRUSH_SIZES[stroke.size] || 8;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+
+  if (stroke.type === 'glow') {
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = stroke.color;
+  } else {
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.beginPath();
 
   if (stroke.type === 'line') {
     ctx.moveTo(pts[0].x * W, pts[0].y * H);
@@ -71,6 +95,12 @@ function drawStrokeOnCtx(ctx, stroke, W, H) {
     for (let i = 1; i < pts.length; i++) {
       ctx.lineTo(pts[i].x * W, pts[i].y * H);
     }
+  }
+
+  if (stroke.isFilled && ['rect', 'circle', 'triangle'].includes(stroke.type)) {
+    ctx.fillStyle = stroke.color;
+    ctx.fill();
+  } else {
     ctx.stroke();
   }
 }
@@ -91,6 +121,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
   const [tool, setTool] = useState('pen'); // pen, eraser, line, rect, circle, triangle
   const [color, setColor] = useState('#1C1040');
   const [brushSize, setBrushSize] = useState('medium');
+  const [isFilled, setIsFilled] = useState(false);
   const chatRef = useRef(null);
 
   const navRef = useRef(nav);
@@ -203,8 +234,8 @@ export default function DrawGameScreen({ nav, roomCode }) {
     e.preventDefault();
     const pos = getCanvasPos(e);
     isDrawingRef.current = true;
-    currentStrokeRef.current = { tool, color, size: brushSize, points: [pos] };
-  }, [isDrawer, tool, color, brushSize, getCanvasPos]);
+    currentStrokeRef.current = { tool, color, size: brushSize, points: [pos], isFilled };
+  }, [isDrawer, tool, color, brushSize, getCanvasPos, isFilled]);
 
   const handlePointerMove = useCallback((e) => {
     if (!isDrawer || !isDrawingRef.current || !currentStrokeRef.current) return;
@@ -393,7 +424,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
             boxShadow: 'var(--brutal-shadow)'
           }}>
              <div style={{ display: 'flex', gap: 4 }}>
-                {['pen', 'eraser', 'line', 'rect', 'circle'].map(t => (
+                {['pen', 'glow', 'eraser', 'line', 'rect', 'circle'].map(t => (
                   <button 
                     key={t} onClick={() => setTool(t)} 
                     style={{ 
@@ -403,13 +434,15 @@ export default function DrawGameScreen({ nav, roomCode }) {
                       transition: 'all 0.2s'
                     }}
                   >
-                    <ToolIcon type={t} active={tool === t} />
+                    <ToolIcon type={t} active={tool === t} isFilled={isFilled} />
                   </button>
                 ))}
              </div>
              <div style={{ height: 24, width: 2, background: 'rgba(0,0,0,0.1)' }} />
              <div style={{ display: 'flex', gap: 4 }}>
                 <button onClick={() => fillBackground(roomCode, color)} title="تلوين الخلفية" style={{ width: 38, height: 38, border: 'none', background: 'transparent', fontSize: 18 }}>🪣</button>
+                <button onClick={() => setIsFilled(!isFilled)} title="تعبئة الأشكال" style={{ width: 38, height: 38, border: 'none', background: isFilled ? 'var(--bg-yellow)' : 'transparent', borderRadius: 8, fontSize: 18 }}>{isFilled ? '⬛' : '⬜'}</button>
+                <button onClick={() => undoLastStroke(roomCode)} title="تراجع" style={{ width: 38, height: 38, border: 'none', background: 'transparent', fontSize: 18 }}>↩️</button>
                 <button onClick={() => clearDrawCanvas(roomCode)} title="مسح الكل" style={{ width: 38, height: 38, border: 'none', background: 'transparent', fontSize: 18 }}>🗑️</button>
              </div>
              <div style={{ height: 24, width: 2, background: 'rgba(0,0,0,0.1)' }} />

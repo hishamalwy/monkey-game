@@ -22,7 +22,7 @@ function useConfetti() {
 
 export default function GameOverScreen({ nav, roomCode }) {
   const { userProfile } = useAuth();
-  const { room, players, isHost, leaveRoom } = useRoom(roomCode);
+  const { room, players, isHost, leaveRoom, resetToLobby } = useRoom(roomCode);
   const confetti = useConfetti();
 
   // Determine winner = player with fewest quarterMonkeys
@@ -116,9 +116,20 @@ export default function GameOverScreen({ nav, roomCode }) {
             ))}
         </div>
 
+        {isHost ? (
+          <button onClick={resetToLobby} className="btn btn-yellow"
+            style={{ width: '100%', padding: '15px', fontSize: 17, marginBottom: 12 }}>
+            🔄 العودة للروم
+          </button>
+        ) : (
+          <p style={{ fontSize: 13, color: 'var(--color-muted)', fontWeight: 700, marginBottom: 12 }}>
+             بانتظار الهوست للعودة للغرفة...
+          </p>
+        )}
+
         <button onClick={handleLeave} className="btn btn-primary"
-          style={{ width: '100%', padding: '15px', fontSize: 17 }}>
-          العودة للرئيسية
+          style={{ width: '100%', padding: '15px', fontSize: 17, opacity: 0.8 }}>
+          🚪 مغادرة الغرفة
         </button>
       </div>
     </div>

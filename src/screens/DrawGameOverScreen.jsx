@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/ui/UserAvatar';
 import { useState, useEffect } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { listenToRoom, leaveRoom } from '../firebase/rooms';
 
 function useConfetti() {
@@ -31,9 +33,23 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
     return unsub;
   }, [roomCode]);
 
+  const isHost = room?.hostUid === userProfile?.uid;
+
+  const handleResetToLobby = async () => {
+    if (!isHost) return;
+    try {
+      await updateDoc(doc(db, 'rooms', roomCode), {
+        status: 'lobby',
+        playerOrder: room.playerOrder,
+        'drawState.roundStatus': 'none',
+        'gameState.currentWord': '',
+      });
+    } catch (e) { console.error(e); }
+  };
+
   const handleLeave = async () => {
     if (!room || !userProfile) { nav.toHome(); return; }
-    await leaveRoom(roomCode, userProfile.uid, room.hostUid === userProfile.uid, room.playerOrder);
+    await leaveRoom(roomCode, userProfile.uid, isHost, room.playerOrder);
     nav.toHome();
   };
 
@@ -121,8 +137,18 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
           <div style={{ height: 4 }} />
         </div>
 
-        <button onClick={handleLeave} className="btn btn-pink" style={{ width: '100%', padding: '15px', fontSize: 17 }}>
-          العودة للرئيسية
+        {isHost ? (
+          <button onClick={handleResetToLobby} className="btn btn-yellow" style={{ width: '100%', padding: '15px', fontSize: 17, marginBottom: 12 }}>
+            🔄 العودة للروم (تغيير اللعبة)
+          </button>
+        ) : (
+          <p style={{ fontSize: 13, color: 'var(--color-muted)', fontWeight: 700, marginBottom: 12 }}>
+            في انتظار الهوست للعودة للغرفة...
+          </p>
+        )}
+
+        <button onClick={handleLeave} className="btn btn-pink" style={{ width: '100%', padding: '15px', fontSize: 17, opacity: 0.8 }}>
+           🚪 مغادرة الغرفة
         </button>
       </div>
     </div>

@@ -47,57 +47,54 @@ export default function HomeScreen({ nav }) {
       </div>
 
       <div className="content-with-nav" style={{
-        flex: 1, overflowY: 'auto',
+        flex: 1, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
-        padding: '16px var(--space-lg)', gap: 'var(--space-lg)',
+        padding: '16px var(--space-lg)', gap: '16px',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        {/* Top Group: Avatar & Text grouped tightly */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-md)' }}>
-          {/* Avatar Card */}
-          <div style={{ position: 'relative' }}>
-            <div className="card" style={{
-               position: 'absolute', top: -12, right: -12, zIndex: 10,
-               background: 'var(--bg-green)', padding: '4px 12px',
-               transform: 'rotate(8deg)', fontSize: '0.85rem', fontWeight: 900,
-               whiteSpace: 'nowrap'
-            }}>
-              هلا {userProfile?.username || 'والله'}!
-            </div>
-            <div className="card" style={{ padding: 'var(--space-sm)', transform: 'rotate(-3deg)', width: 150, position: 'relative' }}>
-              <div style={{ background: '#FFC89D', border: 'var(--brutal-border)', overflow: 'hidden' }}>
-                <img src={hero} alt="monkey" style={{ width: '100%', height: 'auto', display: 'block', transform: 'scale(1.1) translateY(8px)' }} />
-              </div>
-            </div>
+        {/* Avatar Card */}
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <div className="card" style={{
+             position: 'absolute', top: -12, right: -12, zIndex: 10,
+             background: 'var(--bg-green)', padding: '5px 14px',
+             transform: 'rotate(8deg)', fontSize: '0.9rem', fontWeight: 900,
+             whiteSpace: 'nowrap'
+          }}>
+            هلا {userProfile?.username || 'والله'}!
           </div>
-
-          {/* Texts */}
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-            <h2 style={{ fontSize: 'clamp(1.6rem, 5vw, 2rem)', fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.15 }}>
-              هل أنت مستعد<br/>للبدء؟
-            </h2>
-            <p style={{ fontSize: '1.1rem', color: 'var(--bg-dark-purple)', margin: 0, fontWeight: 700, padding: '0 var(--space-md)' }}>
-              تحدى أصدقاءك في أغرب لعبة تواصل!
-            </p>
+          <div className="card" style={{ padding: 'var(--space-sm)', transform: 'rotate(-3deg)', width: 130, position: 'relative' }}>
+            <div style={{ background: '#FFC89D', border: 'var(--brutal-border)', overflow: 'hidden' }}>
+              <img src={hero} alt="monkey" style={{ width: '100%', height: 'auto', display: 'block', transform: 'scale(1.1) translateY(8px)' }} />
+            </div>
           </div>
         </div>
 
+        {/* Texts */}
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 4px', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+            هل أنت مستعد للبدء؟
+          </h2>
+          <p style={{ fontSize: 16, color: 'var(--bg-dark-purple)', margin: 0, fontWeight: 700 }}>
+            تحدى أصدقاءك في أغرب لعبة تواصل!
+          </p>
+        </div>
+
         {/* Main Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', width: '100%', maxWidth: 400 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 380 }}>
           <button
             onClick={nav.toOnlineSetup}
             className="btn btn-pink"
-            style={{ width: '100%', padding: '16px', fontSize: '1.4rem' }}
+            style={{ width: '100%', padding: '16px', fontSize: '1.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
           >
-            ابدأ لعبة
+            <span style={{ fontSize: 26 }}>🎮</span> ابدأ لعبة
           </button>
 
           {joining ? (
-            <div style={{ display: 'flex', gap: 'var(--space-sm)', width: '100%' }}>
+            <div style={{ display: 'flex', gap: 10, width: '100%' }}>
               <input
                 className="input-field"
-                placeholder="أدخل الكود"
+                placeholder="كود"
                 value={joinCode}
                 onChange={e => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={4}
@@ -105,18 +102,18 @@ export default function HomeScreen({ nav }) {
                 onKeyDown={e => e.key === 'Enter' && handleJoin()}
                 autoFocus
               />
-              <button onClick={handleJoin} disabled={loading} className="btn btn-yellow" style={{ padding: '0 var(--space-lg)', fontSize: '1.2rem' }}>
+              <button onClick={handleJoin} disabled={loading} className="btn btn-yellow" style={{ padding: '0 18px', fontSize: '1.2rem' }}>
                 انضم
               </button>
             </div>
           ) : (
-            <button onClick={() => setJoining(true)} className="btn btn-white" style={{ width: '100%', padding: '16px', fontSize: '1.2rem' }}>
-              انضم لغرفة
+            <button onClick={() => setJoining(true)} className="btn btn-white" style={{ width: '100%', padding: '16px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <span style={{ fontSize: 26 }}>🤝</span> انضم لغرفة
             </button>
           )}
 
-          <button onClick={nav.toLocalGame} className="btn btn-pink" style={{ width: '100%', padding: '16px', fontSize: '1.3rem' }}>
-            العب مع الكمبيوتر 🎮
+          <button onClick={nav.toLocalGame} className="btn btn-white" style={{ width: '100%', padding: '16px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <span style={{ fontSize: 26 }}>🤖</span> العب مع القرد
           </button>
         </div>
       </div>

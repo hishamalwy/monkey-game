@@ -61,6 +61,7 @@ export async function startDrawGame(roomCode) {
       strokes: [],
       messages: [],
       scores: Object.fromEntries(playerOrder.map(uid => [uid, 0])),
+      scoreTarget: 120,
       roundScores: {},
       guessersDone: [],
       bgFill: null,
@@ -106,9 +107,10 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
   const timeRemaining = ds.roundEndsAt
     ? Math.max(0, (ds.roundEndsAt - Date.now()) / 1000)
     : 0;
-  const ratio = Math.min(1, timeRemaining / drawTime);
-  // Award points: max 100, min 50 if correct
-  const points = correct ? Math.max(50, Math.round(ratio * 100)) : 0;
+  // Award points based on rank: 1st=15, 2nd=12, 3rd=10, others=5
+  const rank = (ds.guessersDone || []).length;
+  const rankPoints = [15, 12, 10, 8, 6, 5];
+  const points = rank < rankPoints.length ? rankPoints[rank] : 5;
 
   const newMessage = {
     uid,
@@ -131,6 +133,15 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
        patch[`drawState.scores.${uid}`] = (ds.scores[uid] || 0) + points;
     }
     patch['drawState.guessersDone'] = arrayUnion(uid);
+    
+    // Check if everyone guessed correctly
+    const othersCount = (room.playerOrder?.length || 1) - 1;
+    const nowDone = (ds.guessersDone?.length || 0) + 1;
+    if (nowDone >= othersCount) {
+       patch['drawState.messages'] = arrayUnion({
+         uid: 'system', username: 'المنادي', text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now()
+       }, newMessage);
+    }
   }
 
   await updateDoc(doc(db, 'rooms', roomCode), patch);
@@ -148,6 +159,16 @@ export async function clearDrawCanvas(roomCode) {
     'drawState.strokes': [],
     'drawState.bgFill': null,
   });
+}
+
+export async function undoLastStroke(roomCode) {
+  const roomRef = doc(db, 'rooms', roomCode);
+  const snap = await getDoc(roomRef);
+  const ds = snap.data()?.drawState;
+  if (!ds || !ds.strokes || ds.strokes.length === 0) return;
+  const newStrokes = [...ds.strokes];
+  newStrokes.pop();
+  await updateDoc(roomRef, { 'drawState.strokes': newStrokes });
 }
 
 export async function fillBackground(roomCode, color) {

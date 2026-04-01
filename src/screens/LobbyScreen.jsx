@@ -158,8 +158,11 @@ export default function LobbyScreen({ nav, roomCode }) {
       }}>
         {/* placeholder for visual balance */}
         <div style={{ width: 90 }} />
-        <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, textAlign: 'center', lineHeight: 1.3 }}>
-          غرفة الانتظار<br/>واللاعبين
+        <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, textAlign: 'center', lineHeight: 1.2 }}>
+          {room.mode === 'draw' ? 'الرسّام الفنان' : 'قرد الكلكس'}<br/>
+          <span style={{ fontSize: 13, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 8px', borderRadius: 4 }}>
+            {room.category === 'objects' ? 'أشياء' : room.category === 'clubs' ? 'أندية' : 'بلاد'}
+          </span>
         </h1>
         <button
           onClick={handleLeave}

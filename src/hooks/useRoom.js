@@ -218,6 +218,15 @@ export function useRoom(roomCode) {
     }
   }, [computedTimer, isMyTurn, room?.status]);
 
+  const resetToLobby = useCallback(async () => {
+    if (!isHost) return;
+    await updateDoc(doc(db, 'rooms', roomCode), {
+      status: 'lobby',
+      'drawState.roundStatus': 'none',
+      'gameState.currentWord': '',
+    });
+  }, [isHost, roomCode]);
+
   return {
     room,
     players,
@@ -227,9 +236,9 @@ export function useRoom(roomCode) {
     pressLetter,
     pressDelete,
     pressChallenge,
-    pressChallenge,
     confirmNextRound,
     triggerHorn: () => triggerHorn(roomCode, getHornType()),
     leaveRoom: doLeaveRoom,
+    resetToLobby,
   };
 }
