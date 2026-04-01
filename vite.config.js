@@ -1,15 +1,11 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import tailwindcss from 'tailwindcss';
-import autoprefixer from 'autoprefixer';
 
 export default defineConfig({
   plugins: [react()],
-  // GitHub Pages base path (repo name)
+  // اسم المستودع على GitHub Pages
   base: '/monkey-game/',
-  css: {
-    postcss: {
-      plugins: [tailwindcss(), autoprefixer()],
-    },
-  },
+
+  // لا تحتاج لتحديد PostCSS هنا؛ Vite سيقرأ تلقائيًا postcss.config.cjs
 });
