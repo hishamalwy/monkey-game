@@ -107,8 +107,8 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
     ? Math.max(0, (ds.roundEndsAt - Date.now()) / 1000)
     : 0;
   const ratio = Math.min(1, timeRemaining / drawTime);
-  // Award points: max 100, min 45 if correct
-  const points = correct ? Math.max(45, Math.round(ratio * 100)) : 0;
+  // Award points: max 100, min 50 if correct
+  const points = correct ? Math.max(50, Math.round(ratio * 100)) : 0;
 
   const newMessage = {
     uid,
@@ -193,7 +193,7 @@ export async function endDrawRound(roomCode) {
   const correctCount = ds.guessersDone?.length || 0;
 
   const drawerPoints = guessers.length > 0
-    ? Math.round((correctCount / guessers.length) * 60)
+    ? Math.round((correctCount / guessers.length) * 75) // 75 point max per person
     : 0;
 
   const newScores = { ...(ds.scores || {}) };

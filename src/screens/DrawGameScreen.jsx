@@ -222,12 +222,22 @@ export default function DrawGameScreen({ nav, roomCode }) {
 
   if (!room || !ds) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎨</div>;
 
+  // --- Choosing phase timer ---
+  useEffect(() => {
+    if (ds.roundStatus !== 'choosing') return;
+    setChooseTimer(15);
+    const id = setInterval(() => {
+      setChooseTimer(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [ds.roundStatus, ds.currentRound]);
+
   const players = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
   const drawerPlayer = room.players[ds.drawerUid];
   const myAlreadyGuessed = (ds.guessersDone || []).includes(myUid);
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-yellow)' }}>
 
       {/* Header */}
       <div style={{
@@ -239,8 +249,31 @@ export default function DrawGameScreen({ nav, roomCode }) {
           <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={24} />
           <span style={{ fontSize: 13, fontWeight: 900 }}>{isDrawer ? '🎨 ارسم!' : `${drawerPlayer?.username} يرسم`}</span>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>{timeLeft ?? ''}</div>
+        <div style={{ fontSize: 22, fontWeight: 900 }}>{ds.roundStatus === 'choosing' ? chooseTimer : (timeLeft ?? '')}</div>
       </div>
+
+      {ds.roundStatus === 'choosing' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20, textAlign: 'center' }}>
+          {isDrawer ? (
+            <div className="pop">
+              <h2 style={{ marginBottom: 20 }}>اختر كلمة لترسمها:</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 300 }}>
+                {(ds.wordOptions || []).map(word => (
+                  <button key={word} onClick={() => chooseDrawWord(roomCode, word)} className="btn btn-white" style={{ padding: 16, fontSize: 18 }}>
+                    {word}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 64, marginBottom: 20 }}>🤔</div>
+              <h2 style={{ fontWeight: 900 }}>{drawerPlayer?.username} يختار كلمة الآن...</h2>
+              <p style={{ color: 'var(--color-muted)', fontWeight: 700 }}>استعد للتخمين!</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Shapes & Colors (Drawer Only) */}
       {isDrawer && ds.roundStatus === 'drawing' && (
@@ -269,12 +302,21 @@ export default function DrawGameScreen({ nav, roomCode }) {
       )}
 
       {/* Canvas Area */}
-      <div style={{ flex: 1, position: 'relative', background: '#eee', padding: 10 }}>
-        <div style={{ width: '100%', height: '100%', background: '#fff', border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)', overflow: 'hidden' }}>
+      <div style={{ flex: '1 1 auto', position: 'relative', background: '#eee', padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <div style={{ 
+          aspectRatio: '1/1', 
+          width: '100%', 
+          maxWidth: 'min(calc(100dvh - 380px), 100%)',
+          maxHeight: '100%',
+          background: '#fff', 
+          border: 'var(--brutal-border)', 
+          boxShadow: 'var(--brutal-shadow)', 
+          position: 'relative'
+        }}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', touchAction: 'none' }}
             onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} />
           {myAlreadyGuessed && !isDrawer && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(57,255,20,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>✅</div>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(57,255,20,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, pointerEvents: 'none' }}>✅</div>
           )}
         </div>
       </div>

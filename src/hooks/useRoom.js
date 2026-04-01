@@ -12,8 +12,11 @@ function checkGameOver(players, playerOrder) {
   return playerOrder.filter(uid => players[uid] && (players[uid].quarterMonkeys || 0) < MONKEY_LIMIT);
 }
 
-export async function triggerHorn(roomCode) {
-  await updateGameState(roomCode, { 'gameState.lastHornAt': Date.now() });
+export async function triggerHorn(roomCode, hornType) {
+  await updateGameState(roomCode, { 
+    'gameState.lastHornAt': Date.now(),
+    'gameState.lastHornType': hornType 
+  });
 }
 
 export function useRoom(roomCode) {
@@ -21,6 +24,7 @@ export function useRoom(roomCode) {
   const [computedTimer, setComputedTimer] = useState(null);
   const timerRef = useRef(null);
   const penaltyFiredRef = useRef(false); // prevent double-fire on timer
+  const lastHornHandledRef = useRef(0); // Track last handled horn timestamp
   const uid = auth.currentUser?.uid;
 
   useEffect(() => {
@@ -33,9 +37,11 @@ export function useRoom(roomCode) {
       }
       
       // Listen for horn event
-      if (data?.gameState?.lastHornAt && data.gameState.lastHornAt !== room?.gameState?.lastHornAt) {
-        if (data.gameState.currentPlayerUid !== uid) { // only play if it's not my own manual trigger
-           playSound('horn'); // I should define 'horn' sound or just use existing
+      if (data?.gameState?.lastHornAt && data.gameState.lastHornAt > lastHornHandledRef.current) {
+        lastHornHandledRef.current = data.gameState.lastHornAt;
+        if (data.gameState.currentPlayerUid !== uid) { 
+           const typeToPlay = data.gameState.lastHornType || 'classic';
+           previewHorn(typeToPlay); 
         }
       }
     });
@@ -223,7 +229,7 @@ export function useRoom(roomCode) {
     pressChallenge,
     pressChallenge,
     confirmNextRound,
-    triggerHorn: () => triggerHorn(roomCode),
+    triggerHorn: () => triggerHorn(roomCode, getHornType()),
     leaveRoom: doLeaveRoom,
   };
 }

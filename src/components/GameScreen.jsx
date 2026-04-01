@@ -5,7 +5,8 @@ import UserAvatar from './ui/UserAvatar';
 const EN_TO_AR = {
   'q':'ض', 'w':'ص', 'e':'ث', 'r':'ق', 't':'ف', 'y':'غ', 'u':'ع', 'i':'ه', 'o':'خ', 'p':'ح', '[':'ج', ']':'د',
   'a':'ش', 's':'س', 'd':'ي', 'f':'ب', 'g':'ل', 'h':'ا', 'j':'ت', 'k':'ن', 'l':'م', ';':'ك', '\'':'ط',
-  'z':'ئ', 'x':'ء', 'c':'ؤ', 'v':'ر', 'b':'لا', 'n':'ى', 'm':'ة', ',':'و', '.':'ز', '/':'ظ'
+  'z':'ئ', 'x':'ء', 'c':'ؤ', 'v':'ر', 'b':'لا', 'n':'ى', 'm':'ة', ',':'و', '.':'ز', '/':'ظ',
+  '،': 'و' 
 };
 
 export default function GameScreen({
@@ -46,6 +47,9 @@ export default function GameScreen({
       if (e.key === 'Backspace') { e.preventDefault(); onDelete(); return; }
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onKeyPress(' '); return; }
       let char = e.key;
+      // 1. If it's already an Arabic char from a native layout, accept it
+      if (/^[\u0600-\u06FF]$/.test(char)) { onKeyPress(char); return; }
+      // 2. Otherwise map from English layout
       if (/^[a-zA-Z]$/.test(char)) char = EN_TO_AR[char.toLowerCase()];
       if (char && /^[\u0600-\u06FF\s]+$/.test(char)) onKeyPress(char);
     };

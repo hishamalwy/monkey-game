@@ -72,11 +72,11 @@ export const setHornType = (id) => localStorage.setItem('hornType', id);
 // ── Horn (hold to honk) ─────────────────────────────────────────────
 let hornNodes = null;
 
-export const startHorn = () => {
+export const startHorn = (overrideType) => {
   resume();
   if (hornNodes) return;
 
-  const type = getHornType();
+  const type = overrideType || getHornType();
   const gain = audioCtx.createGain();
   gain.connect(audioCtx.destination);
   const now = audioCtx.currentTime;
@@ -280,10 +280,7 @@ export const stopHorn = () => {
   hornNodes = null;
 };
 
-// Preview a horn sound for 0.6s without holding
 export const previewHorn = (typeId) => {
-  const prev = getHornType();
-  setHornType(typeId);
-  startHorn();
-  setTimeout(() => { stopHorn(); setHornType(prev); }, 600);
+  startHorn(typeId);
+  setTimeout(() => { stopHorn(); }, 600);
 };
