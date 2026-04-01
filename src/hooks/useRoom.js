@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { serverTimestamp, doc, updateDoc, increment, deleteField, onSnapshot, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { listenToRoom, updateGameState, leaveRoom, resolveChallenge } from '../firebase/rooms';
 import { normalizeArabic } from '../utils/aiLogic';
@@ -12,7 +12,7 @@ function checkGameOver(players, playerOrder) {
   return playerOrder.filter(uid => players[uid] && (players[uid].quarterMonkeys || 0) < MONKEY_LIMIT);
 }
 
-export async function triggerHorn(roomCode, hornType) {
+export async function syncHornState(roomCode, hornType) {
   await updateGameState(roomCode, { 
     'gameState.lastHornAt': Date.now(),
     'gameState.lastHornType': hornType 
@@ -25,6 +25,7 @@ export function useRoom(roomCode) {
   const timerRef = useRef(null);
   const penaltyFiredRef = useRef(false); // prevent double-fire on timer
   const lastHornHandledRef = useRef(0); // Track last handled horn timestamp
+  const penaltyProcessingRef = useRef(false); // Prevent concurrent penalty updates
   const uid = auth.currentUser?.uid;
 
   useEffect(() => {
@@ -88,35 +89,41 @@ export function useRoom(roomCode) {
 
   // ── Apply penalty & check for game over ──────────────────────
   const applyPenalty = useCallback(async (loserUid, reason, type = 'penalty') => {
-    if (!room) return;
-    const newPlayers = { ...room.players };
-    if (newPlayers[loserUid]) {
-      newPlayers[loserUid] = {
-        ...newPlayers[loserUid],
-        quarterMonkeys: (newPlayers[loserUid].quarterMonkeys || 0) + 1,
-      };
-    }
+    if (!room || room.status !== 'playing' || penaltyProcessingRef.current) return;
+    penaltyProcessingRef.current = true;
+    
+    try {
+      const newPlayers = { ...room.players };
+      if (newPlayers[loserUid]) {
+        newPlayers[loserUid] = {
+          ...newPlayers[loserUid],
+          quarterMonkeys: (newPlayers[loserUid].quarterMonkeys || 0) + 1,
+        };
+      }
 
-    const surviving = checkGameOver(newPlayers, room.playerOrder || []);
+      const surviving = checkGameOver(newPlayers, room.playerOrder || []);
 
-    // Game over if only 1 (or 0) survivors
-    if (surviving.length <= 1) {
-      playSound('win');
-      const winnerUid = surviving[0] || null;
+      // Game over if only 1 (or 0) survivors
+      if (surviving.length <= 1) {
+        playSound('win');
+        const winnerUid = surviving[0] || null;
+        await updateGameState(roomCode, {
+          status: 'game_over',
+          players: newPlayers,
+          lastResult: { type: 'game_over', loserUid, winnerUid, reason },
+        });
+        return;
+      }
+
+      playSound('lose');
       await updateGameState(roomCode, {
-        status: 'game_over',
+        status: 'round_result',
         players: newPlayers,
-        lastResult: { type: 'game_over', loserUid, winnerUid, reason },
+        lastResult: { type, loserUid, reason },
       });
-      return;
+    } finally {
+      penaltyProcessingRef.current = false;
     }
-
-    playSound('lose');
-    await updateGameState(roomCode, {
-      status: 'round_result',
-      players: newPlayers,
-      lastResult: { type, loserUid, reason },
-    });
   }, [room, roomCode]);
 
   // ── Letter press ─────────────────────────────────────────────
@@ -193,6 +200,7 @@ export function useRoom(roomCode) {
       }
     }
 
+    penaltyFiredRef.current = false;
     await updateGameState(roomCode, {
       status: 'playing',
       lastResult: null,
@@ -237,7 +245,7 @@ export function useRoom(roomCode) {
     pressDelete,
     pressChallenge,
     confirmNextRound,
-    triggerHorn: () => triggerHorn(roomCode, getHornType()),
+    triggerHorn: () => syncHornState(roomCode, getHornType()),
     leaveRoom: doLeaveRoom,
     resetToLobby,
   };

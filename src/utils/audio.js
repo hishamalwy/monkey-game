@@ -1,6 +1,13 @@
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+export const getHornType = () => localStorage.getItem('hornType') || 'classic';
+export const setHornType = (id) => localStorage.setItem('hornType', id);
 
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const resume = () => { if (audioCtx.state === 'suspended') audioCtx.resume(); };
+
+// Unlock audio context on first user interaction
+['mousedown', 'touchstart', 'keydown'].forEach(evt => 
+  window.addEventListener(evt, resume, { once: true, passive: true })
+);
 
 export const playSound = (type) => {
   resume();
@@ -66,8 +73,7 @@ export const HORN_TYPES = [
   { id: 'drop',      label: 'نقطة مياه 💧', emoji: '💧' },
 ];
 
-export const getHornType = () => localStorage.getItem('hornType') || 'classic';
-export const setHornType = (id) => localStorage.setItem('hornType', id);
+
 
 // ── Horn (hold to honk) ─────────────────────────────────────────────
 let hornNodes = null;

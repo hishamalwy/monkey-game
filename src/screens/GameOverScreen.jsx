@@ -48,11 +48,6 @@ export default function GameOverScreen({ nav, roomCode }) {
     if (room?.status === 'lobby') nav.toLobby(roomCode);
   }, [room?.status]);
 
-  // Sync lobby redirect
-  useEffect(() => {
-    if (room?.status === 'lobby') nav.toLobby(roomCode);
-  }, [room?.status]);
-
   const handleLeave = async () => {
     await leaveRoom();
     nav.toHome();
