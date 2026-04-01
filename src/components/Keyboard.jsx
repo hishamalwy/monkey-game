@@ -44,8 +44,9 @@ export default function Keyboard({ onKeyPress, disabled, onDelete }) {
             <button
               onClick={() => handleKey(' ')}
               disabled={disabled}
+              aria-label="مسافة"
               className={`kb-key${pressed === ' ' ? ' pressed' : ''}`}
-              style={{ flex: 1.5, maxWidth: 62, height: 44, fontSize: 16 }}
+              style={{ flex: 1.5, maxWidth: 62, height: 44, fontSize: '1.1rem' }}
             >
               ␣
             </button>
@@ -54,8 +55,9 @@ export default function Keyboard({ onKeyPress, disabled, onDelete }) {
             <button
               onClick={() => { if (!disabled) onDelete(); }}
               disabled={disabled}
+              aria-label="مسح الحرف"
               className="kb-key"
-              style={{ flex: 1.5, maxWidth: 62, height: 44, fontSize: 18, color: 'var(--color-primary)' }}
+              style={{ flex: 1.5, maxWidth: 62, height: 44, fontSize: '1.25rem', color: 'var(--color-primary)' }}
             >
               ⌫
             </button>

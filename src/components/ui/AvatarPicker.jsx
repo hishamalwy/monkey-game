@@ -10,7 +10,7 @@ export default function AvatarPicker({ selected, onChange }) {
           style={{
             width: 52, height: 52, borderRadius: '50%',
             fontSize: 26,
-            background: selected === idx ? 'rgba(233,30,140,0.12)' : '#FFFFFF',
+            background: selected === idx ? 'rgba(233,30,140,0.12)' : 'var(--color-card)',
             border: selected === idx ? '3px solid var(--color-primary)' : '2px solid rgba(28,16,64,0.12)',
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -26,3 +26,4 @@ export default function AvatarPicker({ selected, onChange }) {
 }
 
 export const AVATAR_EMOJIS = AVATARS;
+

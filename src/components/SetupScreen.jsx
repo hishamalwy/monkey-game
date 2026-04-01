@@ -34,7 +34,7 @@ export default function SetupScreen({ onStart }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', minHeight: '100dvh', padding: '20px',
+      justifyContent: 'center', minHeight: '100%', padding: '20px',
       background: 'linear-gradient(180deg, #0a0a12 0%, #12101f 100%)',
       overflowY: 'auto',
     }}>
@@ -178,3 +178,4 @@ export default function SetupScreen({ onStart }) {
     </div>
   );
 }
+

@@ -6,34 +6,42 @@ import { normalizeArabic } from '../utils/aiLogic';
 import { appCategories } from '../data/categories';
 import { playSound } from '../utils/audio';
 
+const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
+
+function checkGameOver(players, playerOrder) {
+  return playerOrder.filter(uid => players[uid] && (players[uid].quarterMonkeys || 0) < MONKEY_LIMIT);
+}
+
 export function useRoom(roomCode) {
   const [room, setRoom] = useState(null);
   const [computedTimer, setComputedTimer] = useState(null);
   const timerRef = useRef(null);
+  const penaltyFiredRef = useRef(false); // prevent double-fire on timer
   const uid = auth.currentUser?.uid;
 
-  // Listen to Firestore room document
   useEffect(() => {
     if (!roomCode) return;
-    const unsub = listenToRoom(roomCode, setRoom);
+    const unsub = listenToRoom(roomCode, (data) => {
+      setRoom(data);
+      // reset penalty guard when a new round starts
+      if (data?.status === 'playing') penaltyFiredRef.current = false;
+    });
     return unsub;
   }, [roomCode]);
 
-  // Client-side timer derived from lastActionAt + timeRemainingAtLastAction
+  // Client-side timer
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (!room?.gameState || !room?.timeLimit || room.timeLimit === 0) {
       setComputedTimer(null);
       return;
     }
-
     const { timeRemainingAtLastAction, lastActionAt } = room.gameState;
     if (!lastActionAt) { setComputedTimer(timeRemainingAtLastAction); return; }
 
     const tick = () => {
       const elapsed = (Date.now() - lastActionAt.toMillis()) / 1000;
-      const remaining = Math.max(0, timeRemainingAtLastAction - elapsed);
-      setComputedTimer(Math.ceil(remaining));
+      setComputedTimer(Math.max(0, Math.ceil(timeRemainingAtLastAction - elapsed)));
     };
     tick();
     timerRef.current = setInterval(tick, 500);
@@ -42,10 +50,7 @@ export function useRoom(roomCode) {
 
   const isMyTurn = room?.gameState?.currentPlayerUid === uid;
   const isHost = room?.hostUid === uid;
-
-  const players = room
-    ? (room.playerOrder || []).map(id => room.players[id]).filter(Boolean)
-    : [];
+  const players = room ? (room.playerOrder || []).map(id => room.players[id]).filter(Boolean) : [];
 
   const nextPlayerUid = useCallback(() => {
     if (!room) return null;
@@ -54,15 +59,47 @@ export function useRoom(roomCode) {
     return order[(idx + 1) % order.length];
   }, [room]);
 
+  // ── Apply penalty & check for game over ──────────────────────
+  const applyPenalty = useCallback(async (loserUid, reason, type = 'penalty') => {
+    if (!room) return;
+    const newPlayers = { ...room.players };
+    if (newPlayers[loserUid]) {
+      newPlayers[loserUid] = {
+        ...newPlayers[loserUid],
+        quarterMonkeys: (newPlayers[loserUid].quarterMonkeys || 0) + 1,
+      };
+    }
+
+    const surviving = checkGameOver(newPlayers, room.playerOrder || []);
+
+    // Game over if only 1 (or 0) survivors
+    if (surviving.length <= 1) {
+      playSound('win');
+      const winnerUid = surviving[0] || null;
+      await updateGameState(roomCode, {
+        status: 'game_over',
+        players: newPlayers,
+        lastResult: { type: 'game_over', loserUid, winnerUid, reason },
+      });
+      return;
+    }
+
+    playSound('lose');
+    await updateGameState(roomCode, {
+      status: 'round_result',
+      players: newPlayers,
+      lastResult: { type, loserUid, reason },
+    });
+  }, [room, roomCode]);
+
+  // ── Letter press ─────────────────────────────────────────────
   const pressLetter = useCallback(async (letter) => {
     if (!isMyTurn || !room) return;
     const newWord = (room.gameState.currentWord || '') + letter;
 
-    // Check if exact word
     const cat = appCategories.find(c => c.id === room.category) || appCategories[0];
     const normalizedWords = cat.words.map(w => normalizeArabic(w));
-    const normalizedNew = normalizeArabic(newWord);
-    const exactIdx = normalizedWords.findIndex(w => w === normalizedNew);
+    const exactIdx = normalizedWords.findIndex(w => w === normalizeArabic(newWord));
 
     if (exactIdx !== -1) {
       playSound('win');
@@ -73,7 +110,7 @@ export function useRoom(roomCode) {
           type: 'word_complete',
           winnerUid: uid,
           word: cat.words[exactIdx],
-          reason: `اكتملت الكلمة! الإجابة: ${cat.words[exactIdx]}`,
+          reason: `اكتملت الكلمة! ✓  الإجابة: ${cat.words[exactIdx]}`,
         },
       });
       return;
@@ -86,17 +123,17 @@ export function useRoom(roomCode) {
       'gameState.timeRemainingAtLastAction': room.timeLimit,
       'gameState.lastActionAt': serverTimestamp(),
     });
-  }, [isMyTurn, room, roomCode, uid, nextPlayerUid]);
+  }, [isMyTurn, room, roomCode, uid, nextPlayerUid, applyPenalty]);
 
+  // ── Delete ───────────────────────────────────────────────────
   const pressDelete = useCallback(async () => {
     if (!isMyTurn || !room) return;
     const word = room.gameState.currentWord || '';
     if (!word) return;
-    await updateGameState(roomCode, {
-      'gameState.currentWord': word.slice(0, -1),
-    });
+    await updateGameState(roomCode, { 'gameState.currentWord': word.slice(0, -1) });
   }, [isMyTurn, room, roomCode]);
 
+  // ── Challenge ────────────────────────────────────────────────
   const pressChallenge = useCallback(async () => {
     if (!isMyTurn || !room) return;
     const word = room.gameState.currentWord || '';
@@ -106,42 +143,28 @@ export function useRoom(roomCode) {
     const order = room.playerOrder || [];
     const myIdx = order.indexOf(uid);
     const prevUid = order[myIdx === 0 ? order.length - 1 : myIdx - 1];
-
     const result = resolveChallenge(word, room.category);
 
-    let loserUid, reason;
     if (result.valid) {
-      // Challenger (me) loses
-      loserUid = uid;
-      reason = `التحدي خاسر! الكلمة يمكن أن تكمل لتصبح: ${result.word}`;
+      await applyPenalty(uid, `التحدي خاسر! الكلمة يمكن أن تكمل لتصبح: ${result.word}`, 'challenge');
     } else {
-      // Previous player loses
-      loserUid = prevUid;
-      reason = `التحدي ناجح! لا توجد كلمة تبدأ بـ: ${word}`;
+      await applyPenalty(prevUid, `التحدي ناجح! لا توجد كلمة تبدأ بـ: ${word}`, 'challenge');
     }
+  }, [isMyTurn, room, roomCode, uid, applyPenalty]);
 
-    playSound('lose');
-    const newPlayers = { ...room.players };
-    if (newPlayers[loserUid]) {
-      newPlayers[loserUid] = {
-        ...newPlayers[loserUid],
-        quarterMonkeys: (newPlayers[loserUid].quarterMonkeys || 0) + 1,
-      };
-    }
-
-    await updateGameState(roomCode, {
-      status: 'round_result',
-      players: newPlayers,
-      lastResult: { type: 'challenge', loserUid, reason },
-    });
-  }, [isMyTurn, room, roomCode, uid]);
-
+  // ── Next round ───────────────────────────────────────────────
   const confirmNextRound = useCallback(async () => {
     if (!isHost || !room) return;
     const loserUid = room.lastResult?.loserUid || room.gameState?.currentPlayerUid;
     const order = room.playerOrder || [];
-    const loserIdx = order.indexOf(loserUid);
-    const nextUid = order[loserIdx !== -1 ? loserIdx : 0];
+    // Start from loser's position, skip eliminated players
+    let nextUid = loserUid;
+    for (let i = 0; i < order.length; i++) {
+      const candidate = order[(order.indexOf(loserUid) + i) % order.length];
+      if (room.players[candidate] && (room.players[candidate].quarterMonkeys || 0) < MONKEY_LIMIT) {
+        nextUid = candidate; break;
+      }
+    }
 
     await updateGameState(roomCode, {
       status: 'playing',
@@ -153,27 +176,20 @@ export function useRoom(roomCode) {
     });
   }, [isHost, room, roomCode]);
 
+  // ── Leave room ───────────────────────────────────────────────
   const doLeaveRoom = useCallback(async () => {
     await leaveRoom(roomCode, uid, isHost, room?.playerOrder);
   }, [roomCode, uid, isHost, room]);
 
-  // Timer expiry — only active player writes
+  // ── Timer expiry (only active player writes) ─────────────────
   useEffect(() => {
     if (!isMyTurn || !room?.timeLimit || room.timeLimit === 0) return;
-    if (computedTimer === 0) {
-      const order = room.playerOrder || [];
-      const newPlayers = { ...room.players };
-      if (newPlayers[uid]) {
-        newPlayers[uid] = { ...newPlayers[uid], quarterMonkeys: (newPlayers[uid].quarterMonkeys || 0) + 1 };
-      }
-      playSound('lose');
-      updateGameState(roomCode, {
-        status: 'round_result',
-        players: newPlayers,
-        lastResult: { type: 'timeout', loserUid: uid, reason: 'انتهى الوقت! ⏰' },
-      });
+    if (room?.status !== 'playing') return;
+    if (computedTimer === 0 && !penaltyFiredRef.current) {
+      penaltyFiredRef.current = true;
+      applyPenalty(uid, 'انتهى الوقت! ⏰', 'timeout');
     }
-  }, [computedTimer, isMyTurn]);
+  }, [computedTimer, isMyTurn, room?.status]);
 
   return {
     room,

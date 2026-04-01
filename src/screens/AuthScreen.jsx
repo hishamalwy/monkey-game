@@ -49,8 +49,7 @@ export default function AuthScreen() {
 
   return (
     <div style={{
-      width: '100vw', height: '100dvh',
-      background: 'var(--color-bg)',
+      width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: 20, overflowY: 'auto',
@@ -65,7 +64,7 @@ export default function AuthScreen() {
 
       {/* Card */}
       <div style={{
-        background: '#FFFFFF', borderRadius: 24,
+        background: 'var(--color-card)', borderRadius: 24,
         padding: '28px 24px', width: '100%', maxWidth: 400,
         boxShadow: '0 8px 40px rgba(28,16,64,0.12)',
       }}>
@@ -133,3 +132,4 @@ export default function AuthScreen() {
     </div>
   );
 }
+

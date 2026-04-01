@@ -1,37 +1,101 @@
-import Keyboard from './Keyboard';
+import { useEffect, useRef } from 'react';
+
+// Standard English to Default Arabic keyboard mapping
+const EN_TO_AR = {
+  'q':'ض', 'w':'ص', 'e':'ث', 'r':'ق', 't':'ف', 'y':'غ', 'u':'ع', 'i':'ه', 'o':'خ', 'p':'ح', '[':'ج', ']':'د',
+  'a':'ش', 's':'س', 'd':'ي', 'f':'ب', 'g':'ل', 'h':'ا', 'j':'ت', 'k':'ن', 'l':'م', ';':'ك', '\'':'ط',
+  'z':'ئ', 'x':'ء', 'c':'ؤ', 'v':'ر', 'b':'لا', 'n':'ى', 'm':'ة', ',':'و', '.':'ز', '/':'ظ'
+};
 
 export default function GameScreen({
   currentWord, timeRemaining, timeLimit,
-  currentPlayer, onKeyPress, onChallenge, isAiTurn, onDelete, isOnline,
+  currentPlayer, onKeyPress, onChallenge, isAiTurn, onDelete
 }) {
   const pct = timeLimit > 0 ? (timeRemaining / timeLimit) * 100 : 100;
   const isUrgent = timeLimit > 0 && timeRemaining <= 5;
 
+  const inputRef = useRef(null);
+
+  // Auto-focus native keyboard area
+  useEffect(() => {
+    if (!isAiTurn && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } else if (isAiTurn && inputRef.current) {
+      inputRef.current?.blur();
+    }
+  }, [isAiTurn, currentWord]);
+
+  // Desktop physical keyboard
+  useEffect(() => {
+    if (isAiTurn) return;
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (e.target === inputRef.current) return;
+      if (e.key === 'Backspace') { e.preventDefault(); onDelete(); return; }
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onKeyPress(' '); return; }
+      let char = e.key;
+      if (/^[a-zA-Z]$/.test(char)) char = EN_TO_AR[char.toLowerCase()];
+      if (char && /^[\u0600-\u06FF\s]+$/.test(char)) onKeyPress(char);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAiTurn, onKeyPress, onDelete]);
+
+  const handleInputChange = (e) => {
+    if (isAiTurn) return;
+    const val = e.target.value;
+    if (val.length < currentWord.length) {
+      onDelete();
+    } else {
+      let char = val.slice(currentWord.length);
+      char = char[char.length - 1];
+      if (!char) return;
+      if (/^[a-zA-Z]$/.test(char)) char = EN_TO_AR[char.toLowerCase()];
+      if (char && /^[\u0600-\u06FF\s]+$/.test(char)) onKeyPress(char);
+    }
+  };
+
   return (
-    <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column',
-      overflow: 'hidden', position: 'relative',
-    }}>
+    <div 
+      onClick={() => !isAiTurn && inputRef.current?.focus()} 
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', cursor: isAiTurn ? 'default' : 'text' }}
+    >
+      {/* Hidden input for Native Mobile/Desktop Keyboard */}
+      <input
+        ref={inputRef}
+        type="text"
+        value={currentWord}
+        onChange={handleInputChange}
+        disabled={isAiTurn}
+        autoFocus
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck="false"
+        style={{ opacity: 0, position: 'absolute', zIndex: -1 }}
+      />
+
+      {/* ── Top content area ── */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'space-evenly',
-        padding: '8px 16px', overflow: 'hidden',
+        padding: '10px 20px', overflow: 'hidden', gap: 10,
       }}>
 
-        {/* Current Player Badge */}
-        <div style={{
-          background: 'rgba(233,30,140,0.1)',
-          border: '2px solid rgba(233,30,140,0.3)',
-          borderRadius: 50, padding: '7px 20px',
-          display: 'flex', alignItems: 'center', gap: 8,
+        {/* Current player badge */}
+        <div className="card" style={{
+          padding: '6px 20px', display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <span style={{ fontSize: 15, color: 'var(--color-primary)', fontWeight: 700 }}>دور:</span>
-          <span style={{
-            fontSize: 15, color: 'var(--color-header)', fontWeight: 700,
-            ...(isAiTurn ? { opacity: 0.7 } : {}),
+          <span style={{ fontSize: '0.85rem', color: 'var(--bg-pink)', fontWeight: 900 }}>دور:</span>
+          <span className="truncate" style={{
+            fontSize: '1rem', color: 'var(--bg-dark-purple)', fontWeight: 900, maxWidth: 130,
+            ...(isAiTurn ? { opacity: 0.6 } : {}),
           }}>
             {currentPlayer?.name}
-            {isAiTurn && <span style={{ fontSize: 12, marginRight: 6, color: 'var(--color-muted)' }}>يفكر…</span>}
+            {isAiTurn && (
+              <span style={{ fontSize: '0.75rem', marginRight: 6, color: 'rgba(28,16,63,0.45)' }}>
+                يفكر…
+              </span>
+            )}
           </span>
         </div>
 
@@ -39,73 +103,75 @@ export default function GameScreen({
         {timeLimit > 0 && (
           <div style={{ width: '100%', maxWidth: 360 }}>
             <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              fontSize: 12, color: isUrgent ? 'var(--color-danger)' : 'var(--color-muted)', marginBottom: 6,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              marginBottom: 6, fontSize: '0.8rem',
+              color: isUrgent ? 'var(--bg-pink)' : 'var(--bg-dark-purple)',
             }}>
               <span>⏱</span>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>{timeRemaining}s</span>
+              <span style={{ fontWeight: 900, fontSize: '1rem', fontVariantNumeric: 'tabular-nums' }}>
+                {timeRemaining}s
+              </span>
             </div>
-            <div style={{
-              height: 6, background: 'rgba(28,16,64,0.1)',
-              borderRadius: 3, overflow: 'hidden',
-            }}>
+            <div style={{ height: 14, background: '#FFF', border: 'var(--brutal-border)', overflow: 'hidden' }}>
               <div className="timer-bar" style={{
                 height: '100%',
                 width: `${pct}%`,
-                background: isUrgent
-                  ? 'var(--color-danger)'
-                  : 'var(--color-primary)',
-                borderRadius: 3,
+                background: isUrgent ? 'var(--bg-pink)' : 'var(--bg-green)',
+                borderRight: pct > 0 ? 'var(--brutal-border)' : 'none',
               }} />
             </div>
           </div>
         )}
 
-        {/* Word Display */}
-        <div className={`word-display glow-pulse ${isAiTurn ? '' : 'pop'}`} style={{
+        {/* Word tiles */}
+        <div className={isAiTurn ? '' : 'pop'} style={{
           width: '100%', maxWidth: 360,
-          minHeight: 110, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '16px 24px',
+          display: 'flex', alignItems: 'center', gap: 6,
+          flexDirection: 'row', flexWrap: 'wrap',
+          alignContent: 'center', justifyContent: 'center',
+          minHeight: 80,
         }}>
-          <span style={{
-            fontFamily: 'Cairo, sans-serif',
-            fontSize: currentWord.length > 6 ? 40 : currentWord.length > 3 ? 52 : 64,
-            fontWeight: 900, letterSpacing: '0.04em',
-            color: currentWord ? 'var(--color-header)' : 'rgba(28,16,64,0.2)',
-            textAlign: 'center', lineHeight: 1.2,
-            transition: 'font-size 0.2s ease',
-          }}>
-            {currentWord || '_ _ _'}
-          </span>
+          {currentWord ? (
+            currentWord.split('').map((char, i) => (
+              <div key={i} className="card" style={{
+                width: 56, height: 68,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '2.2rem', fontWeight: 900, color: 'var(--bg-dark-purple)',
+              }}>
+                {char}
+              </div>
+            ))
+          ) : (
+            <div className="card" style={{
+              width: 56, height: 68,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '2.2rem', fontWeight: 900, color: 'rgba(28,16,63,0.25)',
+            }}>_</div>
+          )}
         </div>
 
-        {/* Challenge Button */}
+        {/* Challenge button */}
         <button
           onClick={onChallenge}
           disabled={isAiTurn || !currentWord}
-          className="btn btn-danger"
+          className="btn"
           style={{
-            width: '100%', maxWidth: 360, padding: '14px',
-            fontSize: 18, letterSpacing: '0.03em',
-            opacity: (isAiTurn || !currentWord) ? 0.4 : 1,
-            cursor: (isAiTurn || !currentWord) ? 'not-allowed' : 'pointer',
+            width: '100%', maxWidth: 360,
+            background: 'var(--bg-orange)', color: '#FFF',
+            padding: '14px', fontSize: '1.15rem',
+            opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
           }}
         >
-          شك!
+          أتحداك! 🧐
         </button>
+
+        {!isAiTurn && (
+          <div style={{ textAlign: 'center', opacity: 0.5, fontSize: '0.9rem', marginTop: 10 }}>
+            اضغط في أي مكان للكتابة ⌨️
+          </div>
+        )}
       </div>
 
-      {/* On-screen keyboard */}
-      <Keyboard onKeyPress={onKeyPress} onDelete={onDelete} disabled={isAiTurn} />
-
-      {!isOnline && (
-        <div style={{
-          textAlign: 'center', paddingBottom: 6,
-          fontSize: 11, color: 'var(--color-muted)',
-        }}>
-          ⌨️ يمكنك اللعب بكيبورد الكمبيوتر
-        </div>
-      )}
     </div>
   );
 }

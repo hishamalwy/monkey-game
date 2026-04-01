@@ -1,154 +1,98 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 import GameScreen from '../components/GameScreen';
-import ScoreBoard from '../components/ScoreBoard';
 import { appCategories } from '../data/categories';
 import { playAiTurn, normalizeArabic } from '../utils/aiLogic';
-import { playSound } from '../utils/audio';
+import { playSound, startHorn, stopHorn } from '../utils/audio';
 import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
 import hero from '../assets/hero.png';
 
-// Setup screen embedded
+const MONKEY_LIMIT = 4;
+
+// ── helpers ──────────────────────────────────────────────────────
+function nextActive(fromIdx, players) {
+  const n = players.length;
+  for (let i = 1; i <= n; i++) {
+    const idx = (fromIdx + i) % n;
+    if ((players[idx].quarterMonkeys || 0) < MONKEY_LIMIT) return idx;
+  }
+  return -1; // everyone eliminated
+}
+
+function activePlayers(players) {
+  return players.filter(p => (p.quarterMonkeys || 0) < MONKEY_LIMIT);
+}
+
+const MonkeySVG = ({ qm }) => {
+  const pct = Math.min((qm / 4) * 100, 100);
+  return (
+    <svg viewBox="0 0 100 100" width="32" height="32" style={{ overflow: 'visible', margin: '2px 0', opacity: qm === 0 ? 0.35 : 1 }}>
+      <rect x="0" y="0" width="100" height="100" fill="#e0e0e0" mask="url(#global-monkey-mask)" />
+      {qm > 0 && <rect x="0" y={100 - pct} width="100" height="100" fill="var(--bg-dark-purple)" mask="url(#global-monkey-mask)" style={{ transition: 'y 0.5s ease-out' }} />}
+      
+      <g fill="none" stroke="var(--bg-dark-purple)" strokeWidth="6" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M 68 80 Q 95 95 90 60 Q 90 40 75 60" />
+        <circle cx="26" cy="36" r="10" />
+        <circle cx="74" cy="36" r="10" />
+        <path d="M 32 47 h 36 v 32 q 0 10 -18 10 q -18 0 -18 -10 Z" />
+        <circle cx="50" cy="32" r="20" />
+      </g>
+    </svg>
+  );
+};
+
+// ── Setup screen ─────────────────────────────────────────────────
 function SetupPanel({ onStart, onBack }) {
+  const { userProfile } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState(appCategories[0].id);
-  const [playerCount, setPlayerCount] = useState(2);
-  const [isAi, setIsAi] = useState(false);
   const [timeLimit, setTimeLimit] = useState(15);
-  const [playerNames, setPlayerNames] = useState(['لاعب ١', 'لاعب ٢', 'لاعب ٣', 'لاعب ٤', 'لاعب ٥', 'لاعب ٦', 'لاعب ٧', 'لاعب ٨']);
-  const timeLimits = [0, 10, 15, 20, 30];
 
   const start = () => {
     playSound('click');
-    const players = isAi
-      ? [
-          { id: 1, name: playerNames[0] || 'أنت', quarterMonkeys: 0 },
-          { id: 2, name: 'كمبيوتر 🤖', quarterMonkeys: 0, isAi: true },
-        ]
-      : Array.from({ length: playerCount }, (_, i) => ({
-          id: i + 1, name: playerNames[i] || `لاعب ${i + 1}`, quarterMonkeys: 0,
-        }));
-    onStart(players, isAi, timeLimit, selectedCategory);
-  };
-
-  const updateName = (i, val) => {
-    const n = [...playerNames]; n[i] = val; setPlayerNames(n);
+    const players = [
+      { id:1, name: userProfile?.username || 'أنت', quarterMonkeys:0, avatarEmoji: AVATAR_EMOJIS[userProfile?.avatarId || 0] },
+      { id:2, name:'كمبيوتر 🤖', quarterMonkeys:0, isAi:true }
+    ];
+    onStart(players, true, timeLimit, selectedCategory);
   };
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      minHeight: '100dvh', padding: '20px',
-      background: 'var(--color-bg)', overflowY: 'auto',
-    }}>
-      <div className="slide-up" style={{
-        width: '100%', maxWidth: 420,
-        background: '#FFFFFF', borderRadius: 28,
-        padding: '32px 24px',
-        boxShadow: '0 8px 40px rgba(28,16,64,0.12)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <img src={hero} alt="monkey" style={{ width: 60, height: 60, objectFit: 'contain' }} />
-          <h1 style={{ fontSize: 24, fontWeight: 900, margin: '8px 0 0', color: 'var(--color-header)' }}>
-            ربع قرد
-          </h1>
-          <p style={{ fontSize: 12, color: 'var(--color-muted)', margin: 0 }}>ضد الكمبيوتر أو مع الأصدقاء</p>
-        </div>
+    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', padding:'var(--space-md)', overflow:'hidden' }}>
+      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 'var(--space-xl) var(--space-lg)', gap: 'var(--space-lg)', overflowY: 'auto' }}>
+        <h1 className="title-glitch" style={{ textAlign:'center', margin:'0 0 var(--space-md) 0', fontSize: 'clamp(1.6rem, 5vw, 2rem)' }}>إعداد اللعبة</h1>
+        
+        {/* Settings Group */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          {/* Category */}
+          <select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); playSound('click'); }} className="input-field" style={{ padding: '12px var(--space-md)', fontSize: 16 }}>
+            {appCategories.map(cat => ( <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option> ))}
+          </select>
 
-        {/* Category */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, color: 'var(--color-muted)', marginBottom: 8 }}>الفئة</label>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            {appCategories.map(cat => (
-              <button key={cat.id} onClick={() => { setSelectedCategory(cat.id); playSound('click'); }}
-                className="btn" style={{
-                  flex: '0 0 auto', padding: '9px 13px', fontSize: 13, whiteSpace: 'nowrap',
-                  background: selectedCategory === cat.id ? 'var(--color-success)' : 'rgba(28,16,64,0.06)',
-                  color: selectedCategory === cat.id ? 'white' : 'var(--color-muted)',
-                  border: 'none',
-                }}>
-                {cat.emoji} {cat.name}
+          {/* Timer */}
+          <div style={{ display:'flex', gap: 'var(--space-xs)' }}>
+            {[0, 10, 15, 20].map(t => (
+              <button key={t} onClick={() => { setTimeLimit(t); playSound('click'); }} className={`btn ${timeLimit===t ? 'btn-yellow' : 'btn-white'}`} style={{ flex:1, padding:'10px', fontSize:14 }}>
+                {t===0 ? '∞' : t+' ثانية'}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Mode */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          {[['👥 مع الأصدقاء', false], ['🤖 ضد الكمبيوتر', true]].map(([label, val]) => (
-            <button key={String(val)} onClick={() => { setIsAi(val); playSound('click'); }}
-              className="btn" style={{
-                flex: 1, padding: '10px 6px', fontSize: 13,
-                background: isAi === val ? 'var(--color-primary)' : 'rgba(28,16,64,0.06)',
-                color: isAi === val ? 'white' : 'var(--color-muted)',
-                border: 'none',
-              }}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Player Count */}
-        {!isAi && (
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, color: 'var(--color-muted)', marginBottom: 8 }}>عدد اللاعبين</label>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[2,3,4,5,6,7,8].map(n => (
-                <button key={n} onClick={() => { setPlayerCount(n); playSound('click'); }}
-                  className="btn" style={{
-                    width: 38, height: 38, fontSize: 14,
-                    background: playerCount === n ? 'var(--color-primary)' : 'rgba(28,16,64,0.06)',
-                    color: playerCount === n ? 'white' : 'var(--color-muted)',
-                    border: 'none', borderRadius: 10,
-                  }}>{n}</button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Names */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', fontSize: 13, color: 'var(--color-muted)', marginBottom: 8 }}>أسماء اللاعبين</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {Array.from({ length: isAi ? 1 : playerCount }).map((_, i) => (
-              <input key={i} value={playerNames[i]} onChange={e => updateName(i, e.target.value)}
-                className="input-field" placeholder={`اسم اللاعب ${i + 1}`} />
-            ))}
-          </div>
-        </div>
-
-        {/* Timer */}
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', fontSize: 13, color: 'var(--color-muted)', marginBottom: 8 }}>⏱ وقت الجولة</label>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {timeLimits.map(t => (
-              <button key={t} onClick={() => { setTimeLimit(t); playSound('click'); }}
-                className="btn" style={{
-                  flex: 1, padding: '8px 4px', fontSize: 13,
-                  background: timeLimit === t ? 'var(--color-secondary)' : 'rgba(28,16,64,0.06)',
-                  color: timeLimit === t ? 'white' : 'var(--color-muted)',
-                  border: 'none',
-                }}>
-                {t === 0 ? '∞' : t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onBack} className="btn btn-ghost" style={{ padding: '14px 18px', fontSize: 15 }}>
-            ← رجوع
-          </button>
-          <button onClick={start} className="btn btn-primary" style={{ flex: 1, padding: '14px', fontSize: 17 }}>
-            🚀 ابدأ
-          </button>
+        {/* Action Group */}
+        <div style={{ marginTop: 'auto', display:'flex', gap: 'var(--space-md)', paddingTop: 'var(--space-xl)' }}>
+          <button onClick={onBack} className="btn btn-white" style={{ padding:'12px', fontSize:16, flex: 0.35 }}>رجوع</button>
+          <button onClick={start} className="btn btn-pink" style={{ flex:1, padding:'12px', fontSize:18 }}>🚀 ابدأ</button>
         </div>
       </div>
     </div>
   );
 }
+// ── PlayerRow was defined here and is unused since the header renders inline. Removing unused PlayerRow to polish code. ──
 
-// ─── Main local game logic (extracted from original App.jsx) ───
+
+// ── Main local game ───────────────────────────────────────────────
 export default function LocalGameWrapper({ nav }) {
-  const [gameState, setGameState] = useState('setup');
+  const [gameState, setGameState] = useState('setup'); // setup | playing | result | gameover
   const [players, setPlayers] = useState([]);
   const [isAgainstAi, setIsAgainstAi] = useState(false);
   const [timeLimit, setTimeLimit] = useState(15);
@@ -159,40 +103,42 @@ export default function LocalGameWrapper({ nav }) {
   const [normalizedWords, setNormalizedWords] = useState(appCategories[0].words.map(w => normalizeArabic(w)));
   const [resultMessage, setResultMessage] = useState('');
   const [resultTitle, setResultTitle] = useState('');
+  const [isHonking, setIsHonking] = useState(false);
+  const [winner, setWinner] = useState(null);
 
   // Timer
   useEffect(() => {
-    let timerId;
+    let tid;
     if (gameState === 'playing' && timeLimit > 0) {
       if (timeRemaining > 0) {
-        timerId = setTimeout(() => {
-          setTimeRemaining(prev => prev - 1);
+        tid = setTimeout(() => {
+          setTimeRemaining(p => p - 1);
           if (timeRemaining <= 4) playSound('tick');
         }, 1000);
       } else {
         handlePenalty(currentPlayerIndex, 'انتهى الوقت! ⏰');
       }
     }
-    return () => clearTimeout(timerId);
+    return () => clearTimeout(tid);
   }, [gameState, timeLimit, timeRemaining, currentPlayerIndex]);
 
   // AI turn
   useEffect(() => {
-    let isMounted = true;
-    if (gameState === 'playing' && isAgainstAi && players[currentPlayerIndex]?.isAi) {
-      const runAi = async () => {
+    let mounted = true;
+    if (gameState==='playing' && isAgainstAi && players[currentPlayerIndex]?.isAi) {
+      const run = async () => {
         const res = await playAiTurn(currentWord, 0.15, activeCategory.words);
-        if (!isMounted || gameState !== 'playing') return;
-        if (res.action === 'challenge') handleChallenge();
-        else if (res.action === 'letter') handleLetterPress(res.letter);
+        if (!mounted || gameState!=='playing') return;
+        if (res.action==='challenge') handleChallenge();
+        else if (res.action==='letter') handleLetterPress(res.letter);
       };
-      runAi();
+      run();
     }
-    return () => { isMounted = false; };
+    return () => { mounted = false; };
   }, [currentPlayerIndex, gameState, currentWord]);
 
-  const startGame = (playersList, aiMode, limit, categoryId = 'countries') => {
-    const cat = appCategories.find(c => c.id === categoryId) || appCategories[0];
+  const startGame = (playersList, aiMode, limit, categoryId='countries') => {
+    const cat = appCategories.find(c => c.id===categoryId) || appCategories[0];
     setActiveCategory(cat);
     setNormalizedWords(cat.words.map(w => normalizeArabic(w)));
     setPlayers(playersList);
@@ -201,53 +147,62 @@ export default function LocalGameWrapper({ nav }) {
     setCurrentWord('');
     setCurrentPlayerIndex(0);
     setTimeRemaining(limit);
+    setWinner(null);
     setGameState('playing');
   };
 
   const handleLetterPress = useCallback((letter) => {
     const nextWord = currentWord + letter;
     setCurrentWord(nextWord);
-    const normalizedNextWord = normalizeArabic(nextWord);
-    const exactMatchIndex = normalizedWords.findIndex(w => w === normalizedNextWord);
-    if (exactMatchIndex !== -1) {
+    const norm = normalizeArabic(nextWord);
+    const exactIdx = normalizedWords.findIndex(w => w === norm);
+    if (exactIdx !== -1) {
       playSound('win');
       setResultTitle('اكتملت الكلمة! ✓ 🎉');
-      setResultMessage(`الإجابة الصحيحة هي: ${activeCategory.words[exactMatchIndex]}`);
+      setResultMessage(`الإجابة الصحيحة هي: ${activeCategory.words[exactIdx]}`);
       setGameState('result');
       return;
     }
-    const nextIndex = (currentPlayerIndex + 1) % players.length;
-    setCurrentPlayerIndex(nextIndex);
+    // advance to next active player
+    setCurrentPlayerIndex(prev => {
+      // find next non-eliminated
+      const n = players.length;
+      for (let i = 1; i <= n; i++) {
+        const idx = (prev + i) % n;
+        if ((players[idx].quarterMonkeys || 0) < MONKEY_LIMIT) return idx;
+      }
+      return prev;
+    });
     setTimeRemaining(timeLimit);
-  }, [currentWord, currentPlayerIndex, players.length, timeLimit, normalizedWords, activeCategory]);
+  }, [currentWord, players, timeLimit, normalizedWords, activeCategory]);
 
   const handleDelete = useCallback(() => {
-    if (currentWord.length > 0) setCurrentWord(prev => prev.slice(0, -1));
+    if (currentWord.length > 0) setCurrentWord(p => p.slice(0, -1));
   }, [currentWord]);
 
-  // Physical keyboard
+  // Physical keyboard (only for active, non-eliminated, non-AI player)
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const onKey = (e) => {
       if (gameState !== 'playing') return;
+      if ((players[currentPlayerIndex]?.quarterMonkeys||0) >= MONKEY_LIMIT) return;
       if (isAgainstAi && players[currentPlayerIndex]?.isAi) return;
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); handleDelete(); return; }
-      const arabicRegex = /^[\u0600-\u06FF\s]$/;
-      if (arabicRegex.test(e.key)) { e.preventDefault(); playSound('click'); handleLetterPress(e.key); }
+      if (e.key==='Backspace'||e.key==='Delete') { e.preventDefault(); handleDelete(); return; }
+      if (/^[\u0600-\u06FF\s]$/.test(e.key)) { e.preventDefault(); playSound('click'); handleLetterPress(e.key); }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [gameState, isAgainstAi, players, currentPlayerIndex, handleLetterPress, handleDelete]);
 
   const handleChallenge = () => {
     playSound('alert');
     const challengerIdx = currentPlayerIndex;
-    const prevIdx = currentPlayerIndex === 0 ? players.length - 1 : currentPlayerIndex - 1;
+    const prevIdx = currentPlayerIndex===0 ? players.length-1 : currentPlayerIndex-1;
     const normalizedWord = normalizeArabic(currentWord);
     const isPrefixValid = normalizedWords.some(w => w.startsWith(normalizedWord));
     if (isPrefixValid) {
       const validWord = activeCategory.words[normalizedWords.findIndex(w => w.startsWith(normalizedWord))];
-      handlePenalty(challengerIdx, `التحدي خاسر! الكلمة يمكن أن تكمل لتصبح: ${validWord}`);
+      handlePenalty(challengerIdx, `التحدي خاسر! يمكن أن تكمل لتصبح: ${validWord}`);
     } else {
       handlePenalty(prevIdx, `التحدي ناجح! لا توجد كلمة تبدأ بـ: ${currentWord}`);
     }
@@ -256,8 +211,20 @@ export default function LocalGameWrapper({ nav }) {
   const handlePenalty = (loserIndex, reason) => {
     playSound('lose');
     const newPlayers = [...players];
-    newPlayers[loserIndex] = { ...newPlayers[loserIndex], quarterMonkeys: newPlayers[loserIndex].quarterMonkeys + 1 };
+    const newQm = (newPlayers[loserIndex].quarterMonkeys || 0) + 1;
+    newPlayers[loserIndex] = { ...newPlayers[loserIndex], quarterMonkeys: newQm };
     setPlayers(newPlayers);
+
+    // Check game over
+    const remaining = newPlayers.filter(p => (p.quarterMonkeys||0) < MONKEY_LIMIT);
+    if (remaining.length <= 1) {
+      setWinner(remaining[0] || newPlayers[0]);
+      setResultTitle('انتهت اللعبة! 🏆');
+      setResultMessage(`${remaining[0]?.name || ''} فاز باللعبة!`);
+      setGameState('gameover');
+      return;
+    }
+
     setResultTitle('خسارة! 🙈');
     setResultMessage(`${newPlayers[loserIndex].name} أخذ ربع قرد! ${reason}`);
     setCurrentPlayerIndex(loserIndex);
@@ -265,88 +232,182 @@ export default function LocalGameWrapper({ nav }) {
   };
 
   const nextRound = () => {
+    // start from loser, find next active
+    const next = nextActive(currentPlayerIndex, players);
     setCurrentWord('');
+    setCurrentPlayerIndex(next >= 0 ? next : 0);
     setTimeRemaining(timeLimit);
     setGameState('playing');
   };
 
-  if (gameState === 'setup') {
-    return <SetupPanel onStart={startGame} onBack={nav.toHome} />;
-  }
+  const isEliminated = gameState==='playing'
+    && (players[currentPlayerIndex]?.quarterMonkeys||0) >= MONKEY_LIMIT;
+
+  // Horn
+  const hornStart = () => { setIsHonking(true); startHorn(); };
+  const hornEnd = () => { setIsHonking(false); stopHorn(); };
+  useEffect(() => () => stopHorn(), []);
+
+  // ── Setup ──
+  if (gameState==='setup') return <SetupPanel onStart={startGame} onBack={nav.toHome} />;
 
   return (
     <div style={{
-      width: '100vw', height: '100dvh',
-      display: 'flex', flexDirection: 'column',
-      background: 'var(--color-bg)', overflow: 'hidden',
+      width:'100%', height:'100%',
+      display:'flex', flexDirection:'column',
+      overflow:'hidden',
     }}>
+      {/* ── Top Bar ── */}
       <header style={{
-        padding: '12px 16px',
+        padding: '16px 20px 0',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        background: '#FFFFFF',
-        borderBottom: '1px solid rgba(28,16,64,0.08)',
+        flexShrink: 0,
       }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--color-header)' }}>
-          {activeCategory?.emoji} {activeCategory?.name}
-        </div>
-        <button className="btn btn-ghost" onClick={() => setGameState('setup')}
-          style={{ padding: '6px 12px', fontSize: 13, borderRadius: 10 }}>
-          إنهاء
+        <h2 className="title-glitch" style={{ margin: 0, fontSize: 24, transform: 'none' }}>{activeCategory?.emoji || ''} كلكس!</h2>
+        <button
+          onClick={() => { stopHorn(); setGameState('setup'); }}
+          className="btn btn-white"
+          style={{ padding: '8px 16px', fontSize: 14 }}
+        >
+          ✕ خروج
         </button>
       </header>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {gameState === 'playing' && (
-          <>
-            <div style={{ padding: '10px 8px 0' }}>
-              <ScoreBoard players={players} currentPlayerIndex={currentPlayerIndex} />
+      {/* ── Floating Players Dock ── */}
+      <div style={{
+        padding: '16px 20px',
+        display: 'flex', gap: 12, overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+        flexShrink: 0,
+        position: 'relative',
+      }}>
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <mask id="global-monkey-mask">
+              <circle cx="50" cy="32" r="20" fill="white" />
+              <circle cx="26" cy="36" r="10" fill="white" />
+              <circle cx="74" cy="36" r="10" fill="white" />
+              <path d="M 32 47 h 36 v 32 q 0 10 -18 10 q -18 0 -18 -10 Z" fill="white" />
+              <path d="M 68 80 Q 95 95 90 60 Q 90 40 75 60" fill="none" stroke="white" strokeWidth="10" strokeLinecap="round" />
+            </mask>
+          </defs>
+        </svg>
+        
+        {players.map((p, idx) => {
+          const qm = p.quarterMonkeys || 0;
+          const eliminated = qm >= MONKEY_LIMIT;
+          const isActive = idx === currentPlayerIndex && !eliminated;
+
+          return (
+            <div key={p.id} className="card slide-up" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '8px 12px', minWidth: 70, flexShrink: 0,
+              background: isActive ? 'var(--bg-pink)' : '#FFF',
+              border: isActive ? '3px solid var(--bg-dark-purple)' : '3px solid var(--bg-dark-purple)',
+              boxShadow: isActive ? '4px 4px 0px var(--bg-dark-purple)' : '2px 2px 0px rgba(45,27,78,0.2)',
+              transform: isActive ? 'translateY(-4px)' : 'none',
+              opacity: eliminated ? 0.45 : 1,
+              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}>
+              <span style={{ fontSize: 20, filter: eliminated ? 'grayscale(1)' : 'none', marginBottom: 4 }}>
+                {p.avatarEmoji || AVATAR_EMOJIS[idx % AVATAR_EMOJIS.length]}
+              </span>
+              <span style={{
+                fontSize: 11, fontWeight: 900,
+                color: isActive ? '#FFF' : 'var(--bg-dark-purple)',
+                marginBottom: 6
+              }}>
+                {eliminated ? '💀' : p.name.slice(0, 8)}
+              </span>
+              <MonkeySVG qm={qm} />
             </div>
-            <GameScreen
-              currentWord={currentWord}
-              timeRemaining={timeRemaining}
-              timeLimit={timeLimit}
-              currentPlayer={players[currentPlayerIndex]}
-              isAiTurn={isAgainstAi && players[currentPlayerIndex]?.isAi}
-              onKeyPress={handleLetterPress}
-              onDelete={handleDelete}
-              onChallenge={handleChallenge}
-            />
-          </>
+          );
+        })}
+      </div>
+
+      {/* ── Game area (Modern Integrated View) ── */}
+      <main style={{
+        flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        position: 'relative',
+        background: 'var(--color-card)',
+        borderTop: 'var(--brutal-border)',
+        borderTopLeftRadius: 32, borderTopRightRadius: 32,
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.05)',
+        marginTop: 8
+      }}>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '15rem', opacity: 0.05, pointerEvents: 'none' }}>
+          {activeCategory?.emoji}
+        </div>
+        {gameState === 'playing' && (
+          <GameScreen
+            currentWord={currentWord}
+            timeRemaining={timeRemaining}
+            timeLimit={timeLimit}
+            currentPlayer={players[currentPlayerIndex]}
+            isAiTurn={(isAgainstAi && players[currentPlayerIndex]?.isAi) || isEliminated}
+            onKeyPress={handleLetterPress}
+            onDelete={handleDelete}
+            onChallenge={handleChallenge}
+          />
         )}
 
+        {/* Round result overlay */}
         {gameState === 'result' && (
-          <div className="result-overlay slide-up" style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            zIndex: 100, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', padding: 20,
+          <div className="slide-up" style={{
+            position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(28,16,63,0.85)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20,
+            borderRadius: '32px 32px 0 0'
           }}>
-            <div style={{
-              background: '#FFFFFF', borderRadius: 24,
-              padding: '36px 24px', width: '100%', maxWidth: 400,
-              textAlign: 'center', boxShadow: '0 12px 48px rgba(28,16,64,0.15)',
-            }}>
-              <h2 style={{
-                fontSize: 28, fontWeight: 900, marginBottom: 12,
-                color: resultTitle.includes('اكتملت') ? 'var(--color-success)' : 'var(--color-danger)',
-              }}>
-                {resultTitle}
-              </h2>
-              <p style={{ fontSize: 16, color: 'var(--color-header)', marginBottom: 28, lineHeight: 1.5 }}>
-                {resultMessage}
-              </p>
-              <ScoreBoard players={players} currentPlayerIndex={-1} />
-              <button className="btn btn-primary" onClick={nextRound}
-                style={{ width: '100%', padding: '15px', fontSize: 17, borderRadius: 16, marginTop: 24 }}>
+            <div className="card" style={{ padding: '32px 22px', width: '100%', maxWidth: 400, textAlign: 'center' }}>
+              <div style={{ fontSize: 44, marginBottom: 10 }}>🙈</div>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--bg-pink)', margin: '0 0 10px' }}>{resultTitle}</h2>
+              <p style={{ fontSize: 14, color: 'var(--bg-dark-purple)', marginBottom: 20, fontWeight: 700 }}>{resultMessage}</p>
+              <button className="btn btn-pink" onClick={nextRound} style={{ width: '100%', padding: '14px', fontSize: 16 }}>
                 🔄 الجولة التالية
-              </button>
-              <button className="btn btn-ghost" onClick={nav.toHome}
-                style={{ width: '100%', padding: '12px', fontSize: 15, borderRadius: 14, marginTop: 10 }}>
-                العودة للرئيسية
               </button>
             </div>
           </div>
         )}
+
+        {/* Game over overlay */}
+        {gameState === 'gameover' && (
+          <div className="slide-up" style={{
+            position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(28,16,63,0.85)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20, overflow: 'hidden',
+            borderRadius: '32px 32px 0 0'
+          }}>
+            <div className="card" style={{ padding: '36px 24px', width: '100%', maxWidth: 380, textAlign: 'center', zIndex: 1 }}>
+              <div style={{ fontSize: 52, marginBottom: 10 }}>
+                {winner?.avatarEmoji || AVATAR_EMOJIS[players.indexOf(winner) % AVATAR_EMOJIS.length] || '🏆'}
+              </div>
+              <h2 style={{ fontSize: 26, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 6px' }}>{winner?.name}</h2>
+              <p style={{ fontSize: 16, color: 'var(--bg-pink)', fontWeight: 900, marginBottom: 24 }}>🏆 فاز باللعبة!</p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-white" onClick={() => setGameState('setup')} style={{ flex: 1, padding: '14px', fontSize: 14 }}>إعادة</button>
+                <button className="btn btn-pink" onClick={nav.toHome} style={{ flex: 1, padding: '14px', fontSize: 14 }}>الرئيسية</button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* ── Floating Horn Button (FAB) ── */}
+      {gameState === 'playing' && (
+        <button
+          onMouseDown={hornStart} onMouseUp={hornEnd} onMouseLeave={hornEnd}
+          onTouchStart={e => { e.preventDefault(); hornStart(); }}
+          onTouchEnd={e => { e.preventDefault(); hornEnd(); }}
+          className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'}`}
+          style={{
+            position: 'absolute',
+            bottom: 24, left: 24,
+            width: 72, height: 72, borderRadius: '50%',
+            padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 34, zIndex: 100,
+          }}
+        >
+          📯
+        </button>
+      )}
     </div>
   );
 }

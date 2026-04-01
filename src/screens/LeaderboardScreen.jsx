@@ -18,8 +18,7 @@ export default function LeaderboardScreen({ nav }) {
 
   return (
     <div style={{
-      width: '100vw', height: '100dvh',
-      background: 'var(--color-bg)',
+      width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Header */}
@@ -43,7 +42,7 @@ export default function LeaderboardScreen({ nav }) {
                 <div key={u.uid} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 16px', borderRadius: 16,
-                  background: isMe ? 'rgba(233,30,140,0.1)' : '#FFFFFF',
+                  background: isMe ? 'rgba(233,30,140,0.1)' : 'var(--color-card)',
                   border: isMe ? '2px solid var(--color-primary)' : '2px solid transparent',
                   boxShadow: '0 2px 10px rgba(28,16,64,0.07)',
                 }}>
@@ -97,3 +96,4 @@ export default function LeaderboardScreen({ nav }) {
     </div>
   );
 }
+

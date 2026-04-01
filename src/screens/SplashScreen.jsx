@@ -3,8 +3,7 @@ import hero from '../assets/hero.png';
 export default function SplashScreen() {
   return (
     <div style={{
-      width: '100vw', height: '100dvh',
-      background: 'var(--color-bg)',
+      width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 20,
     }}>
@@ -27,3 +26,4 @@ export default function SplashScreen() {
     </div>
   );
 }
+

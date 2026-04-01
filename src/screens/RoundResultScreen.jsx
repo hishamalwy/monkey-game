@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRoom } from '../hooks/useRoom';
 import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
@@ -8,17 +8,20 @@ export default function RoundResultScreen({ nav, roomCode }) {
   const { userProfile } = useAuth();
   const { room, players, isHost, confirmNextRound } = useRoom(roomCode);
 
+  const navRef = useRef(nav);
+  useEffect(() => { navRef.current = nav; });
+
   useEffect(() => {
     if (!room) return;
-    if (room.status === 'playing') nav.toGame();
-    if (room.status === 'game_over') nav.toGameOver();
-    if (room.status === 'lobby') nav.toLobby(roomCode);
+    if (room.status === 'playing') navRef.current.toGame();
+    if (room.status === 'game_over') navRef.current.toGameOver();
+    if (room.status === 'lobby') navRef.current.toLobby(roomCode);
   }, [room?.status]);
 
   if (!room) {
     return (
       <div style={{
-        width: '100vw', height: '100dvh', background: 'var(--color-bg)',
+        width: '100%', height: '100%', background: 'var(--color-bg)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <LoadingSpinner />
@@ -32,14 +35,13 @@ export default function RoundResultScreen({ nav, roomCode }) {
 
   return (
     <div style={{
-      width: '100vw', height: '100dvh',
-      background: 'var(--color-bg)',
+      width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: 20,
     }}>
       <div className="slide-up" style={{
-        background: '#FFFFFF', borderRadius: 24,
+        background: 'var(--color-card)', borderRadius: 24,
         padding: '36px 24px', width: '100%', maxWidth: 400,
         textAlign: 'center', boxShadow: '0 12px 48px rgba(28,16,64,0.15)',
       }}>
@@ -100,3 +102,4 @@ export default function RoundResultScreen({ nav, roomCode }) {
     </div>
   );
 }
+

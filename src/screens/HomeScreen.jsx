@@ -1,30 +1,18 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import BottomNav from '../components/BottomNav';
-import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
 import Toast from '../components/ui/Toast';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { createRoom, joinRoom } from '../firebase/rooms';
+import { joinRoom } from '../firebase/rooms';
 import hero from '../assets/hero.png';
 
 export default function HomeScreen({ nav }) {
-  const { userProfile } = useAuth();
+  const { userProfile, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
-
-  const handleCreate = async () => {
-    setLoading(true);
-    try {
-      const code = await createRoom(userProfile);
-      nav.toLobby(code);
-    } catch (e) {
-      setToast(e.message || 'حدث خطأ');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleJoin = async () => {
     const code = joinCode.trim().toUpperCase();
@@ -40,139 +28,134 @@ export default function HomeScreen({ nav }) {
     }
   };
 
-  const avatar = AVATAR_EMOJIS[userProfile?.avatarId ?? 0];
-
   return (
     <div style={{
-      width: '100vw', height: '100dvh',
-      background: 'var(--color-bg)',
+      width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 20px',
+        padding: '20px 24px', borderBottom: '4px solid var(--bg-dark-purple)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src={hero} alt="monkey" style={{ width: 40, height: 40, objectFit: 'contain' }} />
-          <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--color-header)' }}>القرد بيتكلم!</span>
-        </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          background: 'rgba(255,255,255,0.6)', borderRadius: 50,
-          padding: '6px 12px',
-        }}>
-          <span style={{ fontSize: 20 }}>{avatar}</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-header)' }}>
-            {userProfile?.username}
-          </span>
-        </div>
+        <button onClick={() => setRulesOpen(true)} className="btn btn-dark" style={{ width: 44, height: 44, fontSize: 18 }}>💡</button>
+        <div className="title-glitch" style={{ transform: 'none' }}>كلكس!</div>
+        <button onClick={() => setMenuOpen(true)} className="btn btn-yellow" style={{ width: 44, height: 44, fontSize: 24, fontWeight: 900 }}>≡</button>
       </div>
 
       {/* Content */}
       <div style={{
         flex: 1, overflowY: 'auto',
         display: 'flex', flexDirection: 'column',
-        padding: '0 20px 20px', gap: 14,
+        padding: '16px var(--space-lg)', gap: 'var(--space-lg)',
         alignItems: 'center',
+        justifyContent: 'center'
       }}>
-        {/* Hero */}
-        <div style={{
-          background: '#FFFFFF', borderRadius: 20, padding: '20px',
-          width: '100%', maxWidth: 400, textAlign: 'center',
-          boxShadow: '0 4px 20px rgba(28,16,64,0.08)',
-          marginBottom: 4,
-        }}>
-          <div style={{ fontSize: 14, color: 'var(--color-primary)', fontWeight: 700, marginBottom: 4 }}>
-            هلا والله!
+        {/* Top Group: Avatar & Text grouped tightly */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-md)' }}>
+          {/* Avatar Card */}
+          <div style={{ position: 'relative' }}>
+            <div className="card" style={{
+               position: 'absolute', top: -12, right: -12, zIndex: 10,
+               background: 'var(--bg-green)', padding: '4px 12px',
+               transform: 'rotate(8deg)', fontSize: '0.85rem', fontWeight: 900
+            }}>
+              هلا والله!
+            </div>
+            <div className="card" style={{ padding: 'var(--space-sm)', transform: 'rotate(-3deg)', width: 150, position: 'relative' }}>
+              <div style={{ background: '#FFC89D', border: 'var(--brutal-border)', overflow: 'hidden' }}>
+                <img src={hero} alt="monkey" style={{ width: '100%', height: 'auto', display: 'block', transform: 'scale(1.1) translateY(8px)' }} />
+              </div>
+            </div>
           </div>
-          <img src={hero} alt="monkey" style={{ width: 90, height: 90, objectFit: 'contain' }} />
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-header)', margin: '8px 0 4px' }}>
-            هل أنت مستعد للبدء؟
-          </h2>
-          <p style={{ fontSize: 13, color: 'var(--color-muted)', margin: 0 }}>
-            تحدى أصدقاءك في أغرب لعبة توصل!
-          </p>
+
+          {/* Texts */}
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+            <h2 style={{ fontSize: 'clamp(1.6rem, 5vw, 2rem)', fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.15 }}>
+              هل أنت مستعد<br/>للبدء؟
+            </h2>
+            <p style={{ fontSize: '1.1rem', color: 'var(--bg-dark-purple)', margin: 0, fontWeight: 700, padding: '0 var(--space-md)' }}>
+              تحدى أصدقاءك في أغرب لعبة تواصل!
+            </p>
+          </div>
         </div>
 
         {/* Main Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 400 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', width: '100%', maxWidth: 400 }}>
           <button
-            onClick={handleCreate}
-            disabled={loading}
-            className="btn btn-primary"
-            style={{ width: '100%', padding: '16px', fontSize: 18, borderRadius: 16 }}
+            onClick={nav.toOnlineSetup}
+            className="btn btn-pink"
+            style={{ width: '100%', padding: '16px', fontSize: '1.4rem' }}
           >
-            {loading ? <LoadingSpinner size={22} /> : 'ابدأ لعبة'}
+            ابدأ لعبة
           </button>
 
-          {/* Join Room */}
           {joining ? (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)', width: '100%' }}>
               <input
                 className="input-field"
-                placeholder="أدخل كود الغرفة"
+                placeholder="أدخل الكود"
                 value={joinCode}
                 onChange={e => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={4}
-                style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: 900, letterSpacing: 4 }}
+                style={{ flex: 1, textAlign: 'center', fontSize: '1.2rem', letterSpacing: 4 }}
                 onKeyDown={e => e.key === 'Enter' && handleJoin()}
                 autoFocus
               />
-              <button
-                onClick={handleJoin}
-                disabled={loading}
-                className="btn btn-secondary"
-                style={{ padding: '12px 18px', fontSize: 15, borderRadius: 14 }}
-              >
+              <button onClick={handleJoin} disabled={loading} className="btn btn-yellow" style={{ padding: '0 var(--space-lg)', fontSize: '1.2rem' }}>
                 انضم
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setJoining(true)}
-              className="btn btn-secondary"
-              style={{ width: '100%', padding: '16px', fontSize: 18, borderRadius: 16 }}
-            >
-              الانضمام لغرفة
+            <button onClick={() => setJoining(true)} className="btn btn-white" style={{ width: '100%', padding: '16px', fontSize: '1.2rem' }}>
+              انضم لغرفة
             </button>
           )}
 
-          <button
-            onClick={nav.toLocalGame}
-            className="btn btn-ghost"
-            style={{ width: '100%', padding: '14px', fontSize: 16, borderRadius: 16 }}
-          >
-            ⚙️ الإعدادات
+          <button onClick={nav.toLocalGame} className="btn btn-pink" style={{ width: '100%', padding: '16px', fontSize: '1.3rem' }}>
+            العب مع الكمبيوتر 🎮
           </button>
         </div>
-
-        {/* Stats */}
-        {userProfile && (
-          <div style={{
-            background: '#FFFFFF', borderRadius: 16, padding: '14px 20px',
-            width: '100%', maxWidth: 400,
-            display: 'flex', justifyContent: 'space-around',
-            boxShadow: '0 4px 16px rgba(28,16,64,0.07)',
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-primary)' }}>
-                {userProfile.wins}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--color-muted)', fontWeight: 600 }}>انتصارات</div>
-            </div>
-            <div style={{ width: 1, background: 'rgba(28,16,64,0.1)' }} />
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-secondary)' }}>
-                {userProfile.gamesPlayed}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--color-muted)', fontWeight: 600 }}>مباريات</div>
-            </div>
-          </div>
-        )}
       </div>
 
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
+
+      {menuOpen && (
+        <div className="slide-up" style={{
+          position: 'absolute', inset: 0, zIndex: 200, background: 'rgba(28,16,63,0.9)',
+          display: 'flex', flexDirection: 'column'
+        }} onClick={() => setMenuOpen(false)}>
+          <div className="card" style={{
+            position: 'absolute', right: 0, top: 0, bottom: 0, width: '75%', maxWidth: 320,
+            padding: 32, display: 'flex', flexDirection: 'column', gap: 20
+          }} onClick={e => e.stopPropagation()}>
+            <h2 className="title-glitch" style={{ marginBottom: 30, textAlign: 'right' }}>القائمة</h2>
+            <button className="btn btn-white" style={{ padding: '16px 20px', fontSize: 18, justifyContent: 'flex-start' }} onClick={() => { setMenuOpen(false); nav.toSettings(); }}>⚙️ الإعدادات</button>
+            <button className="btn btn-white" style={{ padding: '16px 20px', fontSize: 18, justifyContent: 'flex-start' }} onClick={() => { setMenuOpen(false); setRulesOpen(true); }}>💡 طريقة اللعب</button>
+            <button className="btn btn-white" style={{ padding: '16px 20px', fontSize: 18, justifyContent: 'flex-start' }} onClick={() => { setMenuOpen(false); nav.toLeaderboard(); }}>🏆 المتصدرين</button>
+            <div style={{ flex: 1 }} />
+            <button className="btn btn-pink" style={{ padding: '16px 20px', fontSize: 18 }} onClick={() => { setMenuOpen(false); logout(); nav.toAuth(); }}>🚪 تسجيل خروج</button>
+          </div>
+        </div>
+      )}
+
+      {rulesOpen && (
+        <div className="slide-up" style={{
+          position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(28,16,63,0.85)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div className="card" style={{ padding: '24px', width: '100%', maxWidth: 360, textAlign: 'center' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--bg-pink)', marginBottom: 12 }}>طريقة اللعب</h2>
+            <p style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.6, marginBottom: 20, color: 'var(--bg-dark-purple)' }}>
+              اللعبة بتعتمد على إنك تكون كلمة صحيحة حرف بحرف مع أصحابك أو الكمبيوتر. 
+              اللي ميعرفش يكمل أو يكتب حرف غلط بياخد "ربع قرد".
+              لو جمعت قرد كامل بتخسر وتطلع برا اللعبة!
+            </p>
+            <button onClick={() => setRulesOpen(false)} className="btn btn-yellow" style={{ width: '100%', padding: 12, fontSize: 16 }}>فهمت!</button>
+          </div>
+        </div>
+      )}
+
       <BottomNav active="home" onNavigate={(key) => {
         if (key === 'leaderboard') nav.toLeaderboard();
         else if (key === 'settings') nav.toSettings();

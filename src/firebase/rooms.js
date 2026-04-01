@@ -23,14 +23,22 @@ async function generateUniqueCode() {
 
 export async function createRoom(userProfile, settings = {}) {
   const code = await generateUniqueCode();
-  const { category = 'countries', timeLimit = 15 } = settings;
+  const {
+    category = 'countries', timeLimit = 15, maxPlayers = 5,
+    mode = 'monkey', scoreTarget = 40, drawTime = 80, wordChoices = 3,
+  } = settings;
 
   await setDoc(doc(db, 'rooms', code), {
     code,
     hostUid: userProfile.uid,
     status: 'lobby',
+    mode,
     category,
     timeLimit,
+    maxPlayers,
+    scoreTarget,
+    drawTime,
+    wordChoices,
     createdAt: serverTimestamp(),
     players: {
       [userProfile.uid]: {
@@ -56,7 +64,7 @@ export async function joinRoom(code, userProfile) {
   if (!snap.exists()) throw new Error('الغرفة غير موجودة');
   const room = snap.data();
   if (room.status !== 'lobby') throw new Error('اللعبة بدأت بالفعل');
-  if (Object.keys(room.players).length >= 8) throw new Error('الغرفة ممتلئة');
+  if (Object.keys(room.players).length >= (room.maxPlayers || 8)) throw new Error('الغرفة ممتلئة');
   if (room.players[userProfile.uid]) return; // already in room
 
   await updateDoc(roomRef, {

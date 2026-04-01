@@ -7,7 +7,7 @@ import { recordWin, recordLoss } from '../firebase/leaderboard';
 // Generate confetti pieces with stable values
 function useConfetti() {
   return useMemo(() => {
-    const colors = ['#E91E8C', '#FF6B35', '#FFD700', '#1C1040', '#FFFFFF', '#4CAF50'];
+    const colors = ['#E91E8C', '#FF6B35', '#FFD700', '#1C1040', 'var(--color-card)', '#4CAF50'];
     return Array.from({ length: 30 }, (_, i) => ({
       id: i,
       left: `${(i * 3.4) % 100}%`,
@@ -49,8 +49,7 @@ export default function GameOverScreen({ nav, roomCode }) {
 
   return (
     <div style={{
-      width: '100vw', height: '100dvh',
-      background: 'var(--color-bg)',
+      width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: 20, position: 'relative', overflow: 'hidden',
@@ -69,7 +68,7 @@ export default function GameOverScreen({ nav, roomCode }) {
 
       {/* Card */}
       <div className="slide-up" style={{
-        background: '#FFFFFF', borderRadius: 28,
+        background: 'var(--color-card)', borderRadius: 28,
         padding: '40px 28px', width: '100%', maxWidth: 400,
         textAlign: 'center', boxShadow: '0 16px 60px rgba(28,16,64,0.2)',
         position: 'relative', zIndex: 10,
@@ -126,3 +125,4 @@ export default function GameOverScreen({ nav, roomCode }) {
     </div>
   );
 }
+
