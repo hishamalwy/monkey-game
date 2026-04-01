@@ -20,11 +20,22 @@ export default function GameScreen({
   // Auto-focus native keyboard area
   useEffect(() => {
     if (!isAiTurn && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      // Focus more aggressively when turn starts
+      const focusInput = () => {
+        if (document.activeElement !== inputRef.current) {
+          inputRef.current?.focus();
+        }
+      };
+      
+      focusInput();
+      const timer = setTimeout(focusInput, 300); // Wait for animations to settle
+      const timer2 = setTimeout(focusInput, 800); // Secondary fallback
+      
+      return () => { clearTimeout(timer); clearTimeout(timer2); };
     } else if (isAiTurn && inputRef.current) {
       inputRef.current?.blur();
     }
-  }, [isAiTurn, currentWord]);
+  }, [isAiTurn, currentPlayer?.name]); // Trigger when turn changes or player name changes (new round)
 
   // Desktop physical keyboard
   useEffect(() => {

@@ -39,13 +39,14 @@ export default function HomeScreen({ nav }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '20px 24px', borderBottom: '4px solid var(--bg-dark-purple)'
       }}>
-        <button onClick={() => setRulesOpen(true)} className="btn btn-dark" style={{ width: 44, height: 44, fontSize: 18 }}>💡</button>
+        <button onClick={() => setRulesOpen(true)} className="btn btn-dark" style={{ width: 44, height: 44, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src={`${import.meta.env.BASE_URL}icons/rules.png`} alt="القواعد" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+        </button>
         <div className="title-glitch" style={{ transform: 'none' }}>كلكس!</div>
         <button onClick={() => setMenuOpen(true)} className="btn btn-yellow" style={{ width: 44, height: 44, fontSize: 24, fontWeight: 900 }}>≡</button>
       </div>
 
-      {/* Content */}
-      <div style={{
+      <div className="content-with-nav" style={{
         flex: 1, overflowY: 'auto',
         display: 'flex', flexDirection: 'column',
         padding: '16px var(--space-lg)', gap: 'var(--space-lg)',

@@ -1,15 +1,15 @@
 import React from 'react';
 
 const TABS = [
-  { key: 'settings', label: 'الإعدادات', icon: '⚙️' },
-  { key: 'store', label: 'المتجر', icon: '🛍️' },
-  { key: 'leaderboard', label: 'الترتيب', icon: '📊' },
-  { key: 'home', label: 'الرئيسية', icon: '🏠' },
+  { key: 'settings', label: 'الإعدادات', src: 'settings.png' },
+  { key: 'store', label: 'المتجر', src: 'shop.png' },
+  { key: 'leaderboard', label: 'الترتيب', src: 'leaderboard.png' },
+  { key: 'home', label: 'الرئيسية', src: 'home.png' },
 ];
 
 export default function BottomNav({ active, onNavigate }) {
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav-container">
       {TABS.map(tab => {
         const isActive = tab.key === active;
         return (
@@ -17,14 +17,15 @@ export default function BottomNav({ active, onNavigate }) {
             key={tab.key}
             onClick={() => onNavigate(tab.key)}
             className={`nav-item ${isActive ? 'active' : ''}`}
-            style={{ 
-              background: isActive ? 'var(--bg-pink)' : 'transparent',
-              border: 'none', cursor: 'pointer', outline: 'none',
-              padding: '6px'
-            }}
           >
-            <span style={{ fontSize: 24, marginBottom: 2 }}>{tab.icon}</span>
-            <span style={{ fontSize: 12 }}>{tab.label}</span>
+            {isActive && <div className="nav-active-pill" />}
+            <img 
+              src={`${import.meta.env.BASE_URL}icons/${tab.src}`} 
+              alt={tab.label}
+              className="icon"
+              style={{ width: 28, height: 28, objectFit: 'contain' }}
+            />
+            <span className="label">{tab.label}</span>
           </button>
         );
       })}

@@ -4,7 +4,7 @@ import { useRoom } from '../hooks/useRoom';
 import UserAvatar from '../components/ui/UserAvatar';
 import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { stopHorn } from '../utils/audio';
+import { stopHorn, getHornType, HORN_TYPES } from '../utils/audio';
 
 export default function OnlineGameScreen({ nav, roomCode }) {
   const { userProfile } = useAuth();
@@ -127,9 +127,21 @@ export default function OnlineGameScreen({ nav, roomCode }) {
         />
       </main>
 
-      <button onMouseDown={handleHornStart} onMouseUp={handleHornEnd} onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }} onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
-        className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'}`}
-        style={{ position: 'absolute', bottom: 24, left: 24, width: 72, height: 72, borderRadius: '50%', fontSize: 34, zIndex: 100, boxShadow: 'var(--brutal-shadow)' }}>📯</button>
+      {(() => {
+        const hornId = getHornType();
+        const horn = HORN_TYPES.find(h => h.id === hornId) || HORN_TYPES[0];
+        return (
+          <button onMouseDown={handleHornStart} onMouseUp={handleHornEnd} onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }} onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
+            className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'}`}
+            style={{ position: 'absolute', bottom: 24, left: 24, width: 72, height: 72, borderRadius: '50%', padding: 12, zIndex: 100, boxShadow: 'var(--brutal-shadow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {horn.src ? (
+              <img src={`${import.meta.env.BASE_URL}icons/${horn.src}`} alt={horn.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              <span style={{ fontSize: 34 }}>{horn.emoji}</span>
+            )}
+          </button>
+        );
+      })()}
 
       {showExitConfirm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>

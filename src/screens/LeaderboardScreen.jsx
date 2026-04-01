@@ -47,8 +47,7 @@ export default function LeaderboardScreen({ nav }) {
         </div>
       </div>
 
-      {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
+      <div className="content-with-nav" style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
         {loading ? (
           <div style={{ paddingTop: 60, display: 'flex', justifyContent: 'center' }}>
             <LoadingSpinner />
