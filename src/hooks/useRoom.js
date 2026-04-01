@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { serverTimestamp } from 'firebase/firestore';
-import { auth } from '../firebase/config';
+import { serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase/config';
 import { listenToRoom, updateGameState, leaveRoom, resolveChallenge } from '../firebase/rooms';
 import { normalizeArabic } from '../utils/aiLogic';
 import { appCategories } from '../data/categories';
-import { playSound } from '../utils/audio';
+import { playSound, getHornType } from '../utils/audio';
 
 const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
 

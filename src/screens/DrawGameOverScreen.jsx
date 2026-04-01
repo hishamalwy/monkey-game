@@ -28,7 +28,10 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
 
   useEffect(() => {
     const unsub = listenToRoom(roomCode, data => {
-      if (data) setRoom(data);
+      if (data) {
+        setRoom(data);
+        if (data.status === 'lobby') nav.toLobby(roomCode);
+      }
     });
     return unsub;
   }, [roomCode]);

@@ -19,7 +19,7 @@ export default function OnlineSetupScreen({ nav }) {
   const [catOpen, setCatOpen]         = useState(false);
   const [maxPlayers, setMaxPlayers]   = useState(5);
   const [timeLimit, setTimeLimit]     = useState(15);
-  const [scoreTarget, setScoreTarget] = useState(40);
+  const [scoreTarget, setScoreTarget] = useState(120);
   const [drawTime, setDrawTime]       = useState(80);
   const [entryFee, setEntryFee]       = useState(100);
   const [loading, setLoading]         = useState(false);
@@ -199,7 +199,7 @@ export default function OnlineSetupScreen({ nav }) {
                 هدف النقاط للفوز
               </h2>
               <div style={{ display: 'flex', gap: 8 }}>
-                {[20, 40, 60, 100].map(n => (
+                {[120, 240, 360, 480].map(n => (
                   <button
                     key={n}
                     onClick={() => setScoreTarget(n)}

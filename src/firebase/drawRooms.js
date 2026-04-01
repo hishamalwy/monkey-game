@@ -53,6 +53,7 @@ export async function startDrawGame(roomCode) {
       totalRounds: playerOrder.length,
       drawerUid,
       wordOptions: words,
+      choosingEndsAt: Date.now() + 20000,
       chosenWord: null,
       wordLength: 0,
       hint: '',
@@ -138,9 +139,16 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
     const othersCount = (room.playerOrder?.length || 1) - 1;
     const nowDone = (ds.guessersDone?.length || 0) + 1;
     if (nowDone >= othersCount) {
+       const guessers = (room.playerOrder || []).filter(g => g !== ds.drawerUid);
+       const drawerPoints = Math.round((nowDone / guessers.length) * 75);
+       
        patch['drawState.messages'] = arrayUnion({
          uid: 'system', username: 'المنادي', text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now()
        }, newMessage);
+       
+       patch['drawState.roundStatus'] = 'reveal';
+       patch[`drawState.scores.${ds.drawerUid}`] = (ds.scores[ds.drawerUid] || 0) + drawerPoints;
+       patch[`drawState.roundScores.${ds.drawerUid}`] = drawerPoints;
     }
   }
 
@@ -236,7 +244,7 @@ export async function nextDrawRound(roomCode) {
 
   if (!ds || ds.roundStatus !== 'reveal') return;
 
-  const { playerOrder, scoreTarget = 40, wordChoices = 3 } = room;
+  const { playerOrder, scoreTarget = 120, wordChoices = 3 } = room;
 
   // Check if anyone hit scoreTarget
   const winner = playerOrder.find(uid => (ds.scores?.[uid] || 0) >= scoreTarget);
@@ -257,6 +265,7 @@ export async function nextDrawRound(roomCode) {
     'drawState.currentRound': nextRound,
     'drawState.drawerUid': drawerUid,
     'drawState.wordOptions': words,
+    'drawState.choosingEndsAt': Date.now() + 20000,
     'drawState.chosenWord': null,
     'drawState.wordLength': 0,
     'drawState.hint': '',

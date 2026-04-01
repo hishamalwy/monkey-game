@@ -110,8 +110,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
   const [room, setRoom] = useState(null);
   const [toast, setToast] = useState('');
   const [guessInput, setGuessInput] = useState('');
-  const [timeLeft, setTimeLeft] = useState(null);
-  const [chooseTimer, setChooseTimer] = useState(10);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [hintCooldown, setHintCooldown] = useState(0);
 
   const canvasRef = useRef(null);
@@ -178,20 +177,28 @@ export default function DrawGameScreen({ nav, roomCode }) {
     lastStrokesLen.current = strokes.length;
   }, [ds?.strokes, ds?.bgFill]);
 
-  // --- Drawing phase timer ---
+  // --- Unified Phase Timer ---
   useEffect(() => {
-    if (!ds || ds.roundStatus !== 'drawing' || !ds.roundEndsAt) return;
-    const tick = () => {
-      const rem = Math.max(0, Math.ceil((ds.roundEndsAt - Date.now()) / 1000));
-      setTimeLeft(rem);
-      if (rem <= 0 && isHost) {
-        endDrawRound(roomCode).catch(() => {});
-      }
-    };
-    tick();
-    const id = setInterval(tick, 500);
-    return () => clearInterval(id);
-  }, [ds?.roundEndsAt, ds?.roundStatus, isHost, roomCode]);
+    let interval;
+    const status = ds?.roundStatus;
+    const endsAt = (status === 'drawing' ? ds.roundEndsAt : (status === 'choosing' ? ds.choosingEndsAt : null));
+    
+    if (endsAt) {
+      const update = () => {
+        const left = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+        setTimeLeft(left);
+        if (left <= 0) {
+          if (status === 'drawing' && isHost) endDrawRound(roomCode).catch(() => {});
+          if (status === 'choosing' && isDrawer && (ds.wordOptions?.length || 0) > 0) {
+             chooseDrawWord(roomCode, ds.wordOptions[0]).catch(() => {});
+          }
+        }
+      };
+      update();
+      interval = setInterval(update, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [ds?.roundStatus, ds?.roundEndsAt, ds?.choosingEndsAt, isHost, isDrawer, roomCode, ds?.wordOptions]);
 
   // --- Auto scroll chat ---
   useEffect(() => {
@@ -279,15 +286,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
     await submitDrawGuess(roomCode, myUid, userProfile.username, text, room?.drawTime || 80);
   };
 
-  // --- Choosing phase timer ---
-  useEffect(() => {
-    if (!ds || ds.roundStatus !== 'choosing') return;
-    setChooseTimer(15);
-    const id = setInterval(() => {
-      setChooseTimer(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [ds?.roundStatus, ds?.currentRound]);
+
 
   if (!room || !ds) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎨</div>;
 
@@ -330,7 +329,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
           transition: 'all 0.3s ease'
         }}>
           <span style={{ fontSize: 18, fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>
-            {ds.roundStatus === 'choosing' ? chooseTimer : (timeLeft ?? '')}
+            {timeLeft ?? ''}
           </span>
         </div>
       </div>
