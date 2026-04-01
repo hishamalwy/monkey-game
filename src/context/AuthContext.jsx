@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { loginUser, registerUser, logoutUser } from '../firebase/auth';
 
@@ -21,7 +21,19 @@ export function AuthProvider({ children }) {
 
       if (firebaseUser) {
         unsubProfile = onSnapshot(doc(db, 'users', firebaseUser.uid), (snap) => {
-          setUserProfile(snap.exists() ? snap.data() : null);
+          if (snap.exists()) {
+            const data = snap.data();
+            // Migrate old profiles
+            if (data.wins_draw === undefined || data.coins === undefined) {
+               updateDoc(doc(db, 'users', firebaseUser.uid), {
+                 wins_draw: data.wins_draw ?? 0,
+                 coins: data.coins ?? 500
+               });
+            }
+            setUserProfile(data);
+          } else {
+            setUserProfile(null);
+          }
           setLoading(false);
         });
       } else {

@@ -34,6 +34,8 @@ export async function registerUser(username, password, avatarId) {
     username,
     avatarId,
     wins: 0,
+    wins_draw: 0,
+    coins: 500,
     gamesPlayed: 0,
     createdAt: serverTimestamp(),
   });

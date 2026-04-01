@@ -9,23 +9,42 @@ export default function LeaderboardScreen({ nav }) {
   const { userProfile } = useAuth();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState('monkey');
 
   useEffect(() => {
-    getLeaderboard(50)
+    setLoading(true);
+    getLeaderboard(50, mode)
       .then(setList)
       .finally(() => setLoading(false));
-  }, []);
+  }, [mode]);
 
   return (
     <div style={{
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
     }}>
-      {/* Header */}
-      <div style={{ padding: '16px 20px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-header)', margin: 0 }}>
+      <div style={{ padding: '16px 20px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0 }}>
           🏆 المتصدرون
         </h1>
+        
+        {/* Mode Tabs */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button 
+            onClick={() => setMode('monkey')} 
+            className={`btn ${mode === 'monkey' ? 'btn-pink' : 'btn-white'}`}
+            style={{ flex: 1, padding: '8px', fontSize: 13 }}
+          >
+            🔊 القرد بيتكلم
+          </button>
+          <button 
+            onClick={() => setMode('draw')} 
+            className={`btn ${mode === 'draw' ? 'btn-pink' : 'btn-white'}`}
+            style={{ flex: 1, padding: '8px', fontSize: 13 }}
+          >
+            🎨 خمن وارسم
+          </button>
+        </div>
       </div>
 
       {/* List */}
@@ -73,8 +92,10 @@ export default function LeaderboardScreen({ nav }) {
 
                   {/* Wins */}
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--color-primary)' }}>{u.wins}</div>
-                    <div style={{ fontSize: 10, color: 'var(--color-muted)' }}>فوز</div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--bg-pink)' }}>
+                      {mode === 'draw' ? (u.wins_draw || 0) : (u.wins || 0)}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--color-muted)', fontWeight: 700 }}>فوز</div>
                   </div>
                 </div>
               );

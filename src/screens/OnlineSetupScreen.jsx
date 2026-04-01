@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { createRoom } from '../firebase/rooms';
 import { appCategories } from '../data/categories';
+import { drawCategories } from '../data/drawCategories';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Toast from '../components/ui/Toast';
 
@@ -15,21 +16,31 @@ const MODES = [
 export default function OnlineSetupScreen({ nav }) {
   const { userProfile } = useAuth();
   const [mode, setMode]               = useState('monkey');
-  const [category, setCategory]       = useState(appCategories[0].id);
   const [catOpen, setCatOpen]         = useState(false);
   const [maxPlayers, setMaxPlayers]   = useState(5);
   const [timeLimit, setTimeLimit]     = useState(15);
   const [scoreTarget, setScoreTarget] = useState(40);
   const [drawTime, setDrawTime]       = useState(80);
+  const [entryFee, setEntryFee]       = useState(100);
   const [loading, setLoading]         = useState(false);
   const [toast, setToast]             = useState('');
 
-  const selectedCat = appCategories.find(c => c.id === category) || appCategories[0];
+  const currentCategories = mode === 'draw' ? drawCategories : appCategories;
+  const [category, setCategory]       = useState(currentCategories[0].id);
+
+  // Synchronize category if mode changes
+  const [lastMode, setLastMode] = useState(mode);
+  if (mode !== lastMode) {
+    setLastMode(mode);
+    setCategory(currentCategories[0].id);
+  }
+
+  const selectedCat = currentCategories.find(c => c.id === category) || currentCategories[0];
 
   const handleCreate = async () => {
     setLoading(true);
     try {
-      const code = await createRoom(userProfile, { mode, category, timeLimit, maxPlayers, scoreTarget, drawTime, wordChoices: 3 });
+      const code = await createRoom(userProfile, { mode, category, timeLimit, maxPlayers, scoreTarget, drawTime, entryFee, wordChoices: 3 });
       nav.toLobby(code);
     } catch (e) {
       setToast(e.message || 'حدث خطأ');
@@ -123,7 +134,7 @@ export default function OnlineSetupScreen({ nav }) {
 
           {catOpen && (
             <div className="slide-up" style={{ border: 'var(--brutal-border)', borderTop: 'none', background: '#FFF' }}>
-              {appCategories.map(cat => (
+              {currentCategories.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => { setCategory(cat.id); setCatOpen(false); }}
@@ -213,6 +224,23 @@ export default function OnlineSetupScreen({ nav }) {
                     style={{ flex: 1, padding: '10px 4px', fontSize: 14 }}
                   >
                     {t}s
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section>
+              <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--bg-dark-purple)', textAlign: 'center', marginBottom: 10 }}>
+                سعر دخول الغرفة (كوينز)
+              </h2>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[0, 100, 500, 1000].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setEntryFee(n)}
+                    className={`btn ${entryFee === n ? 'btn-yellow' : 'btn-white'}`}
+                    style={{ flex: 1, padding: '10px 4px', fontSize: 15 }}
+                  >
+                    {n === 0 ? 'مجاني' : n}
                   </button>
                 ))}
               </div>

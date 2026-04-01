@@ -5,6 +5,7 @@ import {
 import { db } from './config';
 import { normalizeArabic } from '../utils/aiLogic';
 import { appCategories } from '../data/categories';
+import { drawCategories } from '../data/drawCategories';
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -26,6 +27,7 @@ export async function createRoom(userProfile, settings = {}) {
   const {
     category = 'countries', timeLimit = 15, maxPlayers = 5,
     mode = 'monkey', scoreTarget = 40, drawTime = 80, wordChoices = 3,
+    entryFee = 100,
   } = settings;
 
   await setDoc(doc(db, 'rooms', code), {
@@ -39,6 +41,7 @@ export async function createRoom(userProfile, settings = {}) {
     scoreTarget,
     drawTime,
     wordChoices,
+    entryFee,
     createdAt: serverTimestamp(),
     players: {
       [userProfile.uid]: {
@@ -72,7 +75,7 @@ export async function joinRoom(code, userProfile) {
       uid: userProfile.uid,
       username: userProfile.username,
       avatarId: userProfile.avatarId,
-      isReady: false,
+      isReady: true,
       quarterMonkeys: 0,
     },
     playerOrder: arrayUnion(userProfile.uid),
@@ -139,9 +142,9 @@ export function listenToRoom(code, callback) {
   });
 }
 
-// Challenge logic (pure, shared between local and online)
-export function resolveChallenge(currentWord, category) {
-  const cat = appCategories.find(c => c.id === category) || appCategories[0];
+export function resolveChallenge(currentWord, categoryId, mode = 'monkey') {
+  const cats = mode === 'draw' ? drawCategories : appCategories;
+  const cat = cats.find(c => c.id === categoryId) || cats[0];
   const normalizedWords = cat.words.map(w => normalizeArabic(w));
   const normalizedWord = normalizeArabic(currentWord);
   const isPrefixValid = normalizedWords.some(w => w.startsWith(normalizedWord));

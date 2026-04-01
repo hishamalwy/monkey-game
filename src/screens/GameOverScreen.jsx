@@ -35,12 +35,13 @@ export default function GameOverScreen({ nav, roomCode }) {
   // Record win/loss once
   useEffect(() => {
     if (!winner || !userProfile) return;
+    const mode = room?.mode || 'monkey';
     if (iWon) {
-      recordWin(userProfile.uid).catch(() => {});
+      recordWin(userProfile.uid, mode).catch(() => {});
     } else {
       recordLoss(userProfile.uid).catch(() => {});
     }
-  }, []);
+  }, [!!winner]);
 
   const handleLeave = async () => {
     await leaveRoom();

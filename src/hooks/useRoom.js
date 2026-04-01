@@ -55,8 +55,16 @@ export function useRoom(roomCode) {
   const nextPlayerUid = useCallback(() => {
     if (!room) return null;
     const order = room.playerOrder || [];
-    const idx = order.indexOf(room.gameState.currentPlayerUid);
-    return order[(idx + 1) % order.length];
+    const playersMap = room.players;
+    const currentIdx = order.indexOf(room.gameState.currentPlayerUid);
+    
+    // Check up to next N-1 players to find a survivor
+    for (let i = 1; i <= order.length; i++) {
+      const candidateUid = order[(currentIdx + i) % order.length];
+      const p = playersMap[candidateUid];
+      if (p && (p.quarterMonkeys || 0) < MONKEY_LIMIT) return candidateUid;
+    }
+    return room.gameState.currentPlayerUid; // Should not happen with game over check
   }, [room]);
 
   // ── Apply penalty & check for game over ──────────────────────

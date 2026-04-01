@@ -2,10 +2,11 @@ import {
   doc, getDoc, updateDoc, arrayUnion,
 } from 'firebase/firestore';
 import { db } from './config';
-import { drawWords } from '../data/drawWords';
+import { drawCategories } from '../data/drawCategories';
 
-function pickWords(count = 3) {
-  const shuffled = [...drawWords].sort(() => Math.random() - 0.5);
+function pickWords(roomCategory, count = 3) {
+  const cat = drawCategories.find(c => c.id === roomCategory) || drawCategories[0];
+  const shuffled = [...cat.words].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
 
@@ -19,16 +20,30 @@ function normalizeGuess(str) {
     .replace(/[\u0610-\u061A\u064B-\u065F]/g, '') // strip tashkeel
     .replace(/\s+/g, ' ')
     .replace(/أ|إ|آ/g, 'ا')
+    .replace(/ة/g, 'ه') // common arabic variation
+    .replace(/ى/g, 'ي') // common arabic variation
     .toLowerCase();
+}
+
+function calculateCloseness(guess, word) {
+  const n1 = normalizeGuess(guess);
+  const n2 = normalizeGuess(word);
+  if (n1 === n2) return 'correct';
+  
+  // Very simple closeness: if one contains the other or length difference is small + most chars match
+  if (n1.length > 2 && n2.length > 2) {
+    if (n2.includes(n1) || n1.includes(n2)) return 'close';
+  }
+  return 'wrong';
 }
 
 export async function startDrawGame(roomCode) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
   const room = snap.data();
-  const { playerOrder, wordChoices = 3, scoreTarget = 40 } = room;
+  const { playerOrder, wordChoices = 3, category = 'objects' } = room;
 
   const drawerUid = playerOrder[0];
-  const words = pickWords(wordChoices);
+  const words = pickWords(category, wordChoices);
 
   await updateDoc(doc(db, 'rooms', roomCode), {
     status: 'playing',
@@ -48,6 +63,7 @@ export async function startDrawGame(roomCode) {
       scores: Object.fromEntries(playerOrder.map(uid => [uid, 0])),
       roundScores: {},
       guessersDone: [],
+      bgFill: null,
     },
   });
 }
@@ -71,6 +87,7 @@ export async function chooseDrawWord(roomCode, word) {
     'drawState.guessersDone': [],
     'drawState.roundScores': {},
     'drawState.messages': [],
+    'drawState.bgFill': null,
   });
 }
 
@@ -82,19 +99,24 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
   if (!ds || ds.roundStatus !== 'drawing') return { correct: false };
   if ((ds.guessersDone || []).includes(uid)) return { correct: false, alreadyGuessed: true };
 
-  const correct = normalizeGuess(guess) === normalizeGuess(ds.chosenWord || '');
+  const closeness = calculateCloseness(guess, ds.chosenWord || '');
+  const correct = closeness === 'correct';
+  const isClose = closeness === 'close';
 
   const timeRemaining = ds.roundEndsAt
     ? Math.max(0, (ds.roundEndsAt - Date.now()) / 1000)
     : 0;
   const ratio = Math.min(1, timeRemaining / drawTime);
-  const points = correct ? Math.max(10, Math.round(ratio * 100)) : 0;
+  // Award points: max 100, min 45 if correct
+  const points = correct ? Math.max(45, Math.round(ratio * 100)) : 0;
 
   const newMessage = {
     uid,
     username,
-    text: guess,
+    text: correct ? 'خمّن الكلمة الصحيحة! ✅' : (isClose ? 'قريب جداً! 🤏' : guess),
+    originalText: guess, 
     isCorrect: correct,
+    isClose: isClose,
     points,
     ts: Date.now(),
   };
@@ -104,8 +126,10 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
   };
 
   if (correct) {
-    patch[`drawState.roundScores.${uid}`] = points;
-    patch[`drawState.scores.${uid}`] = (ds.scores?.[uid] || 0) + points;
+    if (ds.scores) {
+       patch[`drawState.roundScores.${uid}`] = points;
+       patch[`drawState.scores.${uid}`] = (ds.scores[uid] || 0) + points;
+    }
     patch['drawState.guessersDone'] = arrayUnion(uid);
   }
 
@@ -122,6 +146,13 @@ export async function addStroke(roomCode, stroke) {
 export async function clearDrawCanvas(roomCode) {
   await updateDoc(doc(db, 'rooms', roomCode), {
     'drawState.strokes': [],
+    'drawState.bgFill': null,
+  });
+}
+
+export async function fillBackground(roomCode, color) {
+  await updateDoc(doc(db, 'rooms', roomCode), {
+    'drawState.bgFill': color,
   });
 }
 
@@ -156,7 +187,7 @@ export async function endDrawRound(roomCode) {
   const room = snap.data();
   const ds = room?.drawState;
 
-  if (!ds || ds.roundStatus !== 'drawing') return; // idempotent guard
+  if (!ds || ds.roundStatus !== 'drawing') return; 
 
   const guessers = (room.playerOrder || []).filter(uid => uid !== ds.drawerUid);
   const correctCount = ds.guessersDone?.length || 0;
@@ -198,7 +229,7 @@ export async function nextDrawRound(roomCode) {
 
   const nextRound = ds.currentRound + 1;
   const drawerUid = playerOrder[(nextRound - 1) % playerOrder.length];
-  const words = pickWords(wordChoices);
+  const words = pickWords(room.category || 'objects', wordChoices);
 
   await updateDoc(doc(db, 'rooms', roomCode), {
     'drawState.roundStatus': 'choosing',
@@ -212,5 +243,6 @@ export async function nextDrawRound(roomCode) {
     'drawState.messages': [],
     'drawState.guessersDone': [],
     'drawState.roundScores': {},
+    'drawState.bgFill': null,
   });
 }

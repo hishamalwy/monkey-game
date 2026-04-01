@@ -4,7 +4,7 @@ import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
 import { listenToRoom } from '../firebase/rooms';
 import {
   chooseDrawWord, submitDrawGuess, addStroke, clearDrawCanvas,
-  endDrawRound, nextDrawRound, revealHint,
+  fillBackground, endDrawRound, nextDrawRound, revealHint,
 } from '../firebase/drawRooms';
 import Toast from '../components/ui/Toast';
 
@@ -76,27 +76,28 @@ export default function DrawGameScreen({ nav, roomCode }) {
     lastStrokesLen.current = 0;
   }, [ds?.roundStatus]);
 
-  // Redraw canvas from strokes on change
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !ds?.strokes) return;
     const strokes = ds.strokes;
 
-    // Full redraw if strokes were cleared or count went down
-    if (strokes.length < lastStrokesLen.current) {
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#FFFFFF';
+    // Full redraw if strokes were cleared, count went down, OR background changed
+    const ctx = canvas.getContext('2d');
+    const hasBgChange = ds.bgFill !== (canvas.dataset.lastBg || null);
+
+    if (strokes.length < lastStrokesLen.current || hasBgChange) {
+      ctx.fillStyle = ds.bgFill || '#FFFFFF';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       strokes.forEach(s => drawStrokeOnCtx(ctx, s, canvas.width, canvas.height));
+      canvas.dataset.lastBg = ds.bgFill || '';
     } else {
       // Incremental: only draw new strokes
-      const ctx = canvas.getContext('2d');
       for (let i = lastStrokesLen.current; i < strokes.length; i++) {
         drawStrokeOnCtx(ctx, strokes[i], canvas.width, canvas.height);
       }
     }
     lastStrokesLen.current = strokes.length;
-  }, [ds?.strokes]);
+  }, [ds?.strokes, ds?.bgFill]);
 
   // --- Drawing phase timer ---
   useEffect(() => {
@@ -518,9 +519,16 @@ export default function DrawGameScreen({ nav, roomCode }) {
             <button
               onClick={() => clearDrawCanvas(roomCode).catch(() => {})}
               className="btn btn-white"
-              style={{ padding: '4px 12px', fontSize: 14 }}
+              style={{ padding: '4px 12px', fontSize: 13 }}
             >
               🗑️
+            </button>
+            <button
+              onClick={() => fillBackground(roomCode, color).catch(() => {})}
+              className="btn btn-white"
+              style={{ padding: '4px 10px', fontSize: 13 }}
+            >
+              🪣 ملء
             </button>
           </div>
         </div>
@@ -528,17 +536,27 @@ export default function DrawGameScreen({ nav, roomCode }) {
         <div style={{ padding: '4px 10px 10px', flexShrink: 0, borderTop: '2px solid rgba(45,27,78,0.1)' }}>
           {/* Recent messages */}
           <div style={{ maxHeight: 56, overflowY: 'auto', marginBottom: 5 }}>
-            {[...(ds.messages || [])].sort((a, b) => a.ts - b.ts).slice(-5).map((msg, i) => (
-              <div key={i} style={{
-                fontSize: 12, fontWeight: 700, direction: 'rtl', textAlign: 'right',
-                color: msg.isCorrect ? 'var(--bg-green)' : 'var(--bg-dark-purple)',
-                background: msg.isCorrect ? 'rgba(57,255,20,0.1)' : 'transparent',
-                padding: '1px 6px',
-              }}>
-                <span style={{ color: 'var(--color-muted)' }}>{msg.username}: </span>
-                {msg.isCorrect ? `✅ ${msg.text} (+${msg.points})` : msg.text}
-              </div>
-            ))}
+            {[...(ds.messages || [])].sort((a, b) => a.ts - b.ts).slice(-6).map((msg, i) => {
+              const isMe = msg.uid === myUid;
+              const displayText = (msg.isCorrect || msg.isClose) 
+                ? (isMe ? msg.originalText : msg.text) 
+                : msg.text;
+              return (
+                <div key={i} style={{
+                  fontSize: 12, fontWeight: 700, direction: 'rtl', textAlign: 'right',
+                  color: msg.isCorrect ? 'var(--bg-green)' : (msg.isClose ? 'var(--bg-orange)' : 'var(--bg-dark-purple)'),
+                  background: msg.isCorrect ? 'rgba(57,255,20,0.1)' : (msg.isClose ? 'rgba(255,107,0,0.08)' : 'transparent'),
+                  padding: '1px 6px',
+                  borderRadius: 4,
+                  marginBottom: 2,
+                }}>
+                  <span style={{ color: 'var(--color-muted)', fontSize: 10 }}>{msg.username}: </span>
+                  {msg.isCorrect && !isMe ? '✅ ' : (msg.isClose && !isMe ? '🤏 ' : '')}
+                  {displayText}
+                  {msg.isCorrect && isMe && <span style={{ fontSize: 10, color: 'var(--bg-green)', marginRight: 4 }}>(صح! +{msg.points})</span>}
+                </div>
+              );
+            })}
           </div>
           {/* Input or done message */}
           {myAlreadyGuessed ? (

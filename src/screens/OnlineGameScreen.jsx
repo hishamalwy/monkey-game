@@ -19,6 +19,25 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isHonking, setIsHonking] = useState(false);
 
+  const MONKEY_LIMIT = 4;
+
+  const MonkeySVG = ({ qm }) => {
+    const pct = Math.min((qm / 4) * 100, 100);
+    return (
+      <svg viewBox="0 0 100 100" width="32" height="32" style={{ overflow: 'visible', margin: '2px 0', opacity: qm === 0 ? 0.35 : 1 }}>
+        <rect x="0" y="0" width="100" height="100" fill="#e0e0e0" mask="url(#global-monkey-mask)" />
+        {qm > 0 && <rect x="0" y={100 - pct} width="100" height="100" fill="var(--bg-dark-purple)" mask="url(#global-monkey-mask)" style={{ transition: 'y 0.5s ease-out' }} />}
+        <g fill="none" stroke="var(--bg-dark-purple)" strokeWidth="6" strokeLinejoin="round" strokeLinecap="round">
+          <path d="M 68 80 Q 95 95 90 60 Q 90 40 75 60" />
+          <circle cx="26" cy="36" r="10" />
+          <circle cx="74" cy="36" r="10" />
+          <path d="M 32 47 h 36 v 32 q 0 10 -18 10 q -18 0 -18 -10 Z" />
+          <circle cx="50" cy="32" r="20" />
+        </g>
+      </svg>
+    );
+  };
+
   // Status transitions — uses navRef to avoid stale closure
   useEffect(() => {
     if (!room) return;
@@ -73,67 +92,97 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     <div style={{
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative'
     }}>
       {/* Header */}
       <header style={{
-        padding: '10px 14px',
+        padding: '16px 20px 0',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        background: 'var(--color-card)',
-        borderBottom: '2px solid rgba(28,16,64,0.08)',
         flexShrink: 0,
       }}>
-        {/* Exit button */}
+        <h2 className="title-glitch" style={{ margin: 0, fontSize: 24, transform: 'none' }}>كلكس!</h2>
         <button
           onClick={() => setShowExitConfirm(true)}
-          style={{
-            background: 'rgba(233,30,140,0.08)', border: '2px solid rgba(233,30,140,0.2)',
-            borderRadius: 10, padding: '6px 12px', cursor: 'pointer',
-            fontSize: 13, fontWeight: 700, color: 'var(--color-primary)',
-            fontFamily: 'Cairo, sans-serif',
-          }}>
+          className="btn btn-white"
+          style={{ padding: '8px 16px', fontSize: 14 }}
+        >
           ✕ خروج
         </button>
-
-        {/* Mini scoreboard */}
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', maxWidth: '60vw' }}>
-          {players.map((p) => {
-            const qm = p.quarterMonkeys || 0;
-            const eliminated = qm >= 4;
-            return (
-              <div key={p.uid} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: '3px 7px', borderRadius: 10, flexShrink: 0,
-                background: p.uid === currentPlayerUid ? 'rgba(233,30,140,0.12)' : 'rgba(28,16,64,0.04)',
-                border: p.uid === currentPlayerUid ? '2px solid var(--color-primary)' : '2px solid transparent',
-                opacity: eliminated ? 0.4 : 1,
-              }}>
-                <span style={{ fontSize: 15 }}>{AVATAR_EMOJIS[p.avatarId ?? 0]}</span>
-                <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--color-header)' }}>
-                  {p.username.slice(0, 6)}
-                </span>
-                <span style={{ fontSize: 9, color: eliminated ? 'var(--color-danger)' : 'var(--color-secondary)', fontWeight: 700 }}>
-                  {eliminated ? '💀' : qm > 0 ? `${qm}/4🐒` : '—'}
-                </span>
-              </div>
-            );
-          })}
-        </div>
       </header>
 
-      {/* Turn banner */}
+      {/* Floating Players Dock */}
       <div style={{
-        textAlign: 'center', padding: '7px 16px',
-        fontSize: 14, fontWeight: 900,
-        background: isMyTurn ? 'var(--color-primary)' : 'rgba(28,16,64,0.07)',
-        color: isMyTurn ? 'white' : 'var(--color-muted)',
-        transition: 'all 0.3s ease',
+        padding: '16px 20px',
+        display: 'flex', gap: 12, overflowX: 'auto', WebkitOverflowScrolling: 'touch',
         flexShrink: 0,
+        position: 'relative',
       }}>
-        {isMyTurn ? '👉 دورك الآن!' : `⏳ دور ${currentPlayer.name}...`}
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <mask id="global-monkey-mask">
+              <circle cx="50" cy="32" r="20" fill="white" />
+              <circle cx="26" cy="36" r="10" fill="white" />
+              <circle cx="74" cy="36" r="10" fill="white" />
+              <path d="M 32 47 h 36 v 32 q 0 10 -18 10 q -18 0 -18 -10 Z" fill="white" />
+              <path d="M 68 80 Q 95 95 90 60 Q 90 40 75 60" fill="none" stroke="white" strokeWidth="10" strokeLinecap="round" />
+            </mask>
+          </defs>
+        </svg>
+
+        {players.map((p) => {
+          const qm = p.quarterMonkeys || 0;
+          const eliminated = qm >= MONKEY_LIMIT;
+          const isActive = p.uid === currentPlayerUid && !eliminated;
+
+          return (
+            <div key={p.uid} className="card slide-up" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '8px 12px', minWidth: 70, flexShrink: 0,
+              background: isActive ? 'var(--bg-pink)' : '#FFF',
+              border: '3px solid var(--bg-dark-purple)',
+              boxShadow: isActive ? '4px 4px 0px var(--bg-dark-purple)' : '2px 2px 0px rgba(45,27,78,0.2)',
+              transform: isActive ? 'translateY(-4px)' : 'none',
+              opacity: eliminated ? 0.45 : 1,
+              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}>
+              <span style={{ fontSize: 20, filter: eliminated ? 'grayscale(1)' : 'none', marginBottom: 4 }}>
+                {AVATAR_EMOJIS[p.avatarId ?? 0]}
+              </span>
+              <span style={{
+                fontSize: 11, fontWeight: 900,
+                color: isActive ? '#FFF' : 'var(--bg-dark-purple)',
+                marginBottom: 6
+              }}>
+                {eliminated ? '💀' : p.username.slice(0, 8)}
+              </span>
+              <MonkeySVG qm={qm} />
+            </div>
+          );
+        })}
       </div>
 
       {/* Game area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <main style={{
+        flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        position: 'relative',
+        background: 'var(--color-card)',
+        borderTop: 'var(--brutal-border)',
+        borderTopLeftRadius: 32, borderTopRightRadius: 32,
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.05)',
+        marginTop: 8
+      }}>
+        {/* Turn indicator watermark font-size reduced slightly */}
+        {isMyTurn && (
+          <div className="pop" style={{
+            position: 'absolute', top: 20, right: 20, zIndex: 10,
+            background: 'var(--bg-pink)', color: 'white', padding: '4px 12px',
+            fontWeight: 900, borderRadius: 12, transform: 'rotate(5deg)',
+            border: '2px solid var(--bg-dark-purple)', boxShadow: '2px 2px 0 var(--bg-dark-purple)'
+          }}>
+            دورك! 🔥
+          </div>
+        )}
+        
         <GameScreen
           currentWord={room.gameState.currentWord || ''}
           timeRemaining={computedTimer ?? room.timeLimit}
@@ -145,69 +194,54 @@ export default function OnlineGameScreen({ nav, roomCode }) {
           onChallenge={pressChallenge}
           isOnline={true}
         />
-      </div>
+      </main>
 
-      {/* Horn button */}
-      <div style={{
-        padding: '8px 16px 12px',
-        background: 'var(--color-card)',
-        borderTop: '1px solid rgba(28,16,64,0.08)',
-        display: 'flex', justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <button
-          onMouseDown={handleHornStart}
-          onMouseUp={handleHornEnd}
-          onMouseLeave={handleHornEnd}
-          onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
-          style={{
-            background: isHonking
-              ? 'linear-gradient(135deg, #FF6B35, #e55c25)'
-              : 'linear-gradient(135deg, #FFD700, #FFC200)',
-            border: 'none', borderRadius: 50,
-            padding: '10px 32px', cursor: 'pointer',
-            fontSize: 22,
-            fontFamily: 'Cairo, sans-serif', fontWeight: 900,
-            color: 'var(--color-header)',
-            boxShadow: isHonking
-              ? '0 2px 8px rgba(255,107,53,0.5)'
-              : '0 4px 16px rgba(255,215,0,0.5)',
-            transform: isHonking ? 'scale(0.93)' : 'scale(1)',
-            transition: 'all 0.08s ease',
-            userSelect: 'none', WebkitUserSelect: 'none',
-          }}
-        >
-          📯
-        </button>
-      </div>
+      {/* Floating Horn FAB */}
+      <button
+        onMouseDown={handleHornStart}
+        onMouseUp={handleHornEnd}
+        onMouseLeave={handleHornEnd}
+        onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }}
+        onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
+        className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'}`}
+        style={{
+          position: 'absolute', bottom: 24, left: 24,
+          width: 72, height: 72, borderRadius: '50%',
+          padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 34, zIndex: 100,
+          boxShadow: isHonking ? '0 2px 8px rgba(233,30,140,0.5)' : 'var(--brutal-shadow)',
+          transform: isHonking ? 'scale(0.93)' : 'scale(1)',
+          transition: 'all 0.08s ease',
+        }}
+      >
+        📯
+      </button>
 
       {/* Exit confirmation overlay */}
       {showExitConfirm && (
-        <div style={{
+        <div className="slide-up" style={{
           position: 'fixed', inset: 0, zIndex: 200,
-          background: 'rgba(28,16,64,0.6)', backdropFilter: 'blur(4px)',
+          background: 'rgba(28,16,63,0.85)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         }}>
-          <div style={{
-            background: 'var(--color-card)', borderRadius: 20, padding: '28px 24px',
+          <div className="card" style={{
+            padding: '28px 24px',
             width: '100%', maxWidth: 320, textAlign: 'center',
-            boxShadow: '0 12px 48px rgba(28,16,64,0.2)',
           }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🚪</div>
-            <h3 style={{ fontSize: 20, fontWeight: 900, color: 'var(--color-header)', margin: '0 0 8px' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
+            <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 12px' }}>
               تخرج من اللعبة؟
             </h3>
-            <p style={{ fontSize: 14, color: 'var(--color-muted)', marginBottom: 20 }}>
-              لو خرجت هتتحسب عليك خسارة
+            <p style={{ fontSize: 16, color: 'var(--bg-dark-purple)', marginBottom: 24, fontWeight: 700 }}>
+              لو خرجت هتتحسب عليك خسارة! 🐒
             </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setShowExitConfirm(false)} className="btn btn-ghost"
-                style={{ flex: 1, padding: '12px', fontSize: 15, borderRadius: 14 }}>
-                لأ، ابقى
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white"
+                style={{ flex: 1, padding: '14px', fontSize: 16 }}>
+                لأ، كمل
               </button>
-              <button onClick={handleExit} className="btn btn-danger"
-                style={{ flex: 1, padding: '12px', fontSize: 15, borderRadius: 14 }}>
+              <button onClick={handleExit} className="btn btn-pink"
+                style={{ flex: 1, padding: '14px', fontSize: 16 }}>
                 اخرج
               </button>
             </div>
