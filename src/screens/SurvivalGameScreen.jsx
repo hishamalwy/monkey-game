@@ -104,6 +104,8 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
     if (!isHost || status !== 'reveal') return;
     
     const aliveCount = Object.values(survivalState.alivePlayers).filter(v => v).length;
+    
+    // If only one (or zero) survives, it's Game Over
     if (aliveCount <= 1 || survivalState.currentQuestionIndex >= survivalState.questions.length - 1) {
       await endSurvivalGame(roomCode);
       return;
@@ -120,26 +122,57 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
   const totalAlive = Object.values(survivalState.alivePlayers).filter(v => v).length;
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
+    <div className="overdrive-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '24px', overflow: 'hidden', position: 'relative' }}>
+      
+      {/* Animated Gradient Background */}
+      <style>{`
+        .overdrive-bg {
+          background: linear-gradient(-45deg, #FF006E, #FFD700, #39FF14, #1C1040);
+          background-size: 400% 400%;
+          animation: gradientShift 15s ease infinite;
+        }
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .survival-card {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border: 5px solid var(--bg-dark-purple);
+          box-shadow: 12px 12px 0 var(--bg-dark-purple);
+          transform: rotate(-0.5deg);
+        }
+        .survival-stat {
+          background: var(--bg-dark-purple);
+          color: #FFF;
+          padding: 8px 16px;
+          font-weight: 900;
+          border: 3px solid #FFF;
+          box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+        }
+      `}</style>
+
       {/* Screen Reader Header */}
       <h1 className="sr-only">لعبة البقاء للأقوى - {currentQ.q}</h1>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ background: 'var(--bg-pink)', padding: '6px 14px', border: 'var(--brutal-border)', fontWeight: 900, color: '#FFF', fontSize: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, zIndex: 10 }}>
+          <div className="survival-stat pop" style={{ background: 'var(--bg-pink)' }}>
               السؤال {survivalState.currentQuestionIndex + 1}
           </div>
-          <div className={timer <= 5 ? 'pulse' : ''} style={{ fontSize: 28, fontWeight: 900, color: timer <= 5 ? 'var(--bg-pink)' : 'var(--bg-dark-purple)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              {timer}s <span style={{ fontSize: 20 }}>⏱️</span>
+          <div className={timer <= 5 ? 'pulse' : ''} style={{ fontSize: 32, fontWeight: 900, color: '#FFF', textShadow: '4px 4px 0 var(--bg-dark-purple)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              {timer}s <span style={{ fontSize: 24 }}>⏱️</span>
           </div>
-          <div style={{ background: 'var(--bg-green)', padding: '6px 14px', border: 'var(--brutal-border)', fontWeight: 900, color: '#FFF', fontSize: 14 }}>
+          <div className="survival-stat pop" style={{ background: 'var(--bg-green)' }}>
               {totalAlive} ناجي
           </div>
       </div>
 
       {/* Question Card */}
-      <div className="card slide-up" style={{ padding: 24, marginBottom: 24, textAlign: 'center', minHeight: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 0 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.4 }}>
+      <div className="survival-card slide-up" style={{ padding: '32px 24px', marginBottom: 32, textAlign: 'center', minHeight: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: -15, left: -20, fontSize: 40, transform: 'rotate(-20deg)', filter: 'drop-shadow(4px 4px 0 var(--bg-dark-purple))' }}>❓</div>
+          <h2 style={{ fontSize: 26, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.5 }}>
               {currentQ.q}
           </h2>
       </div>
@@ -147,9 +180,10 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
       {/* Answers Grid */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
         gap: 16, 
-        marginBottom: 24 
+        marginBottom: 32,
+        zIndex: 10
       }}>
           {currentQ.a.map((ans, i) => {
               const isSelected = selectedAnswer === i || survivalState.answers[userProfile.uid]?.answer === i;
@@ -159,6 +193,9 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
               let bgColor = '#FFF';
               let textColor = 'var(--bg-dark-purple)';
               let borderColor = 'var(--bg-dark-purple)';
+              let scale = isSelected ? 0.96 : 1;
+              let translate = isSelected ? '4px, 4px' : '0, 0';
+              let shadow = isSelected ? 'none' : '8px 8px 0 var(--bg-dark-purple)';
               
               if (isCorrect) {
                   bgColor = 'var(--bg-green)';
@@ -178,28 +215,32 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
                       onClick={() => handleAnswer(i)}
                       className="pop"
                       style={{
-                          padding: '20px 16px',
-                          border: `4px solid ${borderColor}`,
+                          padding: '24px 16px',
+                          border: `5px solid ${borderColor}`,
                           background: bgColor,
                           color: textColor,
                           borderRadius: 0,
                           fontWeight: 900,
-                          fontSize: 17,
-                          boxShadow: isSelected ? 'none' : '6px 6px 0 var(--bg-dark-purple)',
-                          transform: isSelected ? 'translate(4px, 4px)' : 'none',
-                          transition: 'all 0.1s cubic-bezier(0.34,1.56,0.64,1)',
+                          fontSize: 18,
+                          boxShadow: shadow,
+                          transform: `translate(${translate}) scale(${scale})`,
+                          transition: 'all 0.15s cubic-bezier(0.34,1.56,0.64,1)',
                           animationDelay: `${i * 100}ms`,
                           cursor: (!isAlive || status !== 'question' || selectedAnswer !== null) ? 'default' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 10,
+                          gap: 12,
                           position: 'relative'
                       }}
                   >
-                      <span style={{ fontSize: 14, color: isSelected || isCorrect || isWrong ? 'rgba(255,255,255,0.7)' : 'rgba(28,16,64,0.45)' }}>{labels[i]}.</span>
+                      <span style={{ 
+                        fontSize: 14, 
+                        background: isSelected || isCorrect || isWrong ? 'rgba(255,255,255,0.2)' : 'rgba(28,16,64,0.1)',
+                        width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: isSelected || isCorrect || isWrong ? '#FFF' : 'var(--bg-dark-purple)'
+                      }}>{labels[i]}</span>
                       <span style={{ flex: 1 }}>{ans}</span>
-                      {status === 'reveal' && i === currentQ.correct && <span style={{ fontSize: 24 }}>✅</span>}
-                      {status === 'reveal' && isSelected && i !== currentQ.correct && <span style={{ fontSize: 24 }}>❌</span>}
+                      {status === 'reveal' && i === currentQ.correct && <span style={{ fontSize: 24 }}>🔥</span>}
                   </button>
               );
           })}

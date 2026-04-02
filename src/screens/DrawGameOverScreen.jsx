@@ -4,7 +4,7 @@ import UserAvatar from '../components/ui/UserAvatar';
 import { useState, useEffect } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { listenToRoom, leaveRoom } from '../firebase/rooms';
+import { listenToRoom, leaveRoom, resetRoomToLobby } from '../firebase/rooms';
 
 function useConfetti() {
   return useMemo(() => {
@@ -34,19 +34,14 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
       }
     });
     return unsub;
-  }, [roomCode]);
+  }, [roomCode, nav]);
 
   const isHost = room?.hostUid === userProfile?.uid;
 
   const handleResetToLobby = async () => {
     if (!isHost) return;
     try {
-      await updateDoc(doc(db, 'rooms', roomCode), {
-        status: 'lobby',
-        playerOrder: room.playerOrder,
-        'drawState.roundStatus': 'none',
-        'gameState.currentWord': '',
-      });
+      await resetRoomToLobby(roomCode);
     } catch (e) { console.error(e); }
   };
 

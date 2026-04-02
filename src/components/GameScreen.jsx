@@ -141,31 +141,45 @@ export default function GameScreen({
           </div>
         )}
 
-        {/* Word tiles */}
+        {/* Word tiles - Shrinks as word grows */}
         <div className={isAiTurn ? '' : 'pop'} style={{
           width: '100%', maxWidth: 360,
-          display: 'flex', alignItems: 'center', gap: 6,
-          flexDirection: 'row', flexWrap: 'wrap',
+          display: 'flex', alignItems: 'center', gap: 4,
+          flexDirection: 'row', flexWrap: 'nowrap',
           alignContent: 'center', justifyContent: 'center',
           minHeight: 80,
+          overflow: 'hidden'
         }}>
-          {currentWord ? (
-            currentWord.split('').map((char, i) => (
+          {(() => {
+            const word = currentWord || '_';
+            const chars = word.split('');
+            const tileCount = chars.length;
+            
+            // Dynamic sizing logic
+            const baseWidth = 56;
+            const containerWidth = 340; // Approx inner width
+            const calculatedWidth = Math.min(baseWidth, (containerWidth - (tileCount * 4)) / tileCount);
+            const tileWidth = Math.max(30, calculatedWidth);
+            const tileHeight = Math.min(68, tileWidth * 1.2);
+            const fontSize = Math.max(0.9, Math.min(2.2, tileWidth / 24));
+
+            return chars.map((char, i) => (
               <div key={i} className="card" style={{
-                width: 56, height: 68,
+                width: tileWidth, 
+                height: tileHeight,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '2.2rem', fontWeight: 900, color: 'var(--bg-dark-purple)',
+                fontSize: `${fontSize}rem`, 
+                fontWeight: 900, 
+                color: currentWord ? 'var(--bg-dark-purple)' : 'rgba(28,16,63,0.25)',
+                padding: 0,
+                flexShrink: 0,
+                transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                borderWidth: tileWidth < 40 ? '3px' : '4px'
               }}>
                 {char}
               </div>
-            ))
-          ) : (
-            <div className="card" style={{
-              width: 56, height: 68,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '2.2rem', fontWeight: 900, color: 'rgba(28,16,63,0.25)',
-            }}>_</div>
-          )}
+            ));
+          })()}
         </div>
 
         {/* Action Button: ONLY ONE as requested */}

@@ -10,6 +10,13 @@ const socket = io(SOCKET_URL, {
   transports: ['websocket'], 
 });
 
+let isMutedGlobal = localStorage.getItem('hornMuted') === 'true';
+
+export const setHornMute = (muted) => {
+  isMutedGlobal = muted;
+  localStorage.setItem('hornMuted', muted);
+};
+
 export const connectSocket = (roomId) => {
   if (!socket.connected) {
     socket.connect();
@@ -21,6 +28,7 @@ export const connectSocket = (roomId) => {
     // استلام حدث تشغيل الصوت من السيرفر
     socket.on('play_sound_event', ({ soundName, isHonking, playerId }) => {
       console.log(`🔊 Receiving Sound: ${soundName} (${isHonking ? 'ON' : 'OFF'})`);
+      if (isMutedGlobal) return;
       if (isHonking) {
         startHorn(soundName);
       } else {

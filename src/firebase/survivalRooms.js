@@ -6,8 +6,8 @@ export async function startSurvivalGame(code) {
   const snap = await getDoc(doc(db, 'rooms', code));
   const room = snap.data();
 
-  // pick 30 random questions for the game
-  const questions = getRandomSurvivalQuestions(30);
+  // pick 100 random questions to ensure a true elimination experience
+  const questions = getRandomSurvivalQuestions(100);
   
   const initialAlivePlayers = {};
   room.playerOrder.forEach(uid => {

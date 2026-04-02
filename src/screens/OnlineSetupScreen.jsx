@@ -24,6 +24,7 @@ export default function OnlineSetupScreen({ nav }) {
   const [entryFee, setEntryFee]       = useState(100);
   const [loading, setLoading]         = useState(false);
   const [toast, setToast]             = useState('');
+  const [isPublic, setIsPublic]       = useState(true);
 
   const currentCategories = mode === 'draw' ? drawCategories : appCategories;
   const [category, setCategory]       = useState(currentCategories[0].id);
@@ -40,7 +41,7 @@ export default function OnlineSetupScreen({ nav }) {
   const handleCreate = async () => {
     setLoading(true);
     try {
-      const code = await createRoom(userProfile, { mode, category, timeLimit, maxPlayers, scoreTarget, drawTime, entryFee, wordChoices: 3 });
+      const code = await createRoom(userProfile, { mode, category, timeLimit, maxPlayers, scoreTarget, drawTime, entryFee, isPublic, wordChoices: 3 });
       nav.toLobby(code);
     } catch (e) {
       setToast(e.message || 'حدث خطأ');
@@ -111,6 +112,21 @@ export default function OnlineSetupScreen({ nav }) {
                 </div>
               );
             })}
+          </div>
+        </section>
+
+        {/* Visibility */}
+        <section>
+          <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--bg-dark-purple)', textAlign: 'center', marginBottom: 10 }}>
+            خصوصية الغرفة
+          </h2>
+          <div style={{ display: 'flex', gap: 10 }}>
+             <button onClick={() => setIsPublic(true)} className={`btn ${isPublic ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: 12, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span>🌍</span> عامة
+             </button>
+             <button onClick={() => setIsPublic(false)} className={`btn ${!isPublic ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: 12, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span>🔒</span> خاصة
+             </button>
           </div>
         </section>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { listenToRoom, leaveRoom } from '../firebase/rooms';
+import { listenToRoom, leaveRoom, resetRoomToLobby } from '../firebase/rooms';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 export default function SurvivalGameOverScreen({ nav, roomCode }) {
@@ -9,24 +9,31 @@ export default function SurvivalGameOverScreen({ nav, roomCode }) {
 
   useEffect(() => {
     const unsub = listenToRoom(roomCode, (data) => {
+      if (!data) { nav.toHome(); return; }
       setRoom(data);
+      if (data.status === 'lobby') nav.toLobby(roomCode);
     });
     return unsub;
-  }, [roomCode]);
+  }, [roomCode, nav]);
 
   if (!room || !room.survivalState) {
     return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
   }
 
   const { survivalState } = room;
+  const isHost = room.hostUid === userProfile.uid;
   const alivePlayersUids = Object.keys(survivalState.alivePlayers).filter(uid => survivalState.alivePlayers[uid]);
   const isWinner = alivePlayersUids.includes(userProfile.uid);
   const winnerUid = alivePlayersUids[0]; // If more than 1, they are co-winners
   const winner = room.players[winnerUid];
 
   const handleReturnAction = async () => {
-    await leaveRoom(roomCode, userProfile.uid, room.hostUid === userProfile.uid, room.playerOrder);
+    await leaveRoom(roomCode, userProfile.uid, isHost, room.playerOrder);
     nav.toHome();
+  };
+
+  const handleResetToLobby = async () => {
+    if (isHost) await resetRoomToLobby(roomCode);
   };
 
   return (
@@ -63,10 +70,24 @@ export default function SurvivalGameOverScreen({ nav, roomCode }) {
           </div>
       </div>
 
+      {isHost ? (
+        <button 
+          onClick={handleResetToLobby} 
+          className="btn btn-yellow" 
+          style={{ width: '100%', maxWidth: 400, padding: 22, fontSize: 22, boxShadow: '8px 8px 0 var(--bg-dark-purple)', marginBottom: 16 }}
+        >
+            🔄 العودة للروم
+        </button>
+      ) : (
+        <p style={{ fontSize: 14, fontWeight: 900, color: 'var(--bg-dark-purple)', marginBottom: 16, opacity: 0.6 }}>
+          بانتظار الهوست للعودة للغرفة...
+        </p>
+      )}
+
       <button 
         onClick={handleReturnAction} 
         className="btn btn-pink" 
-        style={{ width: '100%', maxWidth: 400, padding: 22, fontSize: 22, boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}
+        style={{ width: '100%', maxWidth: 400, padding: 22, fontSize: 18, opacity: 0.8 }}
       >
           العودة للرئيسية 🏠
       </button>

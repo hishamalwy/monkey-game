@@ -6,7 +6,7 @@ import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio } from '../utils/audio';
 import { useVisualViewport } from '../hooks/useVisualViewport';
-import { connectSocket, disconnectSocket, emitSound } from '../services/socket';
+import { connectSocket, disconnectSocket, emitSound, setHornMute } from '../services/socket';
 import { appCategories } from '../data/categories';
 import { normalizeArabic } from '../utils/textUtils';
 
@@ -24,6 +24,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isHonking, setIsHonking] = useState(false);
+  const [isMuted, setIsMuted] = useState(localStorage.getItem('hornMuted') === 'true');
   const [suspectWord, setSuspectWord] = useState('');
 
   // Sound Server connection
@@ -127,6 +128,12 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   const handleExit = async () => {
     await leaveRoom();
     navRef.current.toHome();
+  };
+
+  const toggleMute = () => {
+     const next = !isMuted;
+     setIsMuted(next);
+     setHornMute(next);
   };
 
   if (!room?.gameState) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
@@ -253,15 +260,24 @@ export default function OnlineGameScreen({ nav, roomCode }) {
         const hornId = getHornType();
         const horn = HORN_TYPES.find(h => h.id === hornId) || HORN_TYPES[0];
         return (
-          <button onMouseDown={handleHornStart} onMouseUp={handleHornEnd} onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }} onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
-            className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'}`}
-            style={{ position: 'absolute', bottom: 24, left: 24, width: 72, height: 72, borderRadius: '50%', padding: 12, zIndex: 100, boxShadow: 'var(--brutal-shadow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {horn.src ? (
-              <img src={`${import.meta.env.BASE_URL}icons/${horn.src}`} alt={horn.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            ) : (
-              <span style={{ fontSize: 34 }}>{horn.emoji}</span>
-            )}
-          </button>
+          <div style={{ position: 'absolute', bottom: 24, left: 24, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 100 }}>
+             <button 
+               onClick={toggleMute}
+               className="btn btn-white"
+               style={{ width: 44, height: 44, borderRadius: '50%', padding: 0, fontSize: 20, boxShadow: 'var(--brutal-shadow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+             >
+               {isMuted ? '🔇' : '🔊'}
+             </button>
+             <button onMouseDown={handleHornStart} onMouseUp={handleHornEnd} onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }} onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
+               className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'} pop`}
+               style={{ width: 72, height: 72, borderRadius: '50%', padding: 12, boxShadow: 'var(--brutal-shadow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               {horn.src ? (
+                 <img src={`${import.meta.env.BASE_URL}icons/${horn.src}`} alt={horn.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+               ) : (
+                 <span style={{ fontSize: 34 }}>{horn.emoji}</span>
+               )}
+             </button>
+          </div>
         );
       })()}
 

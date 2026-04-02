@@ -95,19 +95,31 @@ export default function HomeScreen({ nav }) {
           </button>
 
           {joining ? (
-            <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-              <input
-                className="input-field"
-                placeholder="كود"
-                value={joinCode}
-                onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                maxLength={4}
-                style={{ flex: 1, textAlign: 'center', fontSize: '1.2rem', letterSpacing: 4 }}
-                onKeyDown={e => e.key === 'Enter' && handleJoin()}
-                autoFocus
-              />
-              <button onClick={handleJoin} disabled={loading} className="btn btn-yellow" style={{ padding: '0 18px', fontSize: '1.2rem' }}>
-                انضم
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input
+                  className="input-field"
+                  placeholder="كود الغرفة"
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  maxLength={4}
+                  style={{ flex: 1, textAlign: 'center', fontSize: '1.2rem', letterSpacing: 4 }}
+                  onKeyDown={e => e.key === 'Enter' && handleJoin()}
+                  autoFocus
+                />
+                <button onClick={handleJoin} disabled={loading} className="btn btn-yellow" style={{ padding: '0 18px', fontSize: '1.1rem' }}>
+                  انضم
+                </button>
+              </div>
+              <button 
+                onClick={nav.toBrowseRooms} 
+                className="btn btn-green" 
+                style={{ width: '100%', padding: '12px', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <span>🌍</span> تصفح الغرف العامة
+              </button>
+              <button onClick={() => setJoining(false)} style={{ background: 'none', border: 'none', color: 'var(--bg-dark-purple)', fontSize: 13, fontWeight: 900, marginTop: 4, cursor: 'pointer', textDecoration: 'underline' }}>
+                رجوع
               </button>
             </div>
           ) : (

@@ -25,39 +25,43 @@ async function generateUniqueCode() {
 
 export async function createRoom(userProfile, settings = {}) {
   const code = await generateUniqueCode();
-  const {
-    category = 'countries', timeLimit = 15, maxPlayers = 5,
-    mode = 'monkey', scoreTarget = 40, drawTime = 80, wordChoices = 3,
-    entryFee = 100,
-  } = settings;
+  const roomRef = doc(db, 'rooms', code);
 
-  await setDoc(doc(db, 'rooms', code), {
+  const roomData = {
     code,
     hostUid: userProfile.uid,
+    hostName: userProfile.username,
     status: 'lobby',
-    mode,
-    category,
-    timeLimit,
-    maxPlayers,
-    scoreTarget,
-    drawTime,
-    wordChoices,
-    entryFee,
+    mode: settings.mode || 'monkey',
+    category: settings.category || 'countries',
+    maxPlayers: settings.maxPlayers || 5,
+    isPublic: settings.isPublic ?? true, 
+    timeLimit: settings.timeLimit || 15,
+    scoreTarget: settings.scoreTarget || 40,
+    drawTime: settings.drawTime || 80,
+    wordChoices: settings.wordChoices || 3,
+    entryFee: settings.entryFee || 0,
     createdAt: serverTimestamp(),
+    playerOrder: [userProfile.uid],
     players: {
       [userProfile.uid]: {
         uid: userProfile.uid,
         username: userProfile.username,
-        avatarId: userProfile.avatarId,
+        avatarId: userProfile.avatarId || 0,
         isReady: true,
-        quarterMonkeys: 0,
-      },
+        points: 0,
+        quarterMonkeys: 0
+      }
     },
-    playerOrder: [userProfile.uid],
-    gameState: null,
-    lastResult: null,
-  });
+    gameState: {
+      currentPlayerUid: null,
+      currentWord: '',
+      history: [],
+      lastActionAt: null
+    }
+  };
 
+  await setDoc(roomRef, roomData);
   return code;
 }
 
@@ -141,6 +145,18 @@ export async function leaveRoom(code, uid, isHost) {
   await updateDoc(roomRef, patch);
 }
 
+export async function resetRoomToLobby(code) {
+  const roomRef = doc(db, 'rooms', code);
+  await updateDoc(roomRef, {
+    status: 'lobby',
+    gameState: deleteField(),
+    drawState: deleteField(),
+    survivalState: deleteField(),
+    lastResult: deleteField(),
+    currentWord: '', // Ensure old data is cleared
+  });
+}
+
 export async function cleanupOldRooms() {
   try {
     const dayAgo = new Date();
@@ -165,6 +181,17 @@ export function listenToRoom(code, callback) {
     if (snap.exists()) callback(snap.data());
     else callback(null);
   });
+}
+
+export async function fetchPublicRooms() {
+  const q = query(
+    collection(db, 'rooms'),
+    where('isPublic', '==', true),
+    where('status', '==', 'lobby'),
+    limit(20)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data());
 }
 
 export function resolveChallenge(currentWord, categoryId, mode = 'monkey') {

@@ -4,6 +4,7 @@ import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings } from
 import { startDrawGame } from '../firebase/drawRooms';
 import { startSurvivalGame } from '../firebase/survivalRooms';
 import { appCategories } from '../data/categories';
+import { drawCategories } from '../data/drawCategories';
 import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
 import UserAvatar from '../components/ui/UserAvatar';
 import Toast from '../components/ui/Toast';
@@ -173,25 +174,33 @@ export default function LobbyScreen({ nav, roomCode }) {
             <div style={{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'center' }}>
               <select
                 value={room.mode}
-                onChange={(e) => updateRoomSettings(roomCode, { mode: e.target.value })}
-                style={{ fontSize: 11, padding: '2px 4px', borderRadius: 4, border: '2px solid var(--bg-dark-purple)', fontWeight: 700 }}
+                onChange={(e) => updateRoomSettings(roomCode, { mode: e.target.value, category: (e.target.value === 'draw' ? drawCategories : appCategories)[0].id })}
+                className="input-field"
+                style={{ fontSize: 13, padding: '4px 8px', borderRadius: 8, border: '2px solid var(--bg-dark-purple)', fontWeight: 900, background: '#FFF' }}
               >
                 <option value="monkey">قرد</option>
                 <option value="draw">رسم</option>
-                <option value="survival">مسابقة</option>
+                <option value="survival">البقاء للأقوى</option>
               </select>
-              <select
-                value={room.category}
-                onChange={(e) => updateRoomSettings(roomCode, { category: e.target.value })}
-                style={{ fontSize: 11, padding: '2px 4px', borderRadius: 4, border: '2px solid var(--bg-dark-purple)', fontWeight: 700 }}
-              >
-                {appCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </select>
+              {room.mode !== 'survival' && (
+                <select
+                  value={room.category}
+                  onChange={(e) => updateRoomSettings(roomCode, { category: e.target.value })}
+                  className="input-field"
+                  style={{ fontSize: 13, padding: '4px 8px', borderRadius: 8, border: '2px solid var(--bg-dark-purple)', fontWeight: 900, background: '#FFF' }}
+                >
+                  {(room.mode === 'draw' ? drawCategories : appCategories).map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           ) : (
-             <span style={{ fontSize: 13, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 8px', borderRadius: 4, marginTop: 4, display: 'inline-block' }}>
-               {room.mode === 'survival' ? 'مسابقة معلومات' : (appCategories.find(c => c.id === room.category)?.name || room.category)}
-             </span>
+              <span style={{ fontSize: 13, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 8px', borderRadius: 4, marginTop: 4, display: 'inline-block' }}>
+                {room.mode === 'survival' ? 'مسابقة البقاء' : 
+                 ( (room.mode === 'draw' ? drawCategories : appCategories).find(c => c.id === room.category)?.name || room.category )
+                }
+              </span>
           )}
         </div>
         <button
