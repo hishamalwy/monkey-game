@@ -148,17 +148,21 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     return cat ? cat.words : [];
   })();
 
-  const suspectAnswerValid = (() => {
-     if (!room?.gameState?.suspectAnswer) return false;
+  const { suspectAnswerValid, isDuplicate, isInJSON } = (() => {
+     if (!room?.gameState?.suspectAnswer) return { suspectAnswerValid: false, isDuplicate: false, isInJSON: false };
      const ans = normalizeArabic(room.gameState.suspectAnswer);
      const challenging = normalizeArabic(room.gameState.challengingWord || '');
      const usedWords = room.gameState.usedWords || [];
      
-     const isMatch = currentCategoryWords.some(w => normalizeArabic(w) === ans);
+     const match = currentCategoryWords.some(w => normalizeArabic(w) === ans);
      const startsWithPrefix = ans.startsWith(challenging);
-     const isNotUsed = !usedWords.includes(ans); // check norm vs norm
+     const duplicated = usedWords.includes(ans); 
 
-     return isMatch && startsWithPrefix && isNotUsed;
+     return {
+       suspectAnswerValid: match && startsWithPrefix && !duplicated,
+       isDuplicate: duplicated,
+       isInJSON: match && startsWithPrefix
+     };
   })();
 
   return (
@@ -303,14 +307,16 @@ export default function OnlineGameScreen({ nav, roomCode }) {
                    {room.gameState.suspectAnswer && (
                      <div style={{ padding: 16, background: '#FFF7ED', borderRadius: 0, border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-dark-purple)', marginBottom: 20 }}>
                         <div style={{ fontSize: 13, color: 'var(--bg-dark-purple)', fontWeight: 900, marginBottom: 4, textAlign: 'right' }}>الكلمة التي فكر بها:</div>
-                        <div style={{ fontSize: 28, fontWeight: 900, color: suspectAnswerValid ? 'var(--bg-green)' : 'var(--bg-pink)', textDecoration: suspectAnswerValid ? 'none' : 'line-through' }}>
+                        <div style={{ fontSize: 28, fontWeight: 900, color: suspectAnswerValid ? 'var(--bg-green)' : (isDuplicate ? 'var(--bg-pink)' : 'var(--bg-orange)'), textDecoration: (isDuplicate || !isInJSON) ? 'line-through' : 'none' }}>
                          {room.gameState.suspectAnswer}
-                         {suspectAnswerValid ? ' ✅' : ' ❓'}
                         </div>
-                        <div style={{ fontSize: 11, color: '#666', marginTop: 4, fontWeight: 700 }}>
-                          {suspectAnswerValid 
-                            ? '(موجودة ومتاحة وتبدأ بنفس الحروف)' 
-                            : '(غير موجودة أو تم استخدامها سابقاً أو لا تبدأ بمقطع التحدي)'}
+                        <div style={{ fontSize: 12, marginTop: 10, fontWeight: 900, color: 'var(--bg-dark-purple)', textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ color: isInJSON ? 'var(--bg-green)' : 'red' }}>
+                            {isInJSON ? '✅ موجودة في القائمة' : '❌ غير موجودة في القائمة'}
+                          </span>
+                          <span style={{ color: isDuplicate ? 'red' : 'var(--bg-green)' }}>
+                            {isDuplicate ? '⚠️ تم استخدامها مسبقاً!' : '✅ لم تُستخدم من قبل'}
+                          </span>
                         </div>
                      </div>
                    )}

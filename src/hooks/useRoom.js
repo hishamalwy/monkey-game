@@ -94,7 +94,7 @@ export function useRoom(roomCode) {
 
   // ── Apply penalty & check for game over ──────────────────────
   const applyPenalty = useCallback(async (loserUid, reason, type = 'penalty') => {
-    if (!room || (room.status !== 'playing' && room.status !== 'suspect_question' && room.status !== 'finish_confirmation') || penaltyProcessingRef.current) return;
+    if (!room || (room.status !== 'playing' && room.status !== 'suspect_question') || penaltyProcessingRef.current) return;
     penaltyProcessingRef.current = true;
     
     try {
@@ -144,27 +144,35 @@ export function useRoom(roomCode) {
     const categoryWords = cat.words;
     const normalizedCategory = categoryWords.map(w => normalizeArabic(w));
 
-    const exactMatchIdx = normalizedCategory.findIndex(w => w === normNewWord);
-    
-    // If they finished a word that was used before -> Instant penalty
-    if (exactMatchIdx !== -1 && usedWords.includes(normNewWord)) {
-      playSound('lose');
-      await applyPenalty(uid, `كلمة مكررة! (${categoryWords[exactMatchIdx]})`, 'duplicate');
-      return;
-    }
-
     // AUTO-COMPLETION REMOVED: 
     // We no longer automatically finish the round for words like 'Mali'.
     // The game continues and the next player must decide to Challenge or Continue.
 
+    const exactIdx = normalizedCategory.findIndex(w => w === normNewWord);
+    
+    // Auto-completion check (Smarter Mali/Malaysia logic)
+    const hasContinuations = normalizedCategory.some(w => 
+       w.startsWith(normNewWord) && w.length > normNewWord.length && !usedWords.includes(w)
+    );
+
+    if (exactIdx !== -1 && !usedWords.includes(normNewWord) && !hasContinuations) {
+       // SYSTEM AUTO-FINISH: This word is perfectly complete and has no extras.
+       // The NEXT player is the one who took the hit for being unable to continue.
+       const loser = nextPlayerUid();
+       playSound('win');
+       await updateGameState(roomCode, { 'gameState.usedWords': [...usedWords, normNewWord] });
+       await applyPenalty(loser, `اللاعب اللي قبلك نهى الدولة! (${categoryWords[exactIdx]})`, 'word_complete');
+       return;
+    }
+
     playSound('click');
     await updateGameState(roomCode, {
       'gameState.currentWord': newWordString,
-      // Manual pass: we no longer change currentPlayerUid here
+      'gameState.currentPlayerUid': nextPlayerUid(),
       'gameState.timeRemainingAtLastAction': room.timeLimit,
       'gameState.lastActionAt': serverTimestamp(),
     });
-  }, [isMyTurn, room, roomCode, uid, applyPenalty]);
+  }, [isMyTurn, room, roomCode, uid, nextPlayerUid, applyPenalty]);
 
   // ── Delete ───────────────────────────────────────────────────
   const pressDelete = useCallback(async () => {
@@ -215,63 +223,17 @@ export function useRoom(roomCode) {
     }
   }, [room, applyPenalty, roomCode]);
 
-  const passTurn = useCallback(async () => {
-    if (!isMyTurn || !room || room.status !== 'playing') return;
-    const nextUid = nextPlayerUid();
-    if (!nextUid) return;
-
-    await updateGameState(roomCode, {
-      'gameState.currentPlayerUid': nextUid,
-      'gameState.timeRemainingAtLastAction': room.timeLimit,
-      'gameState.lastActionAt': serverTimestamp(),
-    });
-  }, [isMyTurn, room, roomCode, nextPlayerUid]);
-
-  // الدولة خلصت! (Current player weapon)
-  const pressFinishWord = useCallback(async () => {
-    if (!isMyTurn || !room || room.status !== 'playing') return;
-    const word = room.gameState.currentWord || '';
-    if (!word) return;
-
-    await updateGameState(roomCode, {
-       status: 'finish_confirmation',
-       'gameState.suspectAnswer': word, // using the field for the host to see
-    });
-  }, [isMyTurn, room, roomCode]);
-
-  const resolveFinishWord = useCallback(async (isValid) => {
-     if (!room || room.status !== 'finish_confirmation') return;
-     const { suspectAnswer, currentPlayerUid } = room.gameState;
-     const loserUid = nextPlayerUid(); // Next player fails to continue
-
-     if (isValid) {
-        // Correct completion -> Next player loses
-        const usedWords = room.gameState.usedWords || [];
-        const ansNorm = normalizeArabic(suspectAnswer);
-        await updateGameState(roomCode, { 'gameState.usedWords': [...usedWords, ansNorm] });
-        await applyPenalty(loserUid, `انتهت الكلمة بقرار الهوست! الكلمة: ${suspectAnswer}`, 'word_complete');
-     } else {
-        // Falsely claimed completion -> current player loses
-        await applyPenalty(currentPlayerUid, `ادعاء خاطئ باكتمال الكلمة!`, 'penalty');
-     }
-  }, [room, roomCode, applyPenalty, nextPlayerUid]);
 
   // المشتبه به يدخل الكلمة
   const submitSuspectWord = useCallback(async (answer) => {
     if (!room || room.status !== 'suspect_question') return;
     await updateGameState(roomCode, { 'gameState.suspectAnswer': answer });
     
-    // Automatic Check & Resolution
-    const cat = appCategories.find(c => c.id === room.category) || appCategories[0];
-    const normalizedWords = cat.words.map(w => normalizeArabic(w));
-    const ansNorm = normalizeArabic(answer);
-    const challengingNorm = normalizeArabic(room.gameState.challengingWord || '');
-
-    const isValid = normalizedWords.some(w => w === ansNorm) && ansNorm.startsWith(challengingNorm);
+    const usedWords = room.gameState.usedWords || [];
+    const isValid = normalizedWords.some(w => w === ansNorm) && !usedWords.includes(ansNorm) && ansNorm.startsWith(challengingNorm);
 
     if (isValid) {
       // If it exists in JSON perfectly and NOT used, resolve automatically
-      // We wait a tiny bit to let the Answer update show on others' screens
       setTimeout(async () => {
          await resolveSuspect(true);
       }, 1000);
@@ -349,9 +311,6 @@ export function useRoom(roomCode) {
     pressLetter,
     pressDelete,
     pressChallenge,
-    pressFinishWord,
-    passTurn,
-    resolveFinishWord,
     confirmNextRound,
     submitSuspectWord,
     resolveSuspect,
