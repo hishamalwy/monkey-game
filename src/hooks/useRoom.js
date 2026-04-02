@@ -192,6 +192,20 @@ export function useRoom(roomCode) {
     });
   }, [isMyTurn, room, roomCode, uid]);
 
+  // الهوست أو النظام ينهي التحدي
+  const resolveSuspect = useCallback(async (isValid) => {
+    if (!room || room.status !== 'suspect_question') return;
+    const { suspectedUid, challengerUid, suspectAnswer } = room.gameState;
+
+    if (isValid) {
+      // المشتبه به صح -> المتحدي ياخد ربع قرد
+      await applyPenalty(challengerUid, `المشتبه به كان صادقاً! الكلمة: ${suspectAnswer}`, 'challenge_failed');
+    } else {
+      // المشتبه به غلط -> هو اللي ياخد ربع قرد
+      await applyPenalty(suspectedUid, `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.`, 'challenge_success');
+    }
+  }, [room, applyPenalty]);
+
   // المشتبه به يدخل الكلمة
   const submitSuspectWord = useCallback(async (answer) => {
     if (!room || room.status !== 'suspect_question') return;
@@ -213,20 +227,6 @@ export function useRoom(roomCode) {
       }, 1000);
     }
   }, [room, roomCode, resolveSuspect]);
-
-  // الهوست أو النظام ينهي التحدي
-  const resolveSuspect = useCallback(async (isValid) => {
-    if (!room || room.status !== 'suspect_question') return;
-    const { suspectedUid, challengerUid, suspectAnswer } = room.gameState;
-
-    if (isValid) {
-      // المشتبه به صح -> المتحدي ياخد ربع قرد
-      await applyPenalty(challengerUid, `المشتبه به كان صادقاً! الكلمة: ${suspectAnswer}`, 'challenge_failed');
-    } else {
-      // المشتبه به غلط -> هو اللي ياخد ربع قرد
-      await applyPenalty(suspectedUid, `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.`, 'challenge_success');
-    }
-  }, [room, applyPenalty]);
 
   // ── Next round ───────────────────────────────────────────────
   const confirmNextRound = useCallback(async () => {
