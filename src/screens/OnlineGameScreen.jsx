@@ -15,7 +15,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   const {
     room, players, isMyTurn, computedTimer, isHost,
     pressLetter, pressDelete, pressChallenge, leaveRoom, submitSuspectWord, resolveSuspect,
-    triggerHorn, pressFinishWord, resolveFinishWord,
+    triggerHorn, pressFinishWord, resolveFinishWord, passTurn,
   } = useRoom(roomCode);
   const vh = useVisualViewport();
 
@@ -240,6 +240,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
           onDelete={pressDelete}
           onChallenge={pressChallenge}
           onFinish={pressFinishWord}
+          onNext={passTurn}
           isOnline={true}
         />
       </main>

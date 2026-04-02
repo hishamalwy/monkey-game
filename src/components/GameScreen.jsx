@@ -11,7 +11,7 @@ const EN_TO_AR = {
 
 export default function GameScreen({
   currentWord, timeRemaining, timeLimit,
-  currentPlayer, onKeyPress, onChallenge, onFinish, isAiTurn, onDelete
+  currentPlayer, onKeyPress, onChallenge, onFinish, onNext, isAiTurn, onDelete
 }) {
   const pct = timeLimit > 0 ? (timeRemaining / timeLimit) * 100 : 100;
   const isUrgent = timeLimit > 0 && timeRemaining <= 5;
@@ -172,34 +172,66 @@ export default function GameScreen({
         </div>
 
         {/* Actions area */}
-        <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 360 }}>
-          <button
-            onClick={onChallenge}
-            disabled={isAiTurn || !currentWord}
-            className="btn"
-            style={{
-              flex: 1,
-              background: 'var(--bg-orange)', color: '#FFF',
-              padding: '14px', fontSize: '1rem',
-              opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
-            }}
-          >
-            شك فيه! 🧐
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 360 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={onChallenge}
+              disabled={isAiTurn}
+              className="btn"
+              style={{
+                flex: 1,
+                background: 'var(--bg-orange)', color: '#FFF',
+                padding: '12px', fontSize: '1rem',
+                opacity: (isAiTurn) ? 0.35 : 1,
+              }}
+            >
+              شك فيه! 🧐
+            </button>
+            <button
+              onClick={onDelete}
+              disabled={isAiTurn || !currentWord}
+              className="btn btn-white"
+              style={{
+                flex: 0.6,
+                padding: '12px', fontSize: '1.2rem',
+                opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
+              }}
+            >
+               ⌫
+            </button>
+          </div>
 
-          <button
-            onClick={onFinish}
-            disabled={isAiTurn || !currentWord}
-            className="btn"
-            style={{
-              flex: 1.2,
-              background: 'var(--bg-green)', color: '#FFF',
-              padding: '14px', fontSize: '1rem',
-              opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
-            }}
-          >
-            خلصتها! ✅
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={onNext}
+              disabled={isAiTurn}
+              className="btn"
+              style={{
+                flex: 1,
+                background: 'var(--bg-primary)', color: '#FFF',
+                padding: '16px', fontSize: '1.1rem',
+                opacity: (isAiTurn) ? 0.35 : 1,
+                border: '4px solid var(--bg-dark-purple)'
+              }}
+            >
+              تم (الدور للجاي) ➡️
+            </button>
+
+            <button
+              onClick={onFinish}
+              disabled={isAiTurn || !currentWord}
+              className="btn"
+              style={{
+                flex: 0.8,
+                background: 'var(--bg-green)', color: '#FFF',
+                padding: '16px', fontSize: '1.1rem',
+                opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
+                border: '4px solid var(--bg-dark-purple)'
+              }}
+            >
+              خلصتها! ✅
+            </button>
+          </div>
         </div>
 
         {!isAiTurn && (

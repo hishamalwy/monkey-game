@@ -160,11 +160,11 @@ export function useRoom(roomCode) {
     playSound('click');
     await updateGameState(roomCode, {
       'gameState.currentWord': newWordString,
-      'gameState.currentPlayerUid': nextPlayerUid(),
+      // Manual pass: we no longer change currentPlayerUid here
       'gameState.timeRemainingAtLastAction': room.timeLimit,
       'gameState.lastActionAt': serverTimestamp(),
     });
-  }, [isMyTurn, room, roomCode, uid, nextPlayerUid, applyPenalty]);
+  }, [isMyTurn, room, roomCode, uid, applyPenalty]);
 
   // ── Delete ───────────────────────────────────────────────────
   const pressDelete = useCallback(async () => {
@@ -214,6 +214,18 @@ export function useRoom(roomCode) {
       await applyPenalty(suspectedUid, `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.`, 'challenge_success');
     }
   }, [room, applyPenalty, roomCode]);
+
+  const passTurn = useCallback(async () => {
+    if (!isMyTurn || !room || room.status !== 'playing') return;
+    const nextUid = nextPlayerUid();
+    if (!nextUid) return;
+
+    await updateGameState(roomCode, {
+      'gameState.currentPlayerUid': nextUid,
+      'gameState.timeRemainingAtLastAction': room.timeLimit,
+      'gameState.lastActionAt': serverTimestamp(),
+    });
+  }, [isMyTurn, room, roomCode, nextPlayerUid]);
 
   // الدولة خلصت! (Current player weapon)
   const pressFinishWord = useCallback(async () => {
@@ -338,6 +350,7 @@ export function useRoom(roomCode) {
     pressDelete,
     pressChallenge,
     pressFinishWord,
+    passTurn,
     resolveFinishWord,
     confirmNextRound,
     submitSuspectWord,
