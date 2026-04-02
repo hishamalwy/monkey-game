@@ -98,6 +98,7 @@ export async function startGame(code) {
     status: 'playing',
     gameState: {
       currentWord: '',
+      usedWords: [],
       currentPlayerUid: firstUid,
       timeRemainingAtLastAction: room.timeLimit,
       lastActionAt: serverTimestamp(),

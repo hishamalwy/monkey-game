@@ -69,16 +69,19 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   };
 
   // Quarter-pip indicator  (●●●●)
-  const QuarterPips = ({ qm }) => (
-    <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
-      {[0, 1, 2, 3].map(i => (
-        <div key={i} style={{
-          width: 7, height: 7, borderRadius: '50%',
-          background: i < qm ? QM_COLORS[Math.min(qm, 4)] : '#E5E7EB',
-          border: '1.5px solid rgba(0,0,0,0.12)',
-          transition: 'background 0.3s ease',
-        }} />
-      ))}
+  const QuarterPips = ({ qm, isLoser }) => (
+    <div style={{ display: 'flex', gap: 4, marginTop: 4, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+      {[0, 1, 2, 3].map(i => {
+        const filled = i < (qm % 4) || (qm > 0 && i < 4 && qm % 4 === 0);
+        return (
+          <div key={i} style={{
+            width: 10, height: 10, borderRadius: '20%',
+            background: filled ? (isLoser ? '#FFF' : 'var(--bg-pink)') : '#E5E7EB',
+            border: '1.5px solid var(--bg-dark-purple)'
+          }} />
+        );
+      })}
+      {Array.from({ length: Math.floor(qm / 4) }).map((_, i) => <span key={i} style={{ fontSize: 14 }}>🐒</span>)}
     </div>
   );
 
@@ -149,7 +152,13 @@ export default function OnlineGameScreen({ nav, roomCode }) {
      if (!room?.gameState?.suspectAnswer) return false;
      const ans = normalizeArabic(room.gameState.suspectAnswer);
      const challenging = normalizeArabic(room.gameState.challengingWord || '');
-     return currentCategoryWords.some(w => normalizeArabic(w) === ans) && ans.startsWith(challenging);
+     const usedWords = room.gameState.usedWords || [];
+     
+     const isMatch = currentCategoryWords.some(w => normalizeArabic(w) === ans);
+     const startsWithPrefix = ans.startsWith(challenging);
+     const isNotUsed = !usedWords.includes(ans); // check norm vs norm
+
+     return isMatch && startsWithPrefix && isNotUsed;
   })();
 
   return (
@@ -256,58 +265,73 @@ export default function OnlineGameScreen({ nav, roomCode }) {
              <div style={{ fontSize: 56, marginBottom: 16 }}>🧐</div>
              <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 8px' }}>تحدي شاكك!</h3>
              
-             {isSuspected ? (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                 <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px' }}>انت كنت بتفكر في دولة إيه؟ 🐒</p>
-                 <input 
-                    type="text" 
-                    placeholder="اكتب اسم الدولة هنا..."
-                    className="input-field"
-                    style={{ fontSize: 18, padding: 12, textAlign: 'center' }}
-                    autoFocus
-                    value={suspectWord}
-                    onChange={(e) => setSuspectWord(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') submitSuspectWord(suspectWord);
-                    }}
-                 />
-                 <button onClick={() => {
-                    submitSuspectWord(suspectWord);
-                 }} className="btn btn-pink" style={{ padding: 16, fontSize: 18 }}>إرسال 🚀</button>
-               </div>
-             ) : (
-               <div>
-                  <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--bg-pink)', marginBottom: 20 }}>
-                    {room.players[room.gameState.suspectedUid]?.username} بيكتب الكلمة...
-                  </p>
-                  
-                  {room.gameState.suspectAnswer && (
-                    <div style={{ padding: 16, background: '#FFF7ED', borderRadius: 12, border: suspectAnswerValid ? '2px solid #22C55E' : '2px dashed #EA580C', marginBottom: 20 }}>
-                       <div style={{ fontSize: 13, color: '#9A3412', fontWeight: 700, marginBottom: 4 }}>الكلمة اللي قالها:</div>
-                       <div style={{ fontSize: 24, fontWeight: 900, color: suspectAnswerValid ? '#15803D' : '#EA580C' }}>
-                        {room.gameState.suspectAnswer}
-                        {suspectAnswerValid ? ' ✅' : ' ❓'}
-                       </div>
-                       <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-                         {suspectAnswerValid 
-                           ? '(موجودة في القائمة وتبدأ بنفس الحروف)' 
-                           : '(غير موجودة أو مش بدقة اللي ف الجيسون)'}
-                       </div>
-                    </div>
-                  )}
+             {(isSuspected && !room.gameState.suspectAnswer) ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: 'var(--bg-dark-purple)' }}>انت كنت بتفكر في دولة إيه؟ 🐒</p>
+                  <input 
+                     type="text" 
+                     placeholder="اكتب اسم الدولة هنا..."
+                     className="input-field"
+                     style={{ fontSize: 18, padding: 12, textAlign: 'center' }}
+                     autoFocus
+                     value={suspectWord}
+                     onChange={(e) => setSuspectWord(e.target.value)}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter' && suspectWord.trim()) {
+                         submitSuspectWord(suspectWord);
+                         setSuspectWord('');
+                       }
+                     }}
+                  />
+                  <button onClick={() => {
+                     if (suspectWord.trim()) {
+                       submitSuspectWord(suspectWord);
+                       setSuspectWord('');
+                     }
+                  }} className="btn btn-pink" style={{ padding: 16, fontSize: 18 }}>إرسال 🚀</button>
+                </div>
+              ) : (
+                <div>
+                   {isHost && !room.gameState.suspectAnswer && (
+                     <div style={{ padding: '8px 16px', background: 'var(--bg-yellow)', border: '2px solid var(--bg-dark-purple)', borderRadius: 8, marginBottom: 16, fontSize: 13, fontWeight: 900 }}>
+                        ⏳ بانتظار المشتبه به يكتب كلمته...
+                     </div>
+                   )}
 
-                  {isHost && room.gameState.suspectAnswer && (
-                    <div style={{ display: 'flex', gap: 12 }}>
-                       <button onClick={() => resolveSuspect(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', borderColor: '#EF4444' }}>❌ غلط</button>
-                       <button onClick={() => resolveSuspect(true)} className="btn btn-primary" style={{ flex: 1, padding: 14 }}>✅ صح</button>
-                    </div>
-                  )}
-                  
-                  {!isHost && (
-                    <p style={{ fontSize: 14, color: '#666', fontWeight: 600 }}>بانتظار تأكيد المضيف...</p>
-                  )}
-               </div>
-             )}
+                   {room.gameState.suspectAnswer && (
+                     <div style={{ padding: 16, background: '#FFF7ED', borderRadius: 0, border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-dark-purple)', marginBottom: 20 }}>
+                        <div style={{ fontSize: 13, color: 'var(--bg-dark-purple)', fontWeight: 900, marginBottom: 4, textAlign: 'right' }}>الكلمة التي فكر بها:</div>
+                        <div style={{ fontSize: 28, fontWeight: 900, color: suspectAnswerValid ? 'var(--bg-green)' : 'var(--bg-pink)', textDecoration: suspectAnswerValid ? 'none' : 'line-through' }}>
+                         {room.gameState.suspectAnswer}
+                         {suspectAnswerValid ? ' ✅' : ' ❓'}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#666', marginTop: 4, fontWeight: 700 }}>
+                          {suspectAnswerValid 
+                            ? '(موجودة ومتاحة وتبدأ بنفس الحروف)' 
+                            : '(غير موجودة أو تم استخدامها سابقاً أو لا تبدأ بمقطع التحدي)'}
+                        </div>
+                     </div>
+                   )}
+
+                   {isHost && room.gameState.suspectAnswer && (
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-pink)', marginBottom: 4, animation: 'pulse 1s infinite' }}>
+                           ⚠️ مطلوب قرارك كحكم!
+                        </div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                           <button onClick={() => resolveSuspect(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', border: '3px solid #EF4444' }}>❌ غلط</button>
+                           <button onClick={() => resolveSuspect(true)} className="btn btn-primary" style={{ flex: 1, padding: 14, border: '3px solid var(--bg-dark-purple)' }}>✅ صح</button>
+                        </div>
+                     </div>
+                   )}
+                   
+                   {!isHost && (
+                      <div style={{ fontSize: 14, color: 'var(--bg-dark-purple)', fontWeight: 900, padding: 10, background: '#f3f4f6', border: '2px solid var(--bg-dark-purple)' }}>
+                         {room.gameState.suspectAnswer ? '⏳ بانتظار قرار الهوست...' : `⏳ ${room.players[room.gameState.suspectedUid]?.username} بيكتب...`}
+                      </div>
+                   )}
+                </div>
+              )}
           </div>
         </div>
       )}

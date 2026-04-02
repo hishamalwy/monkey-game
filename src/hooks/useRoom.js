@@ -134,22 +134,35 @@ export function useRoom(roomCode) {
   // ── Letter press ─────────────────────────────────────────────
   const pressLetter = useCallback(async (letter) => {
     if (!isMyTurn || !room) return;
-    const newWord = (room.gameState.currentWord || '') + letter;
+    const newWordString = (room.gameState.currentWord || '') + letter;
+    const normNewWord = normalizeArabic(newWordString);
+    const usedWords = room.gameState.usedWords || [];
 
     const cat = appCategories.find(c => c.id === room.category) || appCategories[0];
-    const normalizedWords = cat.words.map(w => normalizeArabic(w));
-    const exactIdx = normalizedWords.findIndex(w => w === normalizeArabic(newWord));
+    const categoryWords = cat.words;
+    const normalizedCategory = categoryWords.map(w => normalizeArabic(w));
 
-    if (exactIdx !== -1) {
+    // A word is only "Complete" if it's in the category, not already used,
+    // AND doesn't have any continuations in the category (that are also not used).
+    const exactIdx = normalizedCategory.findIndex(w => w === normNewWord);
+    const isAlreadyUsed = usedWords.includes(normNewWord);
+
+    // Filter available words starting with current word prefix
+    const continuations = normalizedCategory.filter(w => 
+       w.startsWith(normNewWord) && w.length > normNewWord.length && !usedWords.includes(w)
+    );
+
+    if (exactIdx !== -1 && !isAlreadyUsed && continuations.length === 0) {
       playSound('win');
       await updateGameState(roomCode, {
         status: 'round_result',
-        'gameState.currentWord': newWord,
+        'gameState.currentWord': newWordString,
+        'gameState.usedWords': [...usedWords, normNewWord],
         lastResult: {
           type: 'word_complete',
           winnerUid: uid,
-          word: cat.words[exactIdx],
-          reason: `اكتملت الكلمة! ✓  الإجابة: ${cat.words[exactIdx]}`,
+          word: categoryWords[exactIdx],
+          reason: `اكتملت الكلمة! ✓  الإجابة: ${categoryWords[exactIdx]}`,
         },
       });
       return;
@@ -157,7 +170,7 @@ export function useRoom(roomCode) {
 
     playSound('click');
     await updateGameState(roomCode, {
-      'gameState.currentWord': newWord,
+      'gameState.currentWord': newWordString,
       'gameState.currentPlayerUid': nextPlayerUid(),
       'gameState.timeRemainingAtLastAction': room.timeLimit,
       'gameState.lastActionAt': serverTimestamp(),
@@ -181,7 +194,7 @@ export function useRoom(roomCode) {
     playSound('alert');
     const order = room.playerOrder || [];
     const myIdx = order.indexOf(uid);
-    const prevUid = order[myIdx === 0 ? order.length - 1 : myIdx - 1]; // المشتبه به هو اللي كتب الحرف الأخير
+    const prevUid = order[myIdx === 0 ? order.length - 1 : myIdx - 1];
 
     await updateGameState(roomCode, {
       status: 'suspect_question',
@@ -248,6 +261,7 @@ export function useRoom(roomCode) {
       lastResult: null,
       'gameState.currentWord': '',
       'gameState.currentPlayerUid': nextUid,
+      'gameState.usedWords': room.gameState.usedWords || [],
       'gameState.timeRemainingAtLastAction': room.timeLimit,
       'gameState.lastActionAt': serverTimestamp(),
     });
