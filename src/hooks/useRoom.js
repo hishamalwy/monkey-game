@@ -5,6 +5,7 @@ import { listenToRoom, updateGameState, leaveRoom, resolveChallenge, resetRoomTo
 import { normalizeArabic } from '../utils/textUtils';
 import { appCategories } from '../data/categories';
 import { playSound, getHornType, startHorn, stopHorn, warmAudio } from '../utils/audio';
+import { isPlayerMuted } from '../services/socket';
 
 const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
 
@@ -44,8 +45,10 @@ export function useRoom(roomCode) {
       const isHonking = data?.gameState?.isHonking;
       const isRemoteHonker = isHonking && data.gameState.honkerUid !== uid;
       if (isRemoteHonker && !remoteHornPlayingRef.current) {
-        remoteHornPlayingRef.current = true;
-        startHorn(data.gameState.lastHornType || 'classic');
+        if (!isPlayerMuted(data.gameState.honkerUid)) {
+          remoteHornPlayingRef.current = true;
+          startHorn(data.gameState.lastHornType || 'classic');
+        }
       } else if (!isHonking && remoteHornPlayingRef.current) {
         remoteHornPlayingRef.current = false;
         stopHorn();

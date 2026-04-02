@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
 import { startHorn, stopHorn } from '../utils/audio';
+import { auth } from '../firebase/config';
 
 // استبدل هذا بعنوان السيرفر الفعلي
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
@@ -55,7 +56,8 @@ export const disconnectSocket = () => {
 
 export const emitSound = (roomId, soundName, isHonking) => {
   if (socket.connected) {
-    socket.emit('play_sound', { roomId, soundName, isHonking });
+    const playerId = auth.currentUser?.uid;
+    socket.emit('play_sound', { roomId, soundName, isHonking, playerId });
   }
 };
 
