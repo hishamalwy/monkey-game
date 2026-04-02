@@ -86,12 +86,20 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     </div>
   );
 
+  const mountedRef = useRef(false);
   useEffect(() => {
     if (room === null) { navRef.current.toHome(); return; }
     if (!room) return;
     if (room.status === 'round_result') navRef.current.toRoundResult();
     if (room.status === 'game_over') navRef.current.toGameOver();
-    if (room.status === 'lobby') navRef.current.toLobby(roomCode);
+    
+    if (room.status === 'lobby' && mountedRef.current) {
+      navRef.current.toLobby(roomCode);
+    }
+    
+    if (room.status === 'playing' || room.status === 'suspect_question') {
+      mountedRef.current = true;
+    }
   }, [room?.status, room === null]);
 
   useEffect(() => {

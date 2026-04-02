@@ -12,12 +12,20 @@ export default function RoundResultScreen({ nav, roomCode }) {
   const navRef = useRef(nav);
   useEffect(() => { navRef.current = nav; });
 
+  const mountedRef = useRef(false);
   useEffect(() => {
     if (room === null) { navRef.current.toHome(); return; }
     if (!room) return;
     if (room.status === 'playing') navRef.current.toGame();
     if (room.status === 'game_over') navRef.current.toGameOver();
-    if (room.status === 'lobby') navRef.current.toLobby(roomCode);
+    
+    if (room.status === 'lobby' && mountedRef.current) {
+        navRef.current.toLobby(roomCode);
+    }
+    
+    if (room.status === 'round_result') {
+        mountedRef.current = true;
+    }
   }, [room?.status, room === null]);
 
   // Countdown timer logic
