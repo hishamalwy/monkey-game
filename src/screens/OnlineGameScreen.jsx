@@ -24,6 +24,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isHonking, setIsHonking] = useState(false);
+  const [suspectWord, setSuspectWord] = useState('');
 
   // Sound Server connection
   useEffect(() => {
@@ -108,12 +109,16 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     // Both Socket and Firebase for maximum compatibility
     emitSound(roomCode, getHornType(), true);
     triggerHorn(true);
+    // Play locally immediately
+    startHorn(getHornType());
   };
   
   const handleHornEnd = () => { 
     setIsHonking(false); 
     emitSound(roomCode, getHornType(), false);
     triggerHorn(false);
+    // Stop locally
+    stopHorn();
   };
 
   const handleExit = async () => {
@@ -260,13 +265,14 @@ export default function OnlineGameScreen({ nav, roomCode }) {
                     className="input-field"
                     style={{ fontSize: 18, padding: 12, textAlign: 'center' }}
                     autoFocus
+                    value={suspectWord}
+                    onChange={(e) => setSuspectWord(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') submitSuspectWord(e.target.value);
+                      if (e.key === 'Enter') submitSuspectWord(suspectWord);
                     }}
                  />
                  <button onClick={() => {
-                    const inp = document.querySelector('.input-field');
-                    submitSuspectWord(inp.value);
+                    submitSuspectWord(suspectWord);
                  }} className="btn btn-pink" style={{ padding: 16, fontSize: 18 }}>إرسال 🚀</button>
                </div>
              ) : (

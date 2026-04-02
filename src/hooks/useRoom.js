@@ -94,7 +94,7 @@ export function useRoom(roomCode) {
 
   // ── Apply penalty & check for game over ──────────────────────
   const applyPenalty = useCallback(async (loserUid, reason, type = 'penalty') => {
-    if (!room || room.status !== 'playing' || penaltyProcessingRef.current) return;
+    if (!room || (room.status !== 'playing' && room.status !== 'suspect_question') || penaltyProcessingRef.current) return;
     penaltyProcessingRef.current = true;
     
     try {
@@ -197,13 +197,22 @@ export function useRoom(roomCode) {
     if (!room || room.status !== 'suspect_question') return;
     await updateGameState(roomCode, { 'gameState.suspectAnswer': answer });
     
-    // محاولة التصحيح التلقائي كخيار أولي
-    const result = resolveChallenge(answer, room.category);
-    if (result.valid && answer.startsWith(room.gameState.challengingWord || '')) {
-       // لو صح تماماً، ممكن نخليها أوتوماتيك أو ننتظر الهوست
-       // بناءً على طلب العميل، الهوست يقدر يتدخل، فسنكتفي بتسجيل الكلمة
+    // Automatic Check & Resolution
+    const cat = appCategories.find(c => c.id === room.category) || appCategories[0];
+    const normalizedWords = cat.words.map(w => normalizeArabic(w));
+    const ansNorm = normalizeArabic(answer);
+    const challengingNorm = normalizeArabic(room.gameState.challengingWord || '');
+
+    const isValid = normalizedWords.some(w => w === ansNorm) && ansNorm.startsWith(challengingNorm);
+
+    if (isValid) {
+      // If it exists in JSON perfectly, resolve automatically
+      // We wait a tiny bit to let the Answer update show on others' screens
+      setTimeout(async () => {
+         await resolveSuspect(true);
+      }, 1000);
     }
-  }, [room, roomCode]);
+  }, [room, roomCode, resolveSuspect]);
 
   // الهوست أو النظام ينهي التحدي
   const resolveSuspect = useCallback(async (isValid) => {
@@ -290,8 +299,6 @@ export function useRoom(roomCode) {
     pressDelete,
     pressChallenge,
     confirmNextRound,
-    confirmNextRound,
-    pressChallenge,
     submitSuspectWord,
     resolveSuspect,
     leaveRoom: doLeaveRoom,
