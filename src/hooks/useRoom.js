@@ -94,7 +94,7 @@ export function useRoom(roomCode) {
 
   // ── Apply penalty & check for game over ──────────────────────
   const applyPenalty = useCallback(async (loserUid, reason, type = 'penalty') => {
-    if (!room || (room.status !== 'playing' && room.status !== 'suspect_question') || penaltyProcessingRef.current) return;
+    if (!room || (room.status !== 'playing' && room.status !== 'suspect_question' && room.status !== 'finish_confirmation') || penaltyProcessingRef.current) return;
     penaltyProcessingRef.current = true;
     
     try {
@@ -134,39 +134,28 @@ export function useRoom(roomCode) {
   // ── Letter press ─────────────────────────────────────────────
   const pressLetter = useCallback(async (letter) => {
     if (!isMyTurn || !room) return;
-    const newWordString = (room.gameState.currentWord || '') + letter;
+    const currentWord = (room.gameState.currentWord || '');
+    const newWordString = currentWord + letter;
     const normNewWord = normalizeArabic(newWordString);
     const usedWords = room.gameState.usedWords || [];
 
+    // DUPLICATE CHECK: If the player types a letter that finishes a word ALREADY USED
     const cat = appCategories.find(c => c.id === room.category) || appCategories[0];
     const categoryWords = cat.words;
     const normalizedCategory = categoryWords.map(w => normalizeArabic(w));
 
-    // A word is only "Complete" if it's in the category, not already used,
-    // AND doesn't have any continuations in the category (that are also not used).
-    const exactIdx = normalizedCategory.findIndex(w => w === normNewWord);
-    const isAlreadyUsed = usedWords.includes(normNewWord);
-
-    // Filter available words starting with current word prefix
-    const continuations = normalizedCategory.filter(w => 
-       w.startsWith(normNewWord) && w.length > normNewWord.length && !usedWords.includes(w)
-    );
-
-    if (exactIdx !== -1 && !isAlreadyUsed && continuations.length === 0) {
-      playSound('win');
-      await updateGameState(roomCode, {
-        status: 'round_result',
-        'gameState.currentWord': newWordString,
-        'gameState.usedWords': [...usedWords, normNewWord],
-        lastResult: {
-          type: 'word_complete',
-          winnerUid: uid,
-          word: categoryWords[exactIdx],
-          reason: `اكتملت الكلمة! ✓  الإجابة: ${categoryWords[exactIdx]}`,
-        },
-      });
+    const exactMatchIdx = normalizedCategory.findIndex(w => w === normNewWord);
+    
+    // If they finished a word that was used before -> Instant penalty
+    if (exactMatchIdx !== -1 && usedWords.includes(normNewWord)) {
+      playSound('lose');
+      await applyPenalty(uid, `كلمة مكررة! (${categoryWords[exactMatchIdx]})`, 'duplicate');
       return;
     }
+
+    // AUTO-COMPLETION REMOVED: 
+    // We no longer automatically finish the round for words like 'Mali'.
+    // The game continues and the next player must decide to Challenge or Continue.
 
     playSound('click');
     await updateGameState(roomCode, {
@@ -210,6 +199,13 @@ export function useRoom(roomCode) {
     if (!room || room.status !== 'suspect_question') return;
     const { suspectedUid, challengerUid, suspectAnswer } = room.gameState;
 
+    // Use the exact word confirmed by the host to add to usedWords list
+    if (isValid && suspectAnswer) {
+       const usedWords = room.gameState.usedWords || [];
+       const ansNorm = normalizeArabic(suspectAnswer);
+       await updateGameState(roomCode, { 'gameState.usedWords': [...usedWords, ansNorm] });
+    }
+
     if (isValid) {
       // المشتبه به صح -> المتحدي ياخد ربع قرد
       await applyPenalty(challengerUid, `المشتبه به كان صادقاً! الكلمة: ${suspectAnswer}`, 'challenge_failed');
@@ -217,7 +213,36 @@ export function useRoom(roomCode) {
       // المشتبه به غلط -> هو اللي ياخد ربع قرد
       await applyPenalty(suspectedUid, `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.`, 'challenge_success');
     }
-  }, [room, applyPenalty]);
+  }, [room, applyPenalty, roomCode]);
+
+  // الدولة خلصت! (Current player weapon)
+  const pressFinishWord = useCallback(async () => {
+    if (!isMyTurn || !room || room.status !== 'playing') return;
+    const word = room.gameState.currentWord || '';
+    if (!word) return;
+
+    await updateGameState(roomCode, {
+       status: 'finish_confirmation',
+       'gameState.suspectAnswer': word, // using the field for the host to see
+    });
+  }, [isMyTurn, room, roomCode]);
+
+  const resolveFinishWord = useCallback(async (isValid) => {
+     if (!room || room.status !== 'finish_confirmation') return;
+     const { suspectAnswer, currentPlayerUid } = room.gameState;
+     const loserUid = nextPlayerUid(); // Next player fails to continue
+
+     if (isValid) {
+        // Correct completion -> Next player loses
+        const usedWords = room.gameState.usedWords || [];
+        const ansNorm = normalizeArabic(suspectAnswer);
+        await updateGameState(roomCode, { 'gameState.usedWords': [...usedWords, ansNorm] });
+        await applyPenalty(loserUid, `انتهت الكلمة بقرار الهوست! الكلمة: ${suspectAnswer}`, 'word_complete');
+     } else {
+        // Falsely claimed completion -> current player loses
+        await applyPenalty(currentPlayerUid, `ادعاء خاطئ باكتمال الكلمة!`, 'penalty');
+     }
+  }, [room, roomCode, applyPenalty, nextPlayerUid]);
 
   // المشتبه به يدخل الكلمة
   const submitSuspectWord = useCallback(async (answer) => {
@@ -233,7 +258,7 @@ export function useRoom(roomCode) {
     const isValid = normalizedWords.some(w => w === ansNorm) && ansNorm.startsWith(challengingNorm);
 
     if (isValid) {
-      // If it exists in JSON perfectly, resolve automatically
+      // If it exists in JSON perfectly and NOT used, resolve automatically
       // We wait a tiny bit to let the Answer update show on others' screens
       setTimeout(async () => {
          await resolveSuspect(true);
@@ -312,6 +337,8 @@ export function useRoom(roomCode) {
     pressLetter,
     pressDelete,
     pressChallenge,
+    pressFinishWord,
+    resolveFinishWord,
     confirmNextRound,
     submitSuspectWord,
     resolveSuspect,

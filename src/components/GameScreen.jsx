@@ -11,7 +11,7 @@ const EN_TO_AR = {
 
 export default function GameScreen({
   currentWord, timeRemaining, timeLimit,
-  currentPlayer, onKeyPress, onChallenge, isAiTurn, onDelete
+  currentPlayer, onKeyPress, onChallenge, onFinish, isAiTurn, onDelete
 }) {
   const pct = timeLimit > 0 ? (timeRemaining / timeLimit) * 100 : 100;
   const isUrgent = timeLimit > 0 && timeRemaining <= 5;
@@ -171,20 +171,36 @@ export default function GameScreen({
           )}
         </div>
 
-        {/* Challenge button */}
-        <button
-          onClick={onChallenge}
-          disabled={isAiTurn || !currentWord}
-          className="btn"
-          style={{
-            width: '100%', maxWidth: 360,
-            background: 'var(--bg-orange)', color: '#FFF',
-            padding: '14px', fontSize: '1.15rem',
-            opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
-          }}
-        >
-          أتحداك! 🧐
-        </button>
+        {/* Actions area */}
+        <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 360 }}>
+          <button
+            onClick={onChallenge}
+            disabled={isAiTurn || !currentWord}
+            className="btn"
+            style={{
+              flex: 1,
+              background: 'var(--bg-orange)', color: '#FFF',
+              padding: '14px', fontSize: '1rem',
+              opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
+            }}
+          >
+            شك فيه! 🧐
+          </button>
+
+          <button
+            onClick={onFinish}
+            disabled={isAiTurn || !currentWord}
+            className="btn"
+            style={{
+              flex: 1.2,
+              background: 'var(--bg-green)', color: '#FFF',
+              padding: '14px', fontSize: '1rem',
+              opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
+            }}
+          >
+            خلصتها! ✅
+          </button>
+        </div>
 
         {!isAiTurn && (
           <div style={{ textAlign: 'center', opacity: 0.5, fontSize: '0.9rem', marginTop: 10 }}>

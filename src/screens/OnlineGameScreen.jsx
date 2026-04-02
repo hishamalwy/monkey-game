@@ -15,7 +15,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   const {
     room, players, isMyTurn, computedTimer, isHost,
     pressLetter, pressDelete, pressChallenge, leaveRoom, submitSuspectWord, resolveSuspect,
-    triggerHorn,
+    triggerHorn, pressFinishWord, resolveFinishWord,
   } = useRoom(roomCode);
   const vh = useVisualViewport();
 
@@ -239,6 +239,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
           onKeyPress={pressLetter}
           onDelete={pressDelete}
           onChallenge={pressChallenge}
+          onFinish={pressFinishWord}
           isOnline={true}
         />
       </main>
@@ -319,8 +320,8 @@ export default function OnlineGameScreen({ nav, roomCode }) {
                            ⚠️ مطلوب قرارك كحكم!
                         </div>
                         <div style={{ display: 'flex', gap: 12 }}>
-                           <button onClick={() => resolveSuspect(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', border: '3px solid #EF4444' }}>❌ غلط</button>
-                           <button onClick={() => resolveSuspect(true)} className="btn btn-primary" style={{ flex: 1, padding: 14, border: '3px solid var(--bg-dark-purple)' }}>✅ صح</button>
+                           <button onClick={() => room.status === 'suspect_question' ? resolveSuspect(false) : resolveFinishWord(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', border: '3px solid #EF4444' }}>❌ غلط</button>
+                           <button onClick={() => room.status === 'suspect_question' ? resolveSuspect(true) : resolveFinishWord(true)} className="btn btn-primary" style={{ flex: 1, padding: 14, border: '3px solid var(--bg-dark-purple)' }}>✅ صح</button>
                         </div>
                      </div>
                    )}
@@ -345,6 +346,43 @@ export default function OnlineGameScreen({ nav, roomCode }) {
               <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ flex: 1, padding: 14 }}>لأ</button>
               <button onClick={handleExit} className="btn btn-pink" style={{ flex: 1, padding: 14 }}>اخرج</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {room.status === 'finish_confirmation' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,16,63,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card slide-up" style={{ padding: 28, width: '100%', maxWidth: 360, textAlign: 'center', border: '5px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
+             <div style={{ fontSize: 56, marginBottom: 16 }}>🏁</div>
+             <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 8px' }}>تأكيد نهاية الدولة</h3>
+             
+             <div style={{ padding: 16, background: '#FFF7ED', borderRadius: 0, border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-dark-purple)', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: 'var(--bg-dark-purple)', fontWeight: 900, marginBottom: 4, textAlign: 'right' }}>اللاعب بيقول الدولة خلصت:</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: suspectAnswerValid ? 'var(--bg-green)' : 'var(--bg-pink)' }}>
+                 {room.gameState.suspectAnswer}
+                </div>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 4, fontWeight: 700 }}>
+                  {suspectAnswerValid 
+                    ? '(موجودة ومتاحة)' 
+                    : '(غير موجودة أو تم استخدامها سابقاً)'}
+                </div>
+             </div>
+
+             {isHost ? (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-pink)', marginBottom: 4 }}>
+                     ⚠️ هل الدولة انتهت فعلاً؟
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                     <button onClick={() => resolveFinishWord(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', border: '3px solid #EF4444' }}>❌ لسه</button>
+                     <button onClick={() => resolveFinishWord(true)} className="btn btn-primary" style={{ flex: 1, padding: 14, border: '3px solid var(--bg-dark-purple)' }}>✅ خلصت</button>
+                  </div>
+               </div>
+             ) : (
+                <div style={{ fontSize: 14, color: 'var(--bg-dark-purple)', fontWeight: 900, padding: 10, background: '#f3f4f6', border: '2px solid var(--bg-dark-purple)' }}>
+                   ⌛ بانتظار قرار الهوست...
+                </div>
+             )}
           </div>
         </div>
       )}
