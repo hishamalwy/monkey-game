@@ -150,14 +150,18 @@ export function useRoom(roomCode) {
 
     const exactIdx = normalizedCategory.findIndex(w => w === normNewWord);
     
-    // Auto-completion check: Simple & Fast
+    // Auto-completion check: NORMAL COMPLETION = NO PENALTY, JUST ROUND END
     if (exactIdx !== -1 && !usedWords.includes(normNewWord)) {
-       // SYSTEM AUTO-FINISH: You completed a word! (Mali, Egypt, etc.)
-       // According to the standard rule: The NEXT player takes the hit.
-       const loser = nextPlayerUid();
        playSound('win');
-       await updateGameState(roomCode, { 'gameState.usedWords': [...usedWords, normNewWord] });
-       await applyPenalty(loser, `اللاعب اللي قبلك نهى الدولة! (${categoryWords[exactIdx]})`, 'word_complete');
+       const updatedUsed = [...usedWords, normNewWord];
+       
+       // Note: We don't call applyPenalty here because completion is "Safe" normally.
+       // We just end the round to Reset/Next letter.
+       await updateGameState(roomCode, {
+          status: 'round_result',
+          'gameState.usedWords': updatedUsed,
+          lastResult: { type: 'word_complete', loserUid: null, reason: `اكتملت الدولة: ${categoryWords[exactIdx]}`, word: categoryWords[exactIdx] },
+       });
        return;
     }
 
@@ -201,21 +205,27 @@ export function useRoom(roomCode) {
   // الهوست أو النظام ينهي التحدي
   const resolveSuspect = useCallback(async (isValid) => {
     if (!room || room.status !== 'suspect_question') return;
-    const { suspectedUid, challengerUid, suspectAnswer } = room.gameState;
+    const { suspectedUid, challengerUid, suspectAnswer, challengingWord } = room.gameState;
 
-    // Use the exact word confirmed by the host to add to usedWords list
+    // A word is only a "win" for the suspect if it's VALID and LONGER than what's on board
+    // If it's a valid word but already finished at that letter, it's a loss for the suspect!
+    const isActuallyLonger = (suspectAnswer || '').length > (challengingWord || '').length;
+
     if (isValid && suspectAnswer) {
        const usedWords = room.gameState.usedWords || [];
        const ansNorm = normalizeArabic(suspectAnswer);
        await updateGameState(roomCode, { 'gameState.usedWords': [...usedWords, ansNorm] });
     }
 
-    if (isValid) {
-      // المشتبه به صح -> المتحدي ياخد ربع قرد
+    if (isValid && isActuallyLonger) {
+      // Suspect was bluffing a longer word successfully! Challenger loses.
       await applyPenalty(challengerUid, `المشتبه به كان صادقاً! الكلمة: ${suspectAnswer}`, 'challenge_failed');
     } else {
-      // المشتبه به غلط -> هو اللي ياخد ربع قرد
-      await applyPenalty(suspectedUid, `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.`, 'challenge_success');
+      // Suspect failed: either invalid word, or they just confirmed they finished a word!
+      const reason = !isValid 
+        ? `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.` 
+        : `خسرت لأنك أكملت كلمة! الكلمة: ${suspectAnswer}`;
+      await applyPenalty(suspectedUid, reason, 'challenge_success');
     }
   }, [room, applyPenalty, roomCode]);
 
