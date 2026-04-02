@@ -103,6 +103,7 @@ export default function LobbyScreen({ nav, roomCode }) {
   const [toast, setToast] = useState('');
   const [starting, setStarting] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const navRef = useRef(nav);
   useEffect(() => { navRef.current = nav; });
@@ -128,17 +129,17 @@ export default function LobbyScreen({ nav, roomCode }) {
     );
   }
 
-  const players    = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
+  const players = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
   const maxPlayers = room.maxPlayers || 5;
   const emptyCount = Math.max(0, maxPlayers - players.length);
-  const isHost     = room.hostUid === userProfile?.uid;
-  const myPlayer   = room.players[userProfile?.uid];
-  const allReady   = players.length >= 2 && players.every(p => p.isReady);
-  // If a game was previously started (gameState exists), lock mode/category
-  const gameStarted = !!(room.gameState || (room.drawState && room.drawState.roundStatus !== 'none'));
+  const isHost = room.hostUid === userProfile?.uid;
+  const myPlayer = room.players[userProfile?.uid];
+  const allReady = players.length >= 2 && players.every(p => p.isReady);
+  // Lock settings if game is actively running. If we are in lobby, host can change settings.
+  const isActivelyPlaying = room.status === 'playing';
 
-  const handleReady  = async () => { await setReady(roomCode, userProfile.uid, !myPlayer?.isReady); };
-  const handleStart  = async () => {
+  const handleReady = async () => { await setReady(roomCode, userProfile.uid, !myPlayer?.isReady); };
+  const handleStart = async () => {
     setStarting(true);
     try {
       if (room.mode === 'draw') await startDrawGame(roomCode);
@@ -147,69 +148,172 @@ export default function LobbyScreen({ nav, roomCode }) {
     }
     catch (e) { setToast(e.message); setStarting(false); }
   };
-  const handleLeave  = async () => {
+  const handleLeave = async () => {
     await leaveRoom(roomCode, userProfile.uid, isHost, room.playerOrder);
     nav.toHome();
   };
   const copyCode = () => {
-    navigator.clipboard?.writeText(roomCode).catch(() => {});
+    navigator.clipboard?.writeText(roomCode).catch(() => { });
     setToast('تم نسخ الكود!');
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      backgroundColor: '#FAFAFA',
+      backgroundImage: 'radial-gradient(rgba(28, 16, 63, 0.15) 2px, transparent 2px)',
+      backgroundSize: '24px 24px'
+    }}>
 
-      {/* Header */}
-      <div style={{
-        padding: '16px 20px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        {/* placeholder for visual balance */}
-        <div style={{ width: 90 }} />
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.2 }}>
-            {room.mode === 'draw' ? 'الرسّام الفنان' : room.mode === 'survival' ? 'البقاء للأقوى' : 'قرد الكلكس'}
-          </h1>
-          {isHost && !gameStarted ? (
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'center' }}>
-              <select
-                value={room.mode}
-                onChange={(e) => updateRoomSettings(roomCode, { mode: e.target.value, category: (e.target.value === 'draw' ? drawCategories : appCategories)[0].id })}
-                className="input-field"
-                style={{ fontSize: 13, padding: '4px 8px', borderRadius: 8, border: '2px solid var(--bg-dark-purple)', fontWeight: 900, background: '#FFF' }}
+      {/* Header & Settings Panel */}
+      <div style={{ background: '#FFF', borderBottom: '5px solid var(--bg-dark-purple)', position: 'relative', zIndex: 2 }}>
+
+        {/* Top Control Bar */}
+        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-yellow)', borderBottom: '3px solid var(--bg-dark-purple)' }}>
+          <button
+            onClick={() => setShowExitConfirm(true)}
+            className="pop"
+            style={{
+              background: '#FFF', border: '3px solid var(--bg-dark-purple)',
+              padding: '6px 14px', fontSize: 14, fontWeight: 900, cursor: 'pointer',
+              boxShadow: '3px 3px 0 var(--bg-dark-purple)'
+            }}
+          >
+            ← خروج
+          </button>
+
+          <button
+            onClick={copyCode}
+            className="pop"
+            style={{
+              background: 'var(--bg-pink)', border: '3px solid var(--bg-dark-purple)',
+              boxShadow: '3px 3px 0 var(--bg-dark-purple)',
+              padding: '6px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+              color: '#FFF', transform: 'rotate(-2deg)'
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 900 }}>الكود:</span>
+            <span style={{ fontSize: 18, fontWeight: 950, letterSpacing: 2 }}>{roomCode}</span>
+            <span style={{ fontSize: 16 }}>📋</span>
+          </button>
+        </div>
+
+        {/* Dashboard Title & Settings Accordion */}
+        <div style={{ padding: '16px 20px', position: 'relative' }}>
+
+          {/* Top Row: Mode Info + Settings Button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: settingsOpen ? 16 : 0 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                fontSize: 28, background: 'var(--bg-yellow)', width: 52, height: 52,
+                borderRadius: 12, border: '3px solid var(--bg-dark-purple)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '3px 3px 0 var(--bg-dark-purple)'
+              }}>
+                {room.mode === 'draw' ? '🎨' : room.mode === 'survival' ? '⚔️' : '🔊'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <h1 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 4px', textTransform: 'uppercase' }}>
+                  {room.mode === 'draw' ? 'خمن و ارسم' : room.mode === 'survival' ? 'البقاء للأقوى' : 'القرد بيتكلم'}
+                </h1>
+                <span style={{
+                  fontSize: 11, background: 'var(--bg-pink)', color: '#FFF',
+                  padding: '2px 10px', fontWeight: 950, borderRadius: 12,
+                  boxShadow: '2px 2px 0 var(--bg-dark-purple)'
+                }}>
+                  {room.mode === 'survival' ? 'تحدي المعلومات السريع' :
+                    ((room.mode === 'draw' ? drawCategories : appCategories).find(c => c.id === room.category)?.name || room.category)
+                  }
+                </span>
+              </div>
+            </div>
+
+            {isHost && !isActivelyPlaying && (
+              <button
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                className="pop"
+                style={{
+                  width: 44, height: 44, borderRadius: '50%', background: settingsOpen ? 'var(--bg-dark-purple)' : '#FFF',
+                  color: settingsOpen ? '#FFF' : 'var(--bg-dark-purple)',
+                  border: '3px solid var(--bg-dark-purple)', fontSize: 20, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '3px 3px 0 var(--bg-pink)', cursor: 'pointer', transition: 'all 0.2s',
+                  transform: settingsOpen ? 'rotate(90deg)' : 'none'
+                }}
               >
-                <option value="monkey">قرد</option>
-                <option value="draw">رسم</option>
-                <option value="survival">البقاء للأقوى</option>
-              </select>
+                ⚙️
+              </button>
+            )}
+          </div>
+
+          {/* Settings Expansion */}
+          {isHost && !isActivelyPlaying && settingsOpen && (
+            <div className="slide-up" style={{
+              background: '#FAFAFA', border: '3px dashed var(--bg-dark-purple)',
+              padding: '16px', borderRadius: 12, marginTop: 12
+            }}>
+              <h3 style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 10px', textTransform: 'uppercase' }}>أسلوب اللعب 🎮</h3>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: room.mode !== 'survival' ? 16 : 0 }}>
+                {[
+                  { id: 'monkey', emoji: '🔊', label: 'قرد' },
+                  { id: 'draw', emoji: '🎨', label: 'رسم' },
+                  { id: 'survival', emoji: '⚔️', label: 'بقاء' }
+                ].map(m => {
+                  const active = room.mode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => updateRoomSettings(roomCode, { mode: m.id, category: (m.id === 'draw' ? drawCategories : appCategories)[0].id })}
+                      style={{
+                        flex: 1, padding: '8px 4px', fontSize: 12, fontWeight: 950,
+                        background: active ? 'var(--bg-dark-purple)' : '#FFF',
+                        color: active ? '#FFF' : 'var(--bg-dark-purple)',
+                        border: '3px solid var(--bg-dark-purple)',
+                        boxShadow: active ? '3px 3px 0 var(--bg-pink)' : '2px 2px 0 rgba(0,0,0,0.1)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                        borderRadius: 6, cursor: 'pointer', transition: 'all 0.1s'
+                      }}
+                    >
+                      <span style={{ fontSize: 20 }}>{m.emoji}</span>
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {room.mode !== 'survival' && (
-                <select
-                  value={room.category}
-                  onChange={(e) => updateRoomSettings(roomCode, { category: e.target.value })}
-                  className="input-field"
-                  style={{ fontSize: 13, padding: '4px 8px', borderRadius: 8, border: '2px solid var(--bg-dark-purple)', fontWeight: 900, background: '#FFF' }}
-                >
-                  {(room.mode === 'draw' ? drawCategories : appCategories).map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
+                <div>
+                  <h3 style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 8px', textTransform: 'uppercase' }}>نوع الأسئلة 📦</h3>
+                  <div style={{
+                    display: 'flex', gap: 8, overflowX: 'auto', padding: '4px 4px 8px',
+                    scrollbarWidth: 'none', msOverflowStyle: 'none'
+                  }}>
+                    {(room.mode === 'draw' ? drawCategories : appCategories).map(cat => {
+                      const active = room.category === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => updateRoomSettings(roomCode, { category: cat.id })}
+                          style={{
+                            whiteSpace: 'nowrap', padding: '6px 12px', fontSize: 12, fontWeight: 950,
+                            background: active ? 'var(--bg-pink)' : '#FFF',
+                            color: active ? '#FFF' : 'var(--bg-dark-purple)',
+                            border: '2px solid var(--bg-dark-purple)',
+                            boxShadow: active ? '2px 2px 0 var(--bg-dark-purple)' : '2px 2px 0 rgba(0,0,0,0.1)',
+                            borderRadius: 20, cursor: 'pointer', transition: 'all 0.1s'
+                          }}
+                        >
+                          {cat.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
-          ) : (
-              <span style={{ fontSize: 13, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 8px', borderRadius: 4, marginTop: 4, display: 'inline-block' }}>
-                {room.mode === 'survival' ? 'مسابقة البقاء' : 
-                 ( (room.mode === 'draw' ? drawCategories : appCategories).find(c => c.id === room.category)?.name || room.category )
-                }
-              </span>
           )}
         </div>
-        <button
-          onClick={() => setShowExitConfirm(true)}
-          className="btn btn-yellow"
-          style={{ padding: '8px 14px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}
-        >
-          خروج ←
-        </button>
       </div>
 
       {showExitConfirm && (
@@ -226,30 +330,14 @@ export default function LobbyScreen({ nav, roomCode }) {
         </div>
       )}
 
-      {/* Room code pill */}
-      <div style={{ textAlign: 'center', marginBottom: 8 }}>
-        <button
-          onClick={copyCode}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 10,
-            background: '#FFF', border: 'var(--brutal-border)',
-            boxShadow: 'var(--brutal-shadow)',
-            padding: '8px 20px', cursor: 'pointer',
-            fontFamily: 'Cairo, sans-serif',
-          }}
-        >
-          <span style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 700 }}>رمز الفرقة:</span>
-          <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--bg-dark-purple)', letterSpacing: 4, fontVariantNumeric: 'tabular-nums' }}>
-            {roomCode}
-          </span>
-          <span>📋</span>
-        </button>
+      <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0 }}>
+          مين جاهز للمطحنة؟ 🔥
+        </h2>
+        <span style={{ fontSize: 12, fontWeight: 950, background: 'var(--bg-dark-purple)', color: '#FFF', padding: '2px 8px' }}>
+          {players.length}/{maxPlayers}
+        </span>
       </div>
-
-      {/* Section heading */}
-      <h2 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', textAlign: 'center', margin: '8px 0 12px' }}>
-        اللاعبون في الغرفة
-      </h2>
 
       {/* Player list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
@@ -268,37 +356,45 @@ export default function LobbyScreen({ nav, roomCode }) {
         <div style={{ height: 4 }} />
       </div>
 
-      {/* Action button */}
-      <div style={{ padding: '16px 20px 24px' }}>
+      {/* Action button container */}
+      <div style={{ padding: '16px 20px 24px', background: '#FFF', borderTop: '5px solid var(--bg-dark-purple)' }}>
         {isHost ? (
           <button
             onClick={handleStart}
             disabled={!allReady || starting}
-            className="btn"
+            className={allReady && !starting ? "btn-yellow pop" : ""}
             style={{
-              width: '100%', padding: '18px', fontSize: 17,
-              background: allReady ? 'var(--bg-orange)' : '#9CA3AF',
-              color: '#FFF',
+              width: '100%', padding: '18px', fontSize: 20, fontWeight: 950,
+              background: allReady ? 'var(--bg-yellow)' : '#FAFAFA',
+              color: allReady ? 'var(--bg-dark-purple)' : '#6B7280',
+              border: allReady ? '5px solid var(--bg-dark-purple)' : '4px dashed #9CA3AF',
+              boxShadow: allReady ? '6px 6px 0 var(--bg-dark-purple)' : 'none',
               cursor: allReady ? 'pointer' : 'not-allowed',
+              transform: allReady ? 'rotate(-1deg)' : 'none',
+              transition: 'all 0.2s'
             }}
           >
             {starting
-              ? <LoadingSpinner size={22} />
+              ? <LoadingSpinner size={24} color="var(--bg-dark-purple)" />
               : allReady
-                ? 'ابدأ اللعبة 🚀'
-                : `ابدأ اللعبة (بانتظار الجميع)`}
+                ? 'دوس يا هوست! 🚀'
+                : 'حد يصحيهم عشان نبدأ! ⏳'}
           </button>
         ) : (
           <button
             onClick={handleReady}
-            className="btn"
+            className="pop"
             style={{
-              width: '100%', padding: '18px', fontSize: 17,
-              background: myPlayer?.isReady ? '#22C55E' : '#FFF',
-              color: myPlayer?.isReady ? '#FFF' : 'var(--bg-dark-purple)',
+              width: '100%', padding: '18px', fontSize: 20, fontWeight: 950,
+              background: myPlayer?.isReady ? 'var(--bg-green)' : 'var(--bg-pink)',
+              color: '#FFF',
+              border: '5px solid var(--bg-dark-purple)',
+              boxShadow: '6px 6px 0 var(--bg-dark-purple)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              transform: myPlayer?.isReady ? 'rotate(1deg)' : 'rotate(-1deg)'
             }}
           >
-            {myPlayer?.isReady ? '✓ أنا جاهز!' : 'اضغط للتجهيز'}
+            {myPlayer?.isReady ? 'أنا وحش وجاهز! 🦍' : 'دوس عشان تبقى جاهز! ⚡'}
           </button>
         )}
       </div>

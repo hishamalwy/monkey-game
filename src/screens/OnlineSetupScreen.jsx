@@ -24,6 +24,7 @@ export default function OnlineSetupScreen({ nav }) {
   const [entryFee, setEntryFee]       = useState(100);
   const [loading, setLoading]         = useState(false);
   const [toast, setToast]             = useState('');
+  const [modeOpen, setModeOpen]       = useState(false);
   const [isPublic, setIsPublic]       = useState(true);
 
   const currentCategories = mode === 'draw' ? drawCategories : appCategories;
@@ -69,50 +70,102 @@ export default function OnlineSetupScreen({ nav }) {
 
         {/* Mode selector */}
         <section>
-          <h2 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', textAlign: 'center', marginBottom: 14 }}>
-            اختيار المود
-          </h2>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {MODES.map(m => {
-              const selected = mode === m.id;
-              return (
-                <div
-                  key={m.id}
-                  onClick={() => m.active && setMode(m.id)}
-                  style={{
-                    flex: 1,
-                    border: selected ? '4px solid var(--bg-dark-purple)' : 'var(--brutal-border)',
-                    background: selected ? 'var(--bg-pink)' : '#FFF',
-                    boxShadow: selected ? 'var(--brutal-shadow)' : '3px 3px 0 rgba(45,27,78,0.25)',
-                    padding: '10px 6px',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                    position: 'relative',
-                    opacity: m.soon ? 0.5 : 1,
-                    cursor: m.active ? 'pointer' : 'not-allowed',
-                    userSelect: 'none',
-                  }}
-                >
-                  <span style={{ fontSize: 28 }}>{m.emoji}</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 900, textAlign: 'center', lineHeight: 1.25,
-                    color: selected ? '#FFF' : 'var(--bg-dark-purple)',
-                  }}>
-                    {m.label}
-                  </span>
-                  {m.soon && (
-                    <span style={{
-                      position: 'absolute', top: -8, left: -6,
-                      background: 'var(--bg-dark-purple)', color: '#FFE300',
-                      fontSize: 9, fontWeight: 900, padding: '2px 5px',
-                      transform: 'rotate(-8deg)',
-                    }}>
-                      قريباً
-                    </span>
-                  )}
+          <div 
+            onClick={() => setModeOpen(!modeOpen)} 
+            className="pop"
+            style={{ 
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 20px', background: '#FFF',
+              border: '4px solid var(--bg-dark-purple)',
+              boxShadow: '4px 4px 0 var(--bg-dark-purple)',
+              cursor: 'pointer', marginBottom: modeOpen ? 14 : 0
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontSize: 28 }}>{MODES.find(m => m.id === mode)?.emoji}</div>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 4px', textTransform: 'uppercase' }}>
+                  أسلوب اللعب
+                </h2>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--bg-dark-purple)', opacity: 0.8 }}>
+                  {MODES.find(m => m.id === mode)?.label}
                 </div>
-              );
-            })}
+              </div>
+            </div>
+            <div style={{ fontSize: 20, transform: modeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', fontWeight: 900 }}>
+              ▼
+            </div>
           </div>
+
+          {modeOpen && (
+            <div className="slide-up" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {MODES.map(m => {
+                const selected = mode === m.id;
+                const isSurvival = m.id === 'survival';
+                const isDraw = m.id === 'draw';
+
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => {
+                      if (m.active) {
+                        setMode(m.id);
+                        setModeOpen(false);
+                      }
+                    }}
+                    className={selected ? '' : 'pop'}
+                    style={{
+                      border: selected ? '4px solid var(--bg-dark-purple)' : '2px dashed var(--bg-dark-purple)',
+                      background: selected ? (isSurvival ? 'var(--bg-dark-purple)' : isDraw ? 'var(--bg-pink)' : 'var(--bg-yellow)') : '#FAFAFA',
+                      padding: '12px 16px',
+                      display: 'flex', alignItems: 'center', gap: 16,
+                      position: 'relative',
+                      opacity: m.soon ? 0.6 : 1,
+                      cursor: m.active ? 'pointer' : 'not-allowed',
+                      transition: 'all 0.1s'
+                    }}
+                  >
+                    <div style={{ fontSize: 32 }}>{m.emoji}</div>
+                    
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ 
+                        fontSize: 18, fontWeight: 950, margin: '0 0 2px', 
+                        color: selected && (isSurvival || isDraw) ? '#FFF' : 'var(--bg-dark-purple)'
+                      }}>
+                        {m.label}
+                      </h3>
+                      <p style={{ 
+                        fontSize: 11, fontWeight: 700, margin: 0, opacity: 0.8,
+                        color: selected && (isSurvival || isDraw) ? '#FFF' : 'var(--bg-dark-purple)'
+                      }}>
+                        {m.id === 'monkey' ? 'تحدي الكلمات السريع' : m.id === 'draw' ? 'ارسم وخلي غيرك يحمن' : 'تحدي بقاء ومعلومات'}
+                      </p>
+                    </div>
+
+                    {selected && (
+                      <div style={{ 
+                        width: 24, height: 24, background: 'var(--bg-green)', borderRadius: '50%', 
+                        border: '2px solid var(--bg-dark-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 14, color: '#FFF'
+                      }}>✓</div>
+                    )}
+
+                    {m.soon && (
+                      <span style={{
+                        position: 'absolute', top: -8, left: 10,
+                        background: 'var(--bg-dark-purple)', color: '#FFE300',
+                        fontSize: 9, fontWeight: 900, padding: '2px 8px',
+                        transform: 'rotate(-5deg)',
+                        border: '2px solid #FFF'
+                      }}>
+                        قريباً
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* Visibility */}
