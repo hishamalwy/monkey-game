@@ -156,7 +156,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     <div 
       onClick={() => warmAudio()}
       onTouchStart={() => warmAudio()}
-      style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}
+      style={{ width: '100%', height: `${vh}px`, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}
     >
       <header style={{ padding: '16px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
