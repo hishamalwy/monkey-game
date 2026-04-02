@@ -15,6 +15,45 @@ export default function BrowseRoomsScreen({ nav }) {
 
   const [joinCode, setJoinCode] = useState('');
 
+  const loadRooms = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchPublicRooms();
+      setRooms(data);
+    } catch (e) {
+      setToast('فشل تحميل الغرف');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRooms();
+  }, []);
+
+  const handleJoin = async (code) => {
+    setJoining(code);
+    try {
+      await joinRoom(code, userProfile);
+      nav.toLobby(code);
+    } catch (e) {
+      setToast(e.message || 'فشل الانضمام');
+      setJoining(null);
+    }
+  };
+
+  const getModeLabel = (mode) => {
+    if (mode === 'draw') return '🎨 رسم';
+    if (mode === 'survival') return '⚔️ بقاء';
+    return '🔊 قرد';
+  };
+
+  const getCatName = (room) => {
+    if (room.mode === 'survival') return 'مسابقة البقاء';
+    const cats = room.mode === 'draw' ? drawCategories : appCategories;
+    return cats.find(c => c.id === room.category)?.name || room.category;
+  };
+
   const handleManualJoin = async (codeStr) => {
     if (codeStr.length !== 4) return;
     setJoining(codeStr);
