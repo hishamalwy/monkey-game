@@ -65,6 +65,7 @@ export async function startDrawGame(roomCode) {
       roundScores: {},
       guessersDone: [],
       bgFill: null,
+      showWordLength: false,
     },
   });
 }
@@ -89,6 +90,7 @@ export async function chooseDrawWord(roomCode, word) {
     'drawState.roundScores': {},
     'drawState.messages': [],
     'drawState.bgFill': null,
+    'drawState.showWordLength': false,
   });
 }
 
@@ -130,11 +132,11 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
     patch[`drawState.scores.${uid}`] = (ds.scores?.[uid] || 0) + points;
     patch['drawState.guessersDone'] = arrayUnion(uid);
 
-    // Check if everyone guessed correctly
-    const othersCount = players.length - 1; // everyone except drawer
-    const nowDone = (ds.guessersDone?.length || 0) + 1;
+    const activePlayers = Object.keys(room.players || {});
+    const othersCount = Math.max(1, activePlayers.length - 1); // everyone except drawer
+    const nowDone = (ds.guessersDone || []).length + 1;
     if (nowDone >= othersCount) {
-      const drawerPoints = nowDone; // +1 per correct guesser
+      const drawerPoints = nowDone; 
       messagesToAdd.push({
         uid: 'system', username: 'المنادي',
         text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now() + 1,
@@ -230,23 +232,9 @@ export async function endDrawRound(roomCode) {
   });
 }
 
-export async function freezeDrawTime(roomCode, extraSeconds = 15) {
-  const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const room = snap.data();
-  const ds = room?.drawState;
-  if (!ds || ds.roundStatus !== 'drawing' || ds.powerupUsed) return;
-
-  const newRoundEndsAt = (ds.roundEndsAt || Date.now()) + (extraSeconds * 1000);
-  
+export async function revealWordLength(roomCode) {
   await updateDoc(doc(db, 'rooms', roomCode), {
-    'drawState.roundEndsAt': newRoundEndsAt,
-    'drawState.powerupUsed': true,
-    'drawState.messages': arrayUnion({
-      uid: 'system',
-      username: 'المنادي',
-      text: `❄️ تم تجميد الوقت! +${extraSeconds} ثانية إضافية`,
-      ts: Date.now()
-    }),
+    'drawState.showWordLength': true,
   });
 }
 
@@ -291,5 +279,6 @@ export async function nextDrawRound(roomCode) {
     'drawState.roundScores': {},
     'drawState.bgFill': null,
     'drawState.powerupUsed': false,
+    'drawState.showWordLength': false,
   });
 }

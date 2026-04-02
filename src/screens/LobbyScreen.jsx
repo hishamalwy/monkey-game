@@ -193,7 +193,7 @@ export default function LobbyScreen({ nav, roomCode }) {
             }}
           >
             <span style={{ fontSize: 13, fontWeight: 900 }}>الكود:</span>
-            <span style={{ fontSize: 18, fontWeight: 950, letterSpacing: 2 }}>{roomCode}</span>
+            <span style={{ fontSize: 18, fontWeight: 950, letterSpacing: 2, direction: 'ltr', display: 'inline-block' }}>{roomCode}</span>
             <span style={{ fontSize: 16 }}>📋</span>
           </button>
         </div>

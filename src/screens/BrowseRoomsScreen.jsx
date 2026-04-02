@@ -135,7 +135,7 @@ export default function BrowseRoomsScreen({ nav }) {
               لديك رمز دعوة؟ ادخله هنا! 🎫
            </h1>
            
-           <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 12, zIndex: 2 }}>
+           <div style={{ position: 'relative', display: 'flex', flexDirection: 'row', direction: 'ltr', justifyContent: 'center', gap: 12, zIndex: 2 }}>
               {[0, 1, 2, 3].map(i => (
                 <div key={i} className="pop" style={{
                   width: 56, height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -155,7 +155,8 @@ export default function BrowseRoomsScreen({ nav }) {
                 onChange={e => handleCodeChange(e.target.value)}
                 maxLength={4}
                 style={{
-                  position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%'
+                  position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%',
+                  direction: 'ltr'
                 }}
               />
            </div>

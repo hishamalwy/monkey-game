@@ -152,14 +152,28 @@ export async function leaveRoom(code, uid, isHost) {
 
 export async function resetRoomToLobby(code) {
   const roomRef = doc(db, 'rooms', code);
-  await updateDoc(roomRef, {
+  const snap = await getDoc(roomRef);
+  if (!snap.exists()) return;
+  const room = snap.data();
+  
+  const updates = {
     status: 'lobby',
     gameState: deleteField(),
     drawState: deleteField(),
     survivalState: deleteField(),
     lastResult: deleteField(),
     currentWord: '', // Ensure old data is cleared
-  });
+  };
+
+  // Reset all players stats for the new game
+  if (room.players) {
+    Object.keys(room.players).forEach(uid => {
+      updates[`players.${uid}.quarterMonkeys`] = 0;
+      updates[`players.${uid}.isReady`] = false;
+    });
+  }
+
+  await updateDoc(roomRef, updates);
 }
 
 export async function cleanupOldRooms() {

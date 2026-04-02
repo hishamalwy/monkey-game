@@ -288,11 +288,12 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 8, borderTopLeftRadius: 32, borderTopRightRadius: 32, background: 'var(--color-card)', boxShadow: '0 -4px 20px rgba(0,0,0,0.05)' }}>
         <GameScreen
-          currentWord={room.gameState.currentWord || ''}
-          timeRemaining={computedTimer ?? room.timeLimit}
+          currentWord={room.gameState.currentWord}
+          timeRemaining={computedTimer}
           timeLimit={room.timeLimit}
-          currentPlayer={currentPlayer}
-          isAiTurn={!isMyTurn}
+          currentPlayer={room.players[room.gameState.currentPlayerUid]}
+          isAiTurn={false}
+          isMyTurn={isMyTurn}
           onKeyPress={pressLetter}
           onDelete={pressDelete}
           onChallenge={pressChallenge}

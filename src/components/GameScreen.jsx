@@ -11,7 +11,7 @@ const EN_TO_AR = {
 
 export default function GameScreen({
   currentWord, timeRemaining, timeLimit,
-  currentPlayer, onKeyPress, onDelete, onChallenge, isAiTurn
+  currentPlayer, onKeyPress, onDelete, onChallenge, isAiTurn, isMyTurn
 }) {
   const pct = timeLimit > 0 ? (timeRemaining / timeLimit) * 100 : 100;
   const isUrgent = timeLimit > 0 && timeRemaining <= 5;
@@ -107,17 +107,21 @@ export default function GameScreen({
         {/* Current player badge */}
         <div className="card" style={{
           padding: '6px 20px', display: 'flex', alignItems: 'center', gap: 10,
+          background: isMyTurn ? 'var(--bg-pink)' : '#FFF',
+          color: isMyTurn ? '#FFF' : 'var(--bg-dark-purple)',
+          border: `3px solid var(--bg-dark-purple)`,
+          transition: 'all 0.3s ease'
         }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--bg-pink)', fontWeight: 900 }}>دور:</span>
+          <span style={{ fontSize: '0.85rem', color: isMyTurn ? '#FFF' : 'var(--bg-pink)', fontWeight: 900 }}>دور:</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {currentPlayer?.avatarId !== undefined && (
-              <UserAvatar avatarId={currentPlayer.avatarId} size={28} style={{ border: 'none' }} />
+              <UserAvatar avatarId={currentPlayer.avatarId} size={28} style={{ border: isMyTurn ? '2px solid #FFF' : 'none' }} />
             )}
             <span className="truncate" style={{
-              fontSize: '1rem', color: 'var(--bg-dark-purple)', fontWeight: 900, maxWidth: 130,
+              fontSize: '1rem', color: isMyTurn ? '#FFF' : 'var(--bg-dark-purple)', fontWeight: 900, maxWidth: 130,
               ...(isAiTurn ? { opacity: 0.6 } : {}),
             }}>
-              {currentPlayer?.name}
+              {currentPlayer?.name} {isMyTurn && '(أنت)'}
               {isAiTurn && (
                 <span style={{ fontSize: '0.75rem', marginRight: 6, color: 'rgba(28,16,63,0.45)' }}>
                   يفكر…
@@ -156,10 +160,10 @@ export default function GameScreen({
           className={isAiTurn ? '' : 'pop'} 
           style={{
             width: '100%', maxWidth: 360, position: 'relative',
-            display: 'flex', alignItems: 'center', gap: 4,
-            flexDirection: 'row', flexWrap: 'nowrap',
+            display: 'flex', alignItems: 'center', gap: 6,
+            flexDirection: 'row-reverse', flexWrap: 'wrap',
             alignContent: 'center', justifyContent: 'center',
-            minHeight: 80,
+            minHeight: 100,
             cursor: 'pointer'
           }}
           onClick={(e) => {
@@ -182,13 +186,24 @@ export default function GameScreen({
             const chars = word.split('');
             const tileCount = chars.length;
             
-            // Dynamic sizing logic
-            const baseWidth = 56;
-            const containerWidth = 340; // Approx inner width
-            const calculatedWidth = Math.min(baseWidth, (containerWidth - (tileCount * 4)) / tileCount);
-            const tileWidth = Math.max(30, calculatedWidth);
-            const tileHeight = Math.min(68, tileWidth * 1.2);
-            const fontSize = Math.max(0.9, Math.min(2.2, tileWidth / 24));
+            // Dynamic sizing & wrap logic
+            const maxInRow = 10;
+            const containerWidth = 340;
+            
+            let tileWidth, tileHeight, fontSize;
+            
+            if (tileCount <= maxInRow) {
+               // Single row shrinking
+               const calculated = Math.min(56, (containerWidth - (tileCount * 6)) / tileCount);
+               tileWidth = Math.max(34, calculated);
+               tileHeight = tileWidth * 1.2;
+               fontSize = tileWidth / 22;
+            } else {
+               // Wrapped mode
+               tileWidth = 40;
+               tileHeight = 52;
+               fontSize = 1.3;
+            }
 
             return chars.map((char, i) => (
               <div key={i} className="card" style={{
