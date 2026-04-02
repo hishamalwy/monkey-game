@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 export default function RoundResultScreen({ nav, roomCode }) {
   const { room, players, isHost, confirmNextRound } = useRoom(roomCode);
+  const { user } = useAuth();
   const [countdown, setCountdown] = useState(5);
 
   const navRef = useRef(nav);
@@ -37,9 +38,43 @@ export default function RoundResultScreen({ nav, roomCode }) {
   }
 
   const result = room.lastResult;
-  const isWin = result?.type === 'word_complete';
-  
-  const QM_COLORS = ['#D1D5DB', '#FCD34D', '#F97316', '#EF4444', '#1C1040'];
+  const myUid = user?.uid;
+  const isWordComplete = result?.type === 'word_complete';
+  const isChallenge = result?.type?.includes('challenge');
+  const isTimeout = result?.type === 'timeout';
+  const amITheLoser = result?.loserUid === myUid;
+
+  // Personalized headline
+  const getHeadline = () => {
+    if (isWordComplete) return amITheLoser ? 'خسرت الجولة! 😤' : 'تمت الكلمة! 🎉';
+    if (isChallenge) {
+      if (amITheLoser) return 'خسرت التحدي! 💀';
+      return 'التحدي نجح! 🕵️';
+    }
+    if (isTimeout) return amITheLoser ? 'انتهى وقتك! ⏰' : 'انتهى وقته! ⏰';
+    return isWordComplete ? 'تمت الكلمة!' : 'انتهت الجولة!';
+  };
+
+  // Personalized sub-message
+  const getSubMessage = () => {
+    if (isWordComplete) {
+      const loserName = players.find(p => p.uid === result?.loserUid)?.username || '؟';
+      return amITheLoser ? 'أكملت الكلمة وده حسبلك جولة خسارة!' : `${loserName} أكمل الكلمة!`;
+    }
+    if (isTimeout) {
+      return amITheLoser ? 'انتهى وقتك وأخدت ربع قرد! 🐒' : 'انتهى وقته وأخد ربع قرد! 🐒';
+    }
+    return result?.reason || 'تم تطبيق العقوبة';
+  };
+
+  const getEmoji = () => {
+    if (isWordComplete) return amITheLoser ? '😤' : '🏆';
+    if (isChallenge) return amITheLoser ? '💀' : '🕵️';
+    return amITheLoser ? '⏰' : '💥';
+  };
+
+  // Background: loser sees light pink, winner sees light yellow
+  const bgColor = amITheLoser ? '#FFF0F5' : '#FFFFF0';
 
   return (
     <div style={{
@@ -47,38 +82,38 @@ export default function RoundResultScreen({ nav, roomCode }) {
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: 20,
-      background: 'var(--bg-light-purple)',
+      background: bgColor,
     }}>
       <div className="slide-up" style={{
         background: '#FFF',
-        border: '6px solid var(--bg-dark-purple)',
-        borderRadius: 0, // Neobrutalist often uses sharp corners
+        border: `6px solid ${amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
+        borderRadius: 0,
         padding: '32px 24px',
         width: '100%',
         maxWidth: 420,
         textAlign: 'center',
-        boxShadow: '12px 12px 0px var(--bg-dark-purple)',
+        boxShadow: `12px 12px 0px ${amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
         position: 'relative',
         overflow: 'hidden'
       }}>
         {/* Countdown Progress Bar */}
         <div style={{
           position: 'absolute', top: 0, left: 0, height: 8,
-          background: 'var(--bg-pink)',
+          background: amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)',
           width: `${(countdown / 5) * 100}%`,
           transition: 'width 1s linear'
         }} />
 
         <div style={{ fontSize: 64, marginBottom: 16 }}>
-          {isWin ? '🏆' : result?.type?.includes('challenge') ? '🕵️' : '💥'}
+          {getEmoji()}
         </div>
 
         <h2 style={{
-          fontSize: 32, fontWeight: 900, marginBottom: 8,
-          color: 'var(--bg-dark-purple)',
+          fontSize: 28, fontWeight: 900, marginBottom: 8,
+          color: amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)',
           textTransform: 'uppercase'
         }}>
-          {isWin ? 'فشل التحدي!' : 'انتهت الجولة!'}
+          {getHeadline()}
         </h2>
 
         <div style={{
