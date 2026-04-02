@@ -150,14 +150,10 @@ export function useRoom(roomCode) {
 
     const exactIdx = normalizedCategory.findIndex(w => w === normNewWord);
     
-    // Auto-completion check (Smarter Mali/Malaysia logic)
-    const hasContinuations = normalizedCategory.some(w => 
-       w.startsWith(normNewWord) && w.length > normNewWord.length && !usedWords.includes(w)
-    );
-
-    if (exactIdx !== -1 && !usedWords.includes(normNewWord) && !hasContinuations) {
-       // SYSTEM AUTO-FINISH: This word is perfectly complete and has no extras.
-       // The NEXT player is the one who took the hit for being unable to continue.
+    // Auto-completion check: Simple & Fast
+    if (exactIdx !== -1 && !usedWords.includes(normNewWord)) {
+       // SYSTEM AUTO-FINISH: You completed a word! (Mali, Egypt, etc.)
+       // According to the standard rule: The NEXT player takes the hit.
        const loser = nextPlayerUid();
        playSound('win');
        await updateGameState(roomCode, { 'gameState.usedWords': [...usedWords, normNewWord] });
