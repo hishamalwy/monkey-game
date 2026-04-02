@@ -15,6 +15,8 @@ import LeaderboardScreen from './screens/LeaderboardScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DrawGameScreen from './screens/DrawGameScreen';
 import DrawGameOverScreen from './screens/DrawGameOverScreen';
+import SurvivalGameScreen from './screens/SurvivalGameScreen';
+import SurvivalGameOverScreen from './screens/SurvivalGameOverScreen';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -43,6 +45,8 @@ export default function App() {
     toAuth: () => setScreen('auth'),
     toDrawGame: () => setScreen('drawGame'),
     toDrawGameOver: () => setScreen('drawGameOver'),
+    toSurvivalGame: () => setScreen('survivalGame'),
+    toSurvivalGameOver: () => setScreen('survivalGameOver'),
   };
 
   const content = (() => {
@@ -59,6 +63,8 @@ export default function App() {
     if (screen === 'settings')     return <SettingsScreen nav={nav} />;
     if (screen === 'drawGame')     return <DrawGameScreen nav={nav} roomCode={roomCode} />;
     if (screen === 'drawGameOver') return <DrawGameOverScreen nav={nav} roomCode={roomCode} />;
+    if (screen === 'survivalGame') return <SurvivalGameScreen nav={nav} roomCode={roomCode} />;
+    if (screen === 'survivalGameOver') return <SurvivalGameOverScreen nav={nav} roomCode={roomCode} />;
     return <SplashScreen />;
   })();
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings } from '../firebase/rooms';
 import { startDrawGame } from '../firebase/drawRooms';
+import { startSurvivalGame } from '../firebase/survivalRooms';
 import { appCategories } from '../data/categories';
 import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -111,6 +112,7 @@ export default function LobbyScreen({ nav, roomCode }) {
       setRoom(data);
       if (data.status === 'playing') {
         if (data.mode === 'draw') navRef.current.toDrawGame?.();
+        else if (data.mode === 'survival') navRef.current.toSurvivalGame?.();
         else navRef.current.toGame();
       }
     });
@@ -139,6 +141,7 @@ export default function LobbyScreen({ nav, roomCode }) {
     setStarting(true);
     try {
       if (room.mode === 'draw') await startDrawGame(roomCode);
+      else if (room.mode === 'survival') await startSurvivalGame(roomCode);
       else await startGame(roomCode);
     }
     catch (e) { setToast(e.message); setStarting(false); }
@@ -164,7 +167,7 @@ export default function LobbyScreen({ nav, roomCode }) {
         <div style={{ width: 90 }} />
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.2 }}>
-            {room.mode === 'draw' ? 'الرسّام الفنان' : 'قرد الكلكس'}
+            {room.mode === 'draw' ? 'الرسّام الفنان' : room.mode === 'survival' ? 'البقاء للأقوى' : 'قرد الكلكس'}
           </h1>
           {isHost && !gameStarted ? (
             <div style={{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'center' }}>
@@ -175,6 +178,7 @@ export default function LobbyScreen({ nav, roomCode }) {
               >
                 <option value="monkey">قرد</option>
                 <option value="draw">رسم</option>
+                <option value="survival">مسابقة</option>
               </select>
               <select
                 value={room.category}
@@ -186,7 +190,7 @@ export default function LobbyScreen({ nav, roomCode }) {
             </div>
           ) : (
              <span style={{ fontSize: 13, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 8px', borderRadius: 4, marginTop: 4, display: 'inline-block' }}>
-               {appCategories.find(c => c.id === room.category)?.name || room.category}
+               {room.mode === 'survival' ? 'مسابقة معلومات' : (appCategories.find(c => c.id === room.category)?.name || room.category)}
              </span>
           )}
         </div>

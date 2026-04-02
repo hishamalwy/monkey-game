@@ -11,7 +11,7 @@ const EN_TO_AR = {
 
 export default function GameScreen({
   currentWord, timeRemaining, timeLimit,
-  currentPlayer, onKeyPress, onChallenge, isAiTurn
+  currentPlayer, onKeyPress, onDelete, onChallenge, isAiTurn
 }) {
   const pct = timeLimit > 0 ? (timeRemaining / timeLimit) * 100 : 100;
   const isUrgent = timeLimit > 0 && timeRemaining <= 5;

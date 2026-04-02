@@ -9,8 +9,8 @@ import Toast from '../components/ui/Toast';
 const MODES = [
   { id: 'monkey', emoji: '🔊', label: 'القرد بيتكلم', active: true },
   { id: 'draw',   emoji: '🎨', label: 'خمن وارسم',    active: true },
+  { id: 'survival', emoji: '⚔️', label: 'البقاء للأقوى', active: true },
   { id: 'soon1',  emoji: '🔒', label: 'قريباً',         soon: true },
-  { id: 'soon2',  emoji: '🔒', label: 'قريباً',         soon: true },
 ];
 
 export default function OnlineSetupScreen({ nav }) {
@@ -115,44 +115,46 @@ export default function OnlineSetupScreen({ nav }) {
         </section>
 
         {/* Category picker */}
-        <section>
-          <button
-            onClick={() => setCatOpen(o => !o)}
-            style={{
-              width: '100%', background: '#FFF',
-              border: 'var(--brutal-border)',
-              boxShadow: 'var(--brutal-shadow)',
-              padding: '12px 16px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              fontFamily: 'Cairo, sans-serif', fontWeight: 900, fontSize: 15,
-              color: 'var(--bg-dark-purple)',
-            }}
-          >
-            <span style={{ fontSize: 16, transform: catOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
-            <span>{selectedCat.emoji} {selectedCat.name}</span>
-          </button>
+        {mode !== 'survival' && (
+          <section>
+            <button
+              onClick={() => setCatOpen(o => !o)}
+              style={{
+                width: '100%', background: '#FFF',
+                border: 'var(--brutal-border)',
+                boxShadow: 'var(--brutal-shadow)',
+                padding: '12px 16px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                fontFamily: 'Cairo, sans-serif', fontWeight: 900, fontSize: 15,
+                color: 'var(--bg-dark-purple)',
+              }}
+            >
+              <span style={{ fontSize: 16, transform: catOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+              <span>{selectedCat.emoji} {selectedCat.name}</span>
+            </button>
 
-          {catOpen && (
-            <div className="slide-up" style={{ border: 'var(--brutal-border)', borderTop: 'none', background: '#FFF' }}>
-              {currentCategories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => { setCategory(cat.id); setCatOpen(false); }}
-                  style={{
-                    width: '100%', padding: '12px 16px', textAlign: 'right',
-                    background: category === cat.id ? 'var(--bg-yellow)' : 'transparent',
-                    border: 'none', borderBottom: '2px solid rgba(45,27,78,0.1)',
-                    fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14,
-                    color: 'var(--bg-dark-purple)', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end',
-                  }}
-                >
-                  {cat.name} {cat.emoji}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
+            {catOpen && (
+              <div className="slide-up" style={{ border: 'var(--brutal-border)', borderTop: 'none', background: '#FFF' }}>
+                {currentCategories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => { setCategory(cat.id); setCatOpen(false); }}
+                    style={{
+                      width: '100%', padding: '12px 16px', textAlign: 'right',
+                      background: category === cat.id ? 'var(--bg-yellow)' : 'transparent',
+                      border: 'none', borderBottom: '2px solid rgba(45,27,78,0.1)',
+                      fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14,
+                      color: 'var(--bg-dark-purple)', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end',
+                    }}
+                  >
+                    {cat.name} {cat.emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Player count */}
         <section>
@@ -173,8 +175,8 @@ export default function OnlineSetupScreen({ nav }) {
           </div>
         </section>
 
-        {/* Timer — monkey mode only */}
-        {mode === 'monkey' && (
+        {/* Timer — monkey and survival mode */}
+        {(mode === 'monkey' || mode === 'survival') && (
           <section>
             <div style={{ display: 'flex', gap: 8 }}>
               {[10, 15, 20, 0].map(t => (
