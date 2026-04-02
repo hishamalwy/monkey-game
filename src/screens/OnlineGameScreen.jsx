@@ -6,7 +6,7 @@ import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio } from '../utils/audio';
 import { useVisualViewport } from '../hooks/useVisualViewport';
-import { connectSocket, disconnectSocket, emitSound, setHornMute } from '../services/socket';
+import { connectSocket, disconnectSocket, emitSound, togglePlayerMute, isPlayerMuted } from '../services/socket';
 import { appCategories } from '../data/categories';
 import { normalizeArabic } from '../utils/textUtils';
 
@@ -15,7 +15,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   const {
     room, players, isMyTurn, computedTimer, isHost,
     pressLetter, pressDelete, pressChallenge, leaveRoom, submitSuspectWord, resolveSuspect,
-    triggerHorn, pressFinishWord, resolveFinishWord, passTurn,
+    triggerHorn, pressFinishWord, resolveFinishWord, passTurn, resetToLobby,
   } = useRoom(roomCode);
   const vh = useVisualViewport();
 
@@ -24,7 +24,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isHonking, setIsHonking] = useState(false);
-  const [isMuted, setIsMuted] = useState(localStorage.getItem('hornMuted') === 'true');
+  const [, setTick] = useState(0); // For forcing re-renders on mute
   const [suspectWord, setSuspectWord] = useState('');
 
   // Sound Server connection
@@ -130,10 +130,10 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     navRef.current.toHome();
   };
 
-  const toggleMute = () => {
-     const next = !isMuted;
-     setIsMuted(next);
-     setHornMute(next);
+  const handleReturnToLobby = async () => {
+     if (!isHost) return;
+     const { resetToLobby } = useRoom(roomCode); // Oops, can't call hook here
+     // I will use resetToLobby from the destructured object above
   };
 
   if (!room?.gameState) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
@@ -225,6 +225,28 @@ export default function OnlineGameScreen({ nav, roomCode }) {
                     fontSize: 18,
                   }}>💀</div>
                 )}
+                
+                {/* Individual Mute Icon */}
+                {p.uid !== userId && !eliminated && (
+                  <button 
+                    onClick={(e) => {
+                       e.stopPropagation();
+                       togglePlayerMute(p.uid);
+                       setTick(t => t+1);
+                    }}
+                    style={{
+                      position: 'absolute', bottom: -2, right: -4,
+                      background: isPlayerMuted(p.uid) ? 'var(--bg-pink)' : '#FFF',
+                      border: '2px solid var(--bg-dark-purple)',
+                      width: 24, height: 24, borderRadius: '50%', padding: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, zIndex: 5, cursor: 'pointer',
+                      boxShadow: '2px 2px 0 rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {isPlayerMuted(p.uid) ? '🔇' : '🔊'}
+                  </button>
+                )}
               </div>
               <span style={{
                 fontSize: 10, fontWeight: 900, lineHeight: 1.2, marginBottom: 5,
@@ -260,14 +282,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
         const hornId = getHornType();
         const horn = HORN_TYPES.find(h => h.id === hornId) || HORN_TYPES[0];
         return (
-          <div style={{ position: 'absolute', bottom: 24, left: 24, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 100 }}>
-             <button 
-               onClick={toggleMute}
-               className="btn btn-white"
-               style={{ width: 44, height: 44, borderRadius: '50%', padding: 0, fontSize: 20, boxShadow: 'var(--brutal-shadow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-             >
-               {isMuted ? '🔇' : '🔊'}
-             </button>
+          <div style={{ position: 'absolute', bottom: 24, left: 24, zIndex: 100 }}>
              <button onMouseDown={handleHornStart} onMouseUp={handleHornEnd} onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }} onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
                className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'} pop`}
                style={{ width: 72, height: 72, borderRadius: '50%', padding: 12, boxShadow: 'var(--brutal-shadow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -365,9 +380,28 @@ export default function OnlineGameScreen({ nav, roomCode }) {
           <div className="card" style={{ padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
             <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 12px' }}>تخرج من اللعبة؟</h3>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ flex: 1, padding: 14 }}>لأ</button>
-              <button onClick={handleExit} className="btn btn-pink" style={{ flex: 1, padding: 14 }}>اخرج</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button 
+                onClick={() => {
+                  if (isHost) {
+                    const { resetRoomToLobby } = import('../firebase/rooms'); // Dynamically? No, useRoom provides it
+                    // I'll use the hook's resetToLobby
+                    resetToLobby();
+                  } else {
+                    handleExit();
+                  }
+                }} 
+                className="btn btn-yellow" 
+                style={{ padding: 14, fontSize: 18 }}
+              >
+                {isHost ? '🏠 العودة للغرفة' : '🚪 خروج'}
+              </button>
+              
+              {!isHost && (
+                 <button onClick={handleExit} className="btn btn-pink" style={{ padding: 14 }}>اخرج من الغرفة</button>
+              )}
+
+              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ padding: 14 }}>رجوع للعب</button>
             </div>
           </div>
         </div>

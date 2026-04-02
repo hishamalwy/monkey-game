@@ -10,12 +10,19 @@ const socket = io(SOCKET_URL, {
   transports: ['websocket'], 
 });
 
-let isMutedGlobal = localStorage.getItem('hornMuted') === 'true';
+let mutedPlayers = new Set(JSON.parse(localStorage.getItem('mutedPlayers') || '[]'));
 
-export const setHornMute = (muted) => {
-  isMutedGlobal = muted;
-  localStorage.setItem('hornMuted', muted);
+export const togglePlayerMute = (playerId) => {
+  if (mutedPlayers.has(playerId)) {
+    mutedPlayers.delete(playerId);
+  } else {
+    mutedPlayers.add(playerId);
+  }
+  localStorage.setItem('mutedPlayers', JSON.stringify([...mutedPlayers]));
+  return mutedPlayers.has(playerId);
 };
+
+export const isPlayerMuted = (playerId) => mutedPlayers.has(playerId);
 
 export const connectSocket = (roomId) => {
   if (!socket.connected) {
@@ -27,8 +34,8 @@ export const connectSocket = (roomId) => {
 
     // استلام حدث تشغيل الصوت من السيرفر
     socket.on('play_sound_event', ({ soundName, isHonking, playerId }) => {
-      console.log(`🔊 Receiving Sound: ${soundName} (${isHonking ? 'ON' : 'OFF'})`);
-      if (isMutedGlobal) return;
+      console.log(`🔊 Receiving Sound: ${soundName} (${isHonking ? 'ON' : 'OFF'}) from ${playerId}`);
+      if (playerId && mutedPlayers.has(playerId)) return;
       if (isHonking) {
         startHorn(soundName);
       } else {

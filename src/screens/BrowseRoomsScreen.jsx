@@ -13,43 +13,24 @@ export default function BrowseRoomsScreen({ nav }) {
   const [joining, setJoining] = useState(null); // code of room being joined
   const [toast, setToast] = useState('');
 
-  const loadRooms = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchPublicRooms();
-      setRooms(data);
-    } catch (e) {
-      setToast('فشل تحميل الغرف');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [joinCode, setJoinCode] = useState('');
 
-  useEffect(() => {
-    loadRooms();
-  }, []);
-
-  const handleJoin = async (code) => {
-    setJoining(code);
+  const handleManualJoin = async (codeStr) => {
+    if (codeStr.length !== 4) return;
+    setJoining(codeStr);
     try {
-      await joinRoom(code, userProfile);
-      nav.toLobby(code);
+      await joinRoom(codeStr, userProfile);
+      nav.toLobby(codeStr);
     } catch (e) {
-      setToast(e.message || 'فشل الانضمام');
+      setToast(e.message || 'كود غير صحيح');
       setJoining(null);
     }
   };
 
-  const getModeLabel = (mode) => {
-    if (mode === 'draw') return '🎨 رسم';
-    if (mode === 'survival') return '⚔️ بقاء';
-    return '🔊 قرد';
-  };
-
-  const getCatName = (room) => {
-    if (room.mode === 'survival') return 'مسابقة البقاء';
-    const cats = room.mode === 'draw' ? drawCategories : appCategories;
-    return cats.find(c => c.id === room.category)?.name || room.category;
+  const handleCodeChange = (val) => {
+    const code = val.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+    setJoinCode(code);
+    if (code.length === 4) handleManualJoin(code);
   };
 
   return (
@@ -60,60 +41,99 @@ export default function BrowseRoomsScreen({ nav }) {
           ← رجوع
         </button>
         <h1 style={{ fontSize: 20, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0 }}>
-          الغرف العامة 🌍
+          انضم لغرفة 🤝
         </h1>
         <button onClick={loadRooms} className="btn btn-white" style={{ padding: '8px 12px', fontSize: 14 }}>
           🔄
         </button>
       </div>
 
-      {/* List */}
-      <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {loading ? (
-          <div style={{ marginTop: 40 }}><LoadingSpinner /></div>
-        ) : rooms.length === 0 ? (
-          <div style={{ textAlign: 'center', marginTop: 60, opacity: 0.6 }}>
-            <div style={{ fontSize: 60, marginBottom: 16 }}>🏜️</div>
-            <p style={{ fontWeight: 900, color: 'var(--bg-dark-purple)' }}>لا توجد غرف عامة حالياً</p>
-            <button onClick={nav.toOnlineSetup} className="btn btn-pink" style={{ marginTop: 20 }}>أنشئ غرفتك الخاصة 🚀</button>
-          </div>
-        ) : (
-          rooms.map(room => {
-            const playersCount = room.playerOrder?.length || 0;
-            const maxPlayers = room.maxPlayers || 5;
-            const isFull = playersCount >= maxPlayers;
-
-            return (
-              <div key={room.code} className="card pop" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 16, background: '#FFF' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, background: 'var(--bg-dark-purple)', color: '#FFF', padding: '2px 8px', fontWeight: 900 }}>
-                       {getModeLabel(room.mode)}
-                    </span>
-                    <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>
-                      غرفة {room.hostName || 'لاعب'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--bg-pink)' }}>
-                    📦 {getCatName(room)}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--bg-dark-purple)', opacity: 0.7, marginTop: 4 }}>
-                    👥 {playersCount} / {maxPlayers} لاعب
-                  </div>
+      <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        
+        {/* Manual Join Section */}
+        <section style={{ textAlign: 'center' }}>
+           <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--bg-dark-purple)', marginBottom: 12 }}>أدخل كود الغرفة</h2>
+           <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 10 }}>
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className="card" style={{
+                  width: 50, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 28, fontWeight: 900, background: '#FFF',
+                  border: `3px solid ${joinCode.length === i ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
+                  boxShadow: joinCode.length === i ? '4px 4px 0 var(--bg-pink)' : '4px 4px 0 var(--bg-dark-purple)',
+                  transition: 'all 0.1s'
+                }}>
+                  {joinCode[i] || ''}
                 </div>
+              ))}
+              <input 
+                type="text"
+                autoFocus
+                value={joinCode}
+                onChange={e => handleCodeChange(e.target.value)}
+                maxLength={4}
+                style={{
+                  position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%'
+                }}
+              />
+           </div>
+           {joining && joinCode.length === 4 && <div style={{ marginTop: 10 }}><LoadingSpinner size={20} /></div>}
+        </section>
 
-                <button 
-                  disabled={isFull || joining}
-                  onClick={() => handleJoin(room.code)}
-                  className={`btn ${isFull ? 'btn-white' : 'btn-yellow'}`}
-                  style={{ padding: '10px 20px', fontSize: 16, minWidth: 90 }}
-                >
-                  {joining === room.code ? <LoadingSpinner size={16} /> : isFull ? 'كاملة' : 'انضم'}
-                </button>
+        <div style={{ height: 4, background: 'var(--bg-dark-purple)', opacity: 0.1, borderRadius: 2 }} />
+
+        {/* Public Rooms List */}
+        <section>
+          <h2 style={{ fontSize: 16, fontWeight: 900, color: 'var(--bg-dark-purple)', marginBottom: 16 }}>
+             🌍 غرف عامة متاحة
+          </h2>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {loading ? (
+              <div style={{ marginTop: 20 }}><LoadingSpinner /></div>
+            ) : rooms.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.6 }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>🏜️</div>
+                <p style={{ fontWeight: 900, color: 'var(--bg-dark-purple)', fontSize: 14 }}>لا توجد غرف عامة حالياً</p>
               </div>
-            );
-          })
-        )}
+            ) : (
+              rooms.map(room => {
+                const playersCount = room.playerOrder?.length || 0;
+                const maxPlayers = room.maxPlayers || 5;
+                const isFull = playersCount >= maxPlayers;
+
+                return (
+                  <div key={room.code} className="card pop" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12, background: '#FFF' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontSize: 11, background: 'var(--bg-dark-purple)', color: '#FFF', padding: '1px 6px', fontWeight: 900 }}>
+                           {getModeLabel(room.mode)}
+                        </span>
+                        <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>
+                          {room.hostName || 'لاعب'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-pink)' }}>
+                        📦 {getCatName(room)}
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'center', marginRight: 8 }}>
+                       <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--bg-dark-purple)', opacity: 0.6 }}>👥 {playersCount}/{maxPlayers}</div>
+                       <button 
+                        disabled={isFull || joining}
+                        onClick={() => handleJoin(room.code)}
+                        className={`btn ${isFull ? 'btn-white' : 'btn-yellow'}`}
+                        style={{ padding: '6px 14px', fontSize: 14, minWidth: 70, marginTop: 4 }}
+                      >
+                        {joining === room.code ? <LoadingSpinner size={12} /> : isFull ? 'كاملة' : 'انضم'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
       </div>
 
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
