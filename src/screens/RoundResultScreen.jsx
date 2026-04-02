@@ -43,14 +43,27 @@ export default function RoundResultScreen({ nav, roomCode }) {
   const isChallenge = result?.type?.includes('challenge');
   const isTimeout = result?.type === 'timeout';
   const amITheLoser = result?.loserUid === myUid;
+  const wasITheChallenger = result?.challengerUid === myUid;
+  const wasITheSuspect = result?.suspectedUid === myUid;
 
   // Personalized headline
   const getHeadline = () => {
     if (isWordComplete) return amITheLoser ? 'خسرت الجولة! 😤' : 'تمت الكلمة! 🎉';
+    
     if (isChallenge) {
-      if (amITheLoser) return 'خسرت التحدي! 💀';
-      return 'التحدي نجح! 🕵️';
+      if (result.type === 'challenge_failed') {
+        // Challenger failed (Challenger is the loser)
+        if (amITheLoser) return 'خسرت التحدي! 😤';
+        if (wasITheSuspect) return 'نجوت من التحدي! 🎉';
+        return 'التحدي فشل! 🕵️';
+      } else {
+        // Challenge success (Suspect is the loser)
+        if (amITheLoser) return 'اتصيدت! 🕸️';
+        if (wasITheChallenger) return 'قفشته! 😂';
+        return 'تحدي ناجح! 🕵️';
+      }
     }
+    
     if (isTimeout) return amITheLoser ? 'انتهى وقتك! ⏰' : 'انتهى وقته! ⏰';
     return isWordComplete ? 'تمت الكلمة!' : 'انتهت الجولة!';
   };
@@ -63,6 +76,14 @@ export default function RoundResultScreen({ nav, roomCode }) {
     }
     if (isTimeout) {
       return amITheLoser ? 'انتهى وقتك وأخدت ربع قرد! 🐒' : 'انتهى وقته وأخد ربع قرد! 🐒';
+    }
+    
+    if (isChallenge) {
+      if (result.type === 'challenge_failed') {
+        return amITheLoser ? 'كنت شاكك غلط، الكلمة كانت صح!' : 'المشتبه به كان صادقاً!';
+      } else {
+        return amITheLoser ? 'قفشك وأنت بتألف كلمة!' : 'صاده وهو بيألف كلمة!';
+      }
     }
     return result?.reason || 'تم تطبيق العقوبة';
   };

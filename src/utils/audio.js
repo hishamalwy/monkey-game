@@ -22,11 +22,11 @@ export const playSound = (type) => {
 
   if (type === 'click') {
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, now);
-    osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-    osc.start(now); osc.stop(now + 0.05);
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.04);
+    gain.gain.setValueAtTime(0.04, now); // Much softer
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    osc.start(now); osc.stop(now + 0.04);
   } else if (type === 'win') {
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(400, now);
@@ -48,12 +48,11 @@ export const playSound = (type) => {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
     osc.start(now); osc.stop(now + 0.05);
   } else if (type === 'alert') {
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(200, now);
-    osc.frequency.linearRampToValueAtTime(100, now + 0.4);
-    gain.gain.setValueAtTime(0.4, now);
-    gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
-    osc.start(now); osc.stop(now + 0.5);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.start(now); osc.stop(now + 0.15);
   } else if (type === 'horn') {
     previewHorn(getHornType());
   }

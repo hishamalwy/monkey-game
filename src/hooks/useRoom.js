@@ -256,26 +256,8 @@ export function useRoom(roomCode) {
   const submitSuspectWord = useCallback(async (answer) => {
     if (!room || room.status !== 'suspect_question') return;
     await updateGameState(roomCode, { 'gameState.suspectAnswer': answer });
-    
-    // Auto-resolve if perfectly valid and not a duplicate
-    const ansNorm = normalizeArabic(answer);
-    const challengingNorm = normalizeArabic(room.gameState.challengingWord || '');
-    const cat = appCategories.find(c => c.id === room.category) || appCategories[0];
-    const normalizedWords = cat.words.map(w => normalizeArabic(w));
-    const usedWords = (room.gameState.usedWords || []).map(w => normalizeArabic(w));
-
-    const isCorrect = normalizedWords.some(w => w === ansNorm);
-    const isNew = !usedWords.includes(ansNorm);
-    const isLonger = ansNorm.length > challengingNorm.length;
-    const startsWith = ansNorm.startsWith(challengingNorm);
-
-    // If perfectly safe: resolve automatically
-    if (isCorrect && isNew && isLonger && startsWith) {
-      setTimeout(async () => {
-         await resolveSuspect(true);
-      }, 1500);
-    }
-  }, [room, roomCode, resolveSuspect]);
+    // Manual/Host resolution only
+  }, [room, roomCode]);
 
   // ── Next round ───────────────────────────────────────────────
   const confirmNextRound = useCallback(async () => {
@@ -330,10 +312,18 @@ export function useRoom(roomCode) {
     return () => clearTimeout(timeoutId);
   }, [isHost, room?.gameState?.lastActionAt, room?.gameState?.timeRemainingAtLastAction, room?.status]);
 
-  const resetToLobby = useCallback(async () => {
-    if (!isHost) return;
-    await resetRoomToLobby(roomCode);
-  }, [isHost, roomCode]);
+  useEffect(() => {
+    if (room === null) {
+      if (window.location.hash !== '#/') {
+         window.location.hash = '#/';
+      }
+      return;
+    }
+    if (!room) return;
+    if (room.status === 'playing') {
+      // navigation logic usually handled by screens, but we can emit events
+    }
+  }, [room === null]);
 
 
 

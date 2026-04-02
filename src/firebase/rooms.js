@@ -125,10 +125,12 @@ export async function leaveRoom(code, uid, isHost) {
   if (!snap.exists()) return;
 
   const room = snap.data();
-  const playerOrder = room.playerOrder || [];
-  const remainingOrder = playerOrder.filter(id => id !== uid);
+  const playersMap = room.players || {};
+  const currentUids = Object.keys(playersMap);
+  const remainingUids = currentUids.filter(id => id !== uid);
 
-  if (remainingOrder.length === 0) {
+  // If nobody left, delete the room
+  if (remainingUids.length === 0) {
     await deleteDoc(roomRef);
     return;
   }
@@ -138,8 +140,11 @@ export async function leaveRoom(code, uid, isHost) {
     playerOrder: arrayRemove(uid),
   };
 
+  // If the host is leaving, promote someone else
   if (isHost || room.hostUid === uid) {
-    patch.hostUid = remainingOrder[0];
+    if (remainingUids.length > 0) {
+      patch.hostUid = remainingUids[0];
+    }
   }
 
   await updateDoc(roomRef, patch);
