@@ -4,7 +4,7 @@ import { useRoom } from '../hooks/useRoom';
 import UserAvatar from '../components/ui/UserAvatar';
 import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio } from '../utils/audio';
+import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio, playSound } from '../utils/audio';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { connectSocket, disconnectSocket, emitSound, togglePlayerMute, isPlayerMuted } from '../services/socket';
 import { appCategories } from '../data/categories';
