@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import UserAvatar from './ui/UserAvatar';
 
 // Standard English to Default Arabic keyboard mapping
@@ -18,9 +18,14 @@ export default function GameScreen({
 
   const inputRef = useRef(null);
 
+  const [showHint, setShowHint] = useState(false);
+
   // Auto-focus native keyboard area
   useEffect(() => {
     if (!isAiTurn && inputRef.current) {
+      setShowHint(true);
+      const timer = setTimeout(() => setShowHint(false), 3000);
+
       // Focus more aggressively when turn starts
       const focusInput = () => {
         if (document.activeElement !== inputRef.current) {
@@ -29,12 +34,17 @@ export default function GameScreen({
       };
       
       focusInput();
-      const timer = setTimeout(focusInput, 300); // Wait for animations to settle
-      const timer2 = setTimeout(focusInput, 800); // Secondary fallback
+      const timerFocus1 = setTimeout(focusInput, 300); // Wait for animations to settle
+      const timerFocus2 = setTimeout(focusInput, 800); // Secondary fallback
       
-      return () => { clearTimeout(timer); clearTimeout(timer2); };
+      return () => { 
+        clearTimeout(timer); 
+        clearTimeout(timerFocus1); 
+        clearTimeout(timerFocus2); 
+      };
     } else if (isAiTurn && inputRef.current) {
       inputRef.current?.blur();
+      setShowHint(false);
     }
   }, [isAiTurn, currentPlayer?.name]); // Trigger when turn changes or player name changes (new round)
 
@@ -157,8 +167,8 @@ export default function GameScreen({
              if (!isAiTurn) inputRef.current?.focus();
           }}
         >
-          {/* Mobile Focus Hint if empty word */}
-          {!isAiTurn && currentWord.length === 0 && (
+          {/* Mobile Focus Hint: shown for 3s when turn starts */}
+          {!isAiTurn && showHint && (
              <div style={{
                position: 'absolute', top: -30, background: 'var(--bg-pink)', color: '#FFF',
                padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 900,

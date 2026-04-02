@@ -84,13 +84,14 @@ export default function RoundResultScreen({ nav, roomCode }) {
         <div style={{
            display: 'inline-block',
            padding: '8px 16px',
-           background: 'var(--bg-yellow)',
+           background: amITheLoser ? 'var(--bg-pink)' : 'var(--bg-yellow)',
+           color: amITheLoser ? '#FFF' : 'var(--bg-dark-purple)',
            border: '3px solid var(--bg-dark-purple)',
-           fontWeight: 800,
+           fontWeight: 800, fontSize: 14,
            marginBottom: 24,
            transform: 'rotate(-2deg)'
         }}>
-          {result?.reason || 'تم تطبيق العقوبة'}
+          {getSubMessage()}
         </div>
 
         {/* Scorecard */}
@@ -98,21 +99,23 @@ export default function RoundResultScreen({ nav, roomCode }) {
           {players.map(p => {
             const qm = p.quarterMonkeys || 0;
             const isLoser = p.uid === result?.loserUid;
+            const isMe = p.uid === myUid;
             
             return (
               <div key={p.uid} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 16px',
-                background: isLoser ? 'var(--bg-pink)' : '#f9fafb',
-                border: '3px solid var(--bg-dark-purple)',
+                background: isLoser ? 'var(--bg-pink)' : isMe ? '#FFF9E6' : '#f9fafb',
+                border: `3px solid ${isLoser ? 'var(--bg-dark-purple)' : isMe ? 'var(--bg-yellow)' : '#E5E7EB'}`,
                 boxShadow: isLoser ? '4px 4px 0px var(--bg-dark-purple)' : 'none',
                 transform: isLoser ? 'scale(1.02)' : 'none',
                 transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
               }}>
                 <UserAvatar avatarId={p.avatarId ?? 0} size={44} />
                 <div style={{ flex: 1, textAlign: 'right' }}>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: isLoser ? '#FFF' : 'var(--bg-dark-purple)' }}>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: isLoser ? '#FFF' : 'var(--bg-dark-purple)', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-start' }}>
                     {p.username}
+                    {isMe && <span style={{ fontSize: 10, background: isLoser ? '#FFF' : 'var(--bg-pink)', color: isLoser ? 'var(--bg-pink)' : '#FFF', padding: '1px 6px', borderRadius: 8 }}>أنت</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 4, marginTop: 4, justifyContent: 'flex-end' }}>
                      {[0,1,2,3].map(i => (
@@ -150,4 +153,3 @@ export default function RoundResultScreen({ nav, roomCode }) {
     </div>
   );
 }
-

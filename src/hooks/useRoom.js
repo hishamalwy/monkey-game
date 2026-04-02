@@ -27,6 +27,13 @@ export function useRoom(roomCode) {
 
   const remoteHornPlayingRef = useRef(false);
 
+  // Global stop on unmount
+  useEffect(() => {
+    return () => {
+      stopHorn(); 
+    };
+  }, []);
+
   useEffect(() => {
     if (!roomCode) return;
     const unsub = listenToRoom(roomCode, (data) => {
@@ -119,6 +126,8 @@ export function useRoom(roomCode) {
           status: 'game_over',
           players: newPlayers,
           lastResult: { type: 'game_over', loserUid, winnerUid, reason },
+          'gameState.isHonking': false,
+          'gameState.honkerUid': null,
         });
         return;
       }
@@ -128,6 +137,8 @@ export function useRoom(roomCode) {
         status: 'round_result',
         players: newPlayers,
         lastResult: { type, loserUid, reason },
+        'gameState.isHonking': false,
+        'gameState.honkerUid': null,
       });
     } finally {
       penaltyProcessingRef.current = false;
@@ -168,6 +179,8 @@ export function useRoom(roomCode) {
             reason: `اكتملت الدولة: ${categoryWords[exactIdx]}`, 
             word: categoryWords[exactIdx] 
           },
+          'gameState.isHonking': false,
+          'gameState.honkerUid': null,
        });
        return;
     }
@@ -206,6 +219,8 @@ export function useRoom(roomCode) {
       'gameState.challengerUid': uid,
       'gameState.challengingWord': word,
       'gameState.suspectAnswer': '',
+      'gameState.isHonking': false,
+      'gameState.honkerUid': null,
     });
   }, [isMyTurn, room, roomCode, uid]);
 
