@@ -16,7 +16,7 @@ function checkGameOver(players, playerOrder) {
 // syncHornState was removed - now using Socket.io for low-latency events
 
 export function useRoom(roomCode) {
-  const [room, setRoom] = useState(null);
+  const [room, setRoom] = useState(undefined);
   const [computedTimer, setComputedTimer] = useState(null);
   const timerRef = useRef(null);
   const penaltyFiredRef = useRef(false); // prevent double-fire on timer

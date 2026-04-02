@@ -88,8 +88,10 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   const mountedRef = useRef(false);
   useEffect(() => {
+    // If explicitly null from Firestore, the room is gone
     if (room === null) { navRef.current.toHome(); return; }
-    if (!room) return;
+    if (room === undefined) return; // Wait for first load
+    
     if (room.status === 'round_result') navRef.current.toRoundResult();
     if (room.status === 'game_over') navRef.current.toGameOver();
     
