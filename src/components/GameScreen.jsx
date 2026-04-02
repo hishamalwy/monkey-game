@@ -142,14 +142,31 @@ export default function GameScreen({
         )}
 
         {/* Word tiles - Shrinks as word grows */}
-        <div className={isAiTurn ? '' : 'pop'} style={{
-          width: '100%', maxWidth: 360,
-          display: 'flex', alignItems: 'center', gap: 4,
-          flexDirection: 'row', flexWrap: 'nowrap',
-          alignContent: 'center', justifyContent: 'center',
-          minHeight: 80,
-          overflow: 'hidden'
-        }}>
+        <div 
+          className={isAiTurn ? '' : 'pop'} 
+          style={{
+            width: '100%', maxWidth: 360, position: 'relative',
+            display: 'flex', alignItems: 'center', gap: 4,
+            flexDirection: 'row', flexWrap: 'nowrap',
+            alignContent: 'center', justifyContent: 'center',
+            minHeight: 80,
+            cursor: 'pointer'
+          }}
+          onClick={(e) => {
+             e.stopPropagation();
+             if (!isAiTurn) inputRef.current?.focus();
+          }}
+        >
+          {/* Mobile Focus Hint if empty word */}
+          {!isAiTurn && currentWord.length === 0 && (
+             <div style={{
+               position: 'absolute', top: -30, background: 'var(--bg-pink)', color: '#FFF',
+               padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 900,
+               boxShadow: '0 4px 10px rgba(0,0,0,0.1)', animation: 'pop 1s infinite alternate'
+             }}>
+                اضغط هنا أو اكتب! ⌨️ 👇
+             </div>
+          )}
           {(() => {
             const word = currentWord || '_';
             const chars = word.split('');

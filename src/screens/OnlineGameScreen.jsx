@@ -116,6 +116,19 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     // Play locally immediately
     startHorn(getHornType());
   };
+
+  // Alert player when it's their turn
+  const prevTurnRef = useRef(isMyTurn);
+  useEffect(() => {
+    if (isMyTurn && !prevTurnRef.current && room?.status === 'playing') {
+      playSound('alert');
+      // Gentle vibration if supported
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
+    }
+    prevTurnRef.current = isMyTurn;
+  }, [isMyTurn, room?.status]);
   
   const handleHornEnd = () => { 
     setIsHonking(false); 
@@ -227,7 +240,7 @@ export default function OnlineGameScreen({ nav, roomCode }) {
                 )}
                 
                 {/* Individual Mute Icon */}
-                {p.uid !== userId && !eliminated && (
+                {p.uid !== userId && (
                   <button 
                     onClick={(e) => {
                        e.stopPropagation();
