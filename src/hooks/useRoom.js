@@ -312,18 +312,11 @@ export function useRoom(roomCode) {
     return () => clearTimeout(timeoutId);
   }, [isHost, room?.gameState?.lastActionAt, room?.gameState?.timeRemainingAtLastAction, room?.status]);
 
-  useEffect(() => {
-    if (room === null) {
-      if (window.location.hash !== '#/') {
-         window.location.hash = '#/';
-      }
-      return;
-    }
-    if (!room) return;
-    if (room.status === 'playing') {
-      // navigation logic usually handled by screens, but we can emit events
-    }
-  }, [room === null]);
+
+  const resetToLobby = useCallback(async () => {
+    if (!isHost) return;
+    await resetRoomToLobby(roomCode);
+  }, [isHost, roomCode]);
 
 
 

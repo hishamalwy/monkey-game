@@ -87,11 +87,12 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   );
 
   useEffect(() => {
+    if (room === null) { navRef.current.toHome(); return; }
     if (!room) return;
     if (room.status === 'round_result') navRef.current.toRoundResult();
     if (room.status === 'game_over') navRef.current.toGameOver();
     if (room.status === 'lobby') navRef.current.toLobby(roomCode);
-  }, [room?.status]);
+  }, [room?.status, room === null]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {

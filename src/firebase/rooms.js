@@ -164,12 +164,12 @@ export async function resetRoomToLobby(code) {
 
 export async function cleanupOldRooms() {
   try {
-    const dayAgo = new Date();
-    dayAgo.setHours(dayAgo.getHours() - 24);
+    const twoHoursAgo = new Date();
+    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
     
     const q = query(
       collection(db, 'rooms'),
-      where('createdAt', '<', dayAgo),
+      where('createdAt', '<', twoHoursAgo),
       limit(20)
     );
     
@@ -189,6 +189,9 @@ export function listenToRoom(code, callback) {
 }
 
 export async function fetchPublicRooms() {
+  // Run a quick cleanup first
+  cleanupOldRooms().catch(() => {});
+
   const q = query(
     collection(db, 'rooms'),
     where('isPublic', '==', true),
@@ -196,7 +199,10 @@ export async function fetchPublicRooms() {
     limit(20)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => d.data());
+  // Manual filter for rooms with at least one player in playerOrder
+  return snap.docs
+    .map(d => d.data())
+    .filter(room => (room.playerOrder || []).length > 0);
 }
 
 export function resolveChallenge(currentWord, categoryId, mode = 'monkey') {
