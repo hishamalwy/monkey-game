@@ -121,28 +121,36 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
+      {/* Screen Reader Header */}
+      <h1 className="sr-only">لعبة البقاء للأقوى - {currentQ.q}</h1>
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ background: 'var(--bg-pink)', padding: '5px 12px', border: 'var(--brutal-border)', fontWeight: 900, color: '#FFF' }}>
+          <div style={{ background: 'var(--bg-pink)', padding: '6px 14px', border: 'var(--brutal-border)', fontWeight: 900, color: '#FFF', fontSize: 14 }}>
               السؤال {survivalState.currentQuestionIndex + 1}
           </div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: timer <= 5 ? 'var(--bg-pink)' : 'var(--bg-dark-purple)' }}>
-              {timer}s ⏱️
+          <div className={timer <= 5 ? 'pulse' : ''} style={{ fontSize: 28, fontWeight: 900, color: timer <= 5 ? 'var(--bg-pink)' : 'var(--bg-dark-purple)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {timer}s <span style={{ fontSize: 20 }}>⏱️</span>
           </div>
-          <div style={{ background: 'var(--bg-green)', padding: '5px 12px', border: 'var(--brutal-border)', fontWeight: 900, color: '#FFF' }}>
+          <div style={{ background: 'var(--bg-green)', padding: '6px 14px', border: 'var(--brutal-border)', fontWeight: 900, color: '#FFF', fontSize: 14 }}>
               {totalAlive} ناجي
           </div>
       </div>
 
       {/* Question Card */}
-      <div className="card" style={{ padding: 24, marginBottom: 20, textAlign: 'center', minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <h2 style={{ fontSize: 20, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0 }}>
+      <div className="card slide-up" style={{ padding: 24, marginBottom: 24, textAlign: 'center', minHeight: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 0 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.4 }}>
               {currentQ.q}
           </h2>
       </div>
 
       {/* Answers Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+        gap: 16, 
+        marginBottom: 24 
+      }}>
           {currentQ.a.map((ans, i) => {
               const isSelected = selectedAnswer === i || survivalState.answers[userProfile.uid]?.answer === i;
               const isCorrect = status === 'reveal' && i === currentQ.correct;
@@ -155,11 +163,9 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
               if (isCorrect) {
                   bgColor = 'var(--bg-green)';
                   textColor = '#FFF';
-                  borderColor = 'var(--bg-dark-purple)';
               } else if (isWrong) {
                   bgColor = 'var(--bg-pink)';
                   textColor = '#FFF';
-                  borderColor = 'var(--bg-dark-purple)';
               } else if (isSelected) {
                   bgColor = 'var(--bg-yellow)';
               }
@@ -168,29 +174,32 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
                   <button
                       key={i}
                       disabled={!isAlive || status !== 'question' || selectedAnswer !== null}
+                      aria-label={`${labels[i]}. ${ans}`}
                       onClick={() => handleAnswer(i)}
+                      className="pop"
                       style={{
-                          padding: '16px 12px',
+                          padding: '20px 16px',
                           border: `4px solid ${borderColor}`,
                           background: bgColor,
                           color: textColor,
                           borderRadius: 0,
                           fontWeight: 900,
-                          fontSize: 16,
-                          boxShadow: isSelected ? 'none' : 'var(--brutal-shadow)',
+                          fontSize: 17,
+                          boxShadow: isSelected ? 'none' : '6px 6px 0 var(--bg-dark-purple)',
                           transform: isSelected ? 'translate(4px, 4px)' : 'none',
-                          transition: 'all 0.1s',
+                          transition: 'all 0.1s cubic-bezier(0.34,1.56,0.64,1)',
+                          animationDelay: `${i * 100}ms`,
                           cursor: (!isAlive || status !== 'question' || selectedAnswer !== null) ? 'default' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 8,
+                          gap: 10,
                           position: 'relative'
                       }}
                   >
-                      <span style={{ opacity: 0.5 }}>{labels[i]}.</span>
+                      <span style={{ fontSize: 14, color: isSelected || isCorrect || isWrong ? 'rgba(255,255,255,0.7)' : 'rgba(28,16,64,0.45)' }}>{labels[i]}.</span>
                       <span style={{ flex: 1 }}>{ans}</span>
-                      {isCorrect && <span style={{ position: 'absolute', top: -10, right: -10, fontSize: 20 }}>✅</span>}
-                      {isWrong && <span style={{ position: 'absolute', top: -10, right: -10, fontSize: 20 }}>❌</span>}
+                      {status === 'reveal' && i === currentQ.correct && <span style={{ fontSize: 24 }}>✅</span>}
+                      {status === 'reveal' && isSelected && i !== currentQ.correct && <span style={{ fontSize: 24 }}>❌</span>}
                   </button>
               );
           })}
@@ -204,23 +213,23 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
 
       {/* Stats and Controls */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-          <div style={{ background: '#FFF', border: 'var(--brutal-border)', padding: 12, marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 900, marginBottom: 4 }}>
-                  <span>تقدم الإجابات</span>
+          <div className="card" style={{ background: '#FFF', border: 'var(--brutal-border)', padding: 16, marginBottom: 16, borderRadius: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 900, marginBottom: 8, color: 'var(--bg-dark-purple)' }}>
+                  <span>تقدم جولة الإجابات</span>
                   <span>{answeredCount} / {totalAlive}</span>
               </div>
-              <div style={{ width: '100%', height: 12, background: 'var(--bg-dark-purple)', padding: 2 }}>
-                  <div style={{ width: `${(answeredCount / (totalAlive || 1)) * 100}%`, height: '100%', background: 'var(--bg-yellow)', transition: 'width 0.3s' }} />
+              <div style={{ width: '100%', height: 16, background: 'var(--bg-dark-purple)', padding: 3, border: '2px solid var(--bg-dark-purple)' }}>
+                  <div style={{ width: `${(answeredCount / (totalAlive || 1)) * 100}%`, height: '100%', background: 'var(--bg-yellow)', transition: 'width 0.4s cubic-bezier(0.34,1.56,0.64,1)' }} />
               </div>
           </div>
 
           {isHost && (
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
                   {status === 'question' ? (
                       <button 
                         onClick={handleReveal}
                         className="btn btn-pink" 
-                        style={{ flex: 1, padding: 16, fontSize: 18 }}
+                        style={{ flex: 1, padding: '18px 24px', fontSize: 20, boxShadow: '6px 6px 0 var(--bg-dark-purple)' }}
                       >
                           اكشف الإجابة 🔍
                       </button>
@@ -228,9 +237,9 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
                       <button 
                         onClick={handleNext}
                         className="btn btn-green" 
-                        style={{ flex: 1, padding: 16, fontSize: 18 }}
+                        style={{ flex: 1, padding: '18px 24px', fontSize: 20, boxShadow: '6px 6px 0 var(--bg-dark-purple)' }}
                       >
-                          {totalAlive <= 1 ? 'نهاية اللعبة 🏁' : 'السؤال القادم ➡️'}
+                          {totalAlive <= 1 ? 'نهاية المسابقة 🏁' : 'السؤال التالي ➡️'}
                       </button>
                   )}
               </div>

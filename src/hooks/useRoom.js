@@ -257,7 +257,7 @@ export function useRoom(roomCode) {
          await resolveSuspect(true);
       }, 1500);
     }
-  }, [room, roomCode, resolveSuspect, normalizeArabic]);
+  }, [room, roomCode, resolveSuspect]);
 
   // ── Next round ───────────────────────────────────────────────
   const confirmNextRound = useCallback(async () => {
@@ -321,16 +321,7 @@ export function useRoom(roomCode) {
     });
   }, [isHost, roomCode]);
 
-  const normalizeArabic = (text) => {
-    return text
-      .replace(/[أإآا]/g, 'ا')
-      .replace(/[ىي]/g, 'ى')
-      .replace(/[ةه]/g, 'ه')
-      .replace(/ئ/g, 'ى')
-      .replace(/ؤ/g, 'و')
-      .replace(/[^\u0621-\u064A\s]/g, '') // Strip everything except Arabic letters and spaces
-      .trim();
-  };
+
 
   return {
     room,
