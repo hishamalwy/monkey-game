@@ -116,9 +116,7 @@ export default function HomeScreen({ nav }) {
             </button>
           )}
 
-          <button onClick={nav.toLocalGame} className="btn btn-white" style={{ width: '100%', padding: '16px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            <span style={{ fontSize: 26 }}>🤖</span> العب مع القرد
-          </button>
+
         </div>
       </div>
 
@@ -151,7 +149,7 @@ export default function HomeScreen({ nav }) {
           <div className="card" style={{ padding: '24px', width: '100%', maxWidth: 360, textAlign: 'center' }}>
             <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--bg-pink)', marginBottom: 12 }}>طريقة اللعب</h2>
             <p style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.6, marginBottom: 20, color: 'var(--bg-dark-purple)' }}>
-              اللعبة بتعتمد على إنك تكون كلمة صحيحة حرف بحرف مع أصحابك أو الكمبيوتر. 
+              اللعبة بتعتمد على إنك تكون كلمة صحيحة حرف بحرف مع أصحابك. 
               اللي ميعرفش يكمل أو يكتب حرف غلط بياخد "ربع قرد".
               لو جمعت قرد كامل بتخسر وتطلع برا اللعبة!
             </p>

@@ -10,7 +10,7 @@ import LobbyScreen from './screens/LobbyScreen';
 import OnlineGameScreen from './screens/OnlineGameScreen';
 import RoundResultScreen from './screens/RoundResultScreen';
 import GameOverScreen from './screens/GameOverScreen';
-import LocalGameWrapper from './screens/LocalGameWrapper';
+
 import LeaderboardScreen from './screens/LeaderboardScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DrawGameScreen from './screens/DrawGameScreen';
@@ -37,7 +37,7 @@ export default function App() {
     toRoundResult: () => setScreen('roundResult'),
     toGameOver: () => setScreen('gameOver'),
     toOnlineSetup: () => setScreen('onlineSetup'),
-    toLocalGame: () => setScreen('localGame'),
+
     toLeaderboard: () => setScreen('leaderboard'),
     toSettings: () => setScreen('settings'),
     toAuth: () => setScreen('auth'),
@@ -54,7 +54,7 @@ export default function App() {
     if (screen === 'roundResult') return <RoundResultScreen nav={nav} roomCode={roomCode} />;
     if (screen === 'gameOver')    return <GameOverScreen nav={nav} roomCode={roomCode} />;
     if (screen === 'onlineSetup') return <OnlineSetupScreen nav={nav} />;
-    if (screen === 'localGame')   return <LocalGameWrapper nav={nav} />;
+
     if (screen === 'leaderboard')  return <LeaderboardScreen nav={nav} />;
     if (screen === 'settings')     return <SettingsScreen nav={nav} />;
     if (screen === 'drawGame')     return <DrawGameScreen nav={nav} roomCode={roomCode} />;

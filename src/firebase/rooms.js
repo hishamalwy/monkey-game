@@ -4,7 +4,7 @@ import {
   query, where, getDocs, limit, arrayRemove, collection
 } from 'firebase/firestore';
 import { db } from './config';
-import { normalizeArabic } from '../utils/aiLogic';
+import { normalizeArabic } from '../utils/textUtils';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
 

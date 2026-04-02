@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { listenToRoom, updateGameState, leaveRoom, resolveChallenge } from '../firebase/rooms';
-import { normalizeArabic } from '../utils/aiLogic';
+import { normalizeArabic } from '../utils/textUtils';
 import { appCategories } from '../data/categories';
-import { playSound, getHornType, startHorn, stopHorn } from '../utils/audio';
+import { playSound, getHornType, startHorn, stopHorn, warmAudio } from '../utils/audio';
 
 const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
 
@@ -12,14 +12,7 @@ function checkGameOver(players, playerOrder) {
   return playerOrder.filter(uid => players[uid] && (players[uid].quarterMonkeys || 0) < MONKEY_LIMIT);
 }
 
-export async function syncHornState(roomCode, isHonking, hornType) {
-  await updateGameState(roomCode, { 
-    'gameState.isHonking': isHonking,
-    'gameState.honkerUid': isHonking ? auth.currentUser?.uid : null,
-    'gameState.lastHornAt': Date.now(),
-    'gameState.lastHornType': hornType 
-  });
-}
+// syncHornState was removed - now using Socket.io for low-latency events
 
 export function useRoom(roomCode) {
   const [room, setRoom] = useState(null);
@@ -27,17 +20,18 @@ export function useRoom(roomCode) {
   const timerRef = useRef(null);
   const penaltyFiredRef = useRef(false); // prevent double-fire on timer
   const penaltyProcessingRef = useRef(false); // Prevent concurrent penalty updates
-  const remoteHornPlayingRef = useRef(false); // Track whether remote horn is playing
   const prevPlayerUidRef = useRef(null); // Track previous player for penalty reset
   const prevStatusRef = useRef(null); // Track previous status for penalty reset
   const uid = auth.currentUser?.uid;
+
+  const remoteHornPlayingRef = useRef(false);
 
   useEffect(() => {
     if (!roomCode) return;
     const unsub = listenToRoom(roomCode, (data) => {
       setRoom(data);
 
-      // Reset penalty guard reliably using refs (not stale room state)
+      // Reset penalty guard reliably
       const curPlayerUid = data?.gameState?.currentPlayerUid;
       const curStatus = data?.status;
       if (curPlayerUid !== prevPlayerUidRef.current || curStatus !== prevStatusRef.current) {
@@ -46,7 +40,7 @@ export function useRoom(roomCode) {
       prevPlayerUidRef.current = curPlayerUid;
       prevStatusRef.current = curStatus;
 
-      // Horn sync — use ref to avoid stale state comparison
+      // Firestore Sound Sync (Fallback/Secondary)
       const isHonking = data?.gameState?.isHonking;
       const isRemoteHonker = isHonking && data.gameState.honkerUid !== uid;
       if (isRemoteHonker && !remoteHornPlayingRef.current) {
@@ -187,15 +181,43 @@ export function useRoom(roomCode) {
     playSound('alert');
     const order = room.playerOrder || [];
     const myIdx = order.indexOf(uid);
-    const prevUid = order[myIdx === 0 ? order.length - 1 : myIdx - 1];
-    const result = resolveChallenge(word, room.category);
+    const prevUid = order[myIdx === 0 ? order.length - 1 : myIdx - 1]; // المشتبه به هو اللي كتب الحرف الأخير
 
-    if (result.valid) {
-      await applyPenalty(uid, `التحدي خاسر! الكلمة يمكن أن تكمل لتصبح: ${result.word}`, 'challenge');
-    } else {
-      await applyPenalty(prevUid, `التحدي ناجح! لا توجد كلمة تبدأ بـ: ${word}`, 'challenge');
+    await updateGameState(roomCode, {
+      status: 'suspect_question',
+      'gameState.suspectedUid': prevUid,
+      'gameState.challengerUid': uid,
+      'gameState.challengingWord': word,
+      'gameState.suspectAnswer': '',
+    });
+  }, [isMyTurn, room, roomCode, uid]);
+
+  // المشتبه به يدخل الكلمة
+  const submitSuspectWord = useCallback(async (answer) => {
+    if (!room || room.status !== 'suspect_question') return;
+    await updateGameState(roomCode, { 'gameState.suspectAnswer': answer });
+    
+    // محاولة التصحيح التلقائي كخيار أولي
+    const result = resolveChallenge(answer, room.category);
+    if (result.valid && answer.startsWith(room.gameState.challengingWord || '')) {
+       // لو صح تماماً، ممكن نخليها أوتوماتيك أو ننتظر الهوست
+       // بناءً على طلب العميل، الهوست يقدر يتدخل، فسنكتفي بتسجيل الكلمة
     }
-  }, [isMyTurn, room, roomCode, uid, applyPenalty]);
+  }, [room, roomCode]);
+
+  // الهوست أو النظام ينهي التحدي
+  const resolveSuspect = useCallback(async (isValid) => {
+    if (!room || room.status !== 'suspect_question') return;
+    const { suspectedUid, challengerUid, suspectAnswer } = room.gameState;
+
+    if (isValid) {
+      // المشتبه به صح -> المتحدي ياخد ربع قرد
+      await applyPenalty(challengerUid, `المشتبه به كان صادقاً! الكلمة: ${suspectAnswer}`, 'challenge_failed');
+    } else {
+      // المشتبه به غلط -> هو اللي ياخد ربع قرد
+      await applyPenalty(suspectedUid, `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.`, 'challenge_success');
+    }
+  }, [room, applyPenalty]);
 
   // ── Next round ───────────────────────────────────────────────
   const confirmNextRound = useCallback(async () => {
@@ -268,8 +290,18 @@ export function useRoom(roomCode) {
     pressDelete,
     pressChallenge,
     confirmNextRound,
-    triggerHorn: (on) => syncHornState(roomCode, on, getHornType()),
+    confirmNextRound,
+    pressChallenge,
+    submitSuspectWord,
+    resolveSuspect,
     leaveRoom: doLeaveRoom,
     resetToLobby,
+    triggerHorn: (on) => {
+      updateGameState(roomCode, { 
+        'gameState.isHonking': on,
+        'gameState.honkerUid': on ? uid : null,
+        'gameState.lastHornType': getHornType()
+      });
+    },
   };
 }

@@ -6,12 +6,14 @@ import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio } from '../utils/audio';
 import { useVisualViewport } from '../hooks/useVisualViewport';
+import { connectSocket, disconnectSocket, emitSound } from '../services/socket';
 
 export default function OnlineGameScreen({ nav, roomCode }) {
-  useAuth(); // keeps auth context alive
+  const { user } = useAuth(); // keeps auth context alive
   const {
-    room, players, isMyTurn, computedTimer,
-    pressLetter, pressDelete, pressChallenge, leaveRoom, triggerHorn,
+    room, players, isMyTurn, computedTimer, isHost,
+    pressLetter, pressDelete, pressChallenge, leaveRoom, submitSuspectWord, resolveSuspect,
+    triggerHorn,
   } = useRoom(roomCode);
   const vh = useVisualViewport();
 
@@ -20,6 +22,14 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isHonking, setIsHonking] = useState(false);
+
+  // Sound Server connection
+  useEffect(() => {
+    if (roomCode) {
+      connectSocket(roomCode);
+    }
+    return () => disconnectSocket();
+  }, [roomCode]);
 
   const MONKEY_LIMIT = 4;
 
@@ -90,8 +100,19 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   useEffect(() => () => stopHorn(), []);
 
-  const handleHornStart = () => { warmAudio(); setIsHonking(true); startHorn(); triggerHorn(true); };
-  const handleHornEnd = () => { setIsHonking(false); stopHorn(); triggerHorn(false); };
+  const handleHornStart = () => { 
+    warmAudio(); 
+    setIsHonking(true); 
+    // Both Socket and Firebase for maximum compatibility
+    emitSound(roomCode, getHornType(), true);
+    triggerHorn(true);
+  };
+  
+  const handleHornEnd = () => { 
+    setIsHonking(false); 
+    emitSound(roomCode, getHornType(), false);
+    triggerHorn(false);
+  };
 
   const handleExit = async () => {
     await leaveRoom();
@@ -106,6 +127,23 @@ export default function OnlineGameScreen({ nav, roomCode }) {
     name: currentPlayerData?.username || '...',
     avatarId: currentPlayerData?.avatarId ?? 0,
   };
+
+  const userId = user?.uid;
+  const isSuspected = room.status === 'suspect_question' && room.gameState.suspectedUid === userId;
+  const isChallenger = room.status === 'suspect_question' && room.gameState.challengerUid === userId;
+
+  const currentCategoryWords = (() => {
+    if (!room?.category) return [];
+    const cat = appCategories.find(c => c.id === room.category);
+    return cat ? cat.words : [];
+  })();
+
+  const suspectAnswerValid = (() => {
+     if (!room?.gameState?.suspectAnswer) return false;
+     const ans = normalizeArabic(room.gameState.suspectAnswer);
+     const challenging = normalizeArabic(room.gameState.challengingWord || '');
+     return currentCategoryWords.some(w => normalizeArabic(w) === ans) && ans.startsWith(challenging);
+  })();
 
   return (
     <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
@@ -200,6 +238,67 @@ export default function OnlineGameScreen({ nav, roomCode }) {
           </button>
         );
       })()}
+
+      {room.status === 'suspect_question' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,16,63,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card slide-up" style={{ padding: 28, width: '100%', maxWidth: 360, textAlign: 'center', border: '5px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
+             <div style={{ fontSize: 56, marginBottom: 16 }}>🧐</div>
+             <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 8px' }}>تحدي شاكك!</h3>
+             
+             {isSuspected ? (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                 <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px' }}>انت كنت بتفكر في دولة إيه؟ 🐒</p>
+                 <input 
+                    type="text" 
+                    placeholder="اكتب اسم الدولة هنا..."
+                    className="input-field"
+                    style={{ fontSize: 18, padding: 12, textAlign: 'center' }}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') submitSuspectWord(e.target.value);
+                    }}
+                 />
+                 <button onClick={() => {
+                    const inp = document.querySelector('.input-field');
+                    submitSuspectWord(inp.value);
+                 }} className="btn btn-pink" style={{ padding: 16, fontSize: 18 }}>إرسال 🚀</button>
+               </div>
+             ) : (
+               <div>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--bg-pink)', marginBottom: 20 }}>
+                    {room.players[room.gameState.suspectedUid]?.username} بيكتب الكلمة...
+                  </p>
+                  
+                  {room.gameState.suspectAnswer && (
+                    <div style={{ padding: 16, background: '#FFF7ED', borderRadius: 12, border: suspectAnswerValid ? '2px solid #22C55E' : '2px dashed #EA580C', marginBottom: 20 }}>
+                       <div style={{ fontSize: 13, color: '#9A3412', fontWeight: 700, marginBottom: 4 }}>الكلمة اللي قالها:</div>
+                       <div style={{ fontSize: 24, fontWeight: 900, color: suspectAnswerValid ? '#15803D' : '#EA580C' }}>
+                        {room.gameState.suspectAnswer}
+                        {suspectAnswerValid ? ' ✅' : ' ❓'}
+                       </div>
+                       <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                         {suspectAnswerValid 
+                           ? '(موجودة في القائمة وتبدأ بنفس الحروف)' 
+                           : '(غير موجودة أو مش بدقة اللي ف الجيسون)'}
+                       </div>
+                    </div>
+                  )}
+
+                  {isHost && room.gameState.suspectAnswer && (
+                    <div style={{ display: 'flex', gap: 12 }}>
+                       <button onClick={() => resolveSuspect(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', borderColor: '#EF4444' }}>❌ غلط</button>
+                       <button onClick={() => resolveSuspect(true)} className="btn btn-primary" style={{ flex: 1, padding: 14 }}>✅ صح</button>
+                    </div>
+                  )}
+                  
+                  {!isHost && (
+                    <p style={{ fontSize: 14, color: '#666', fontWeight: 600 }}>بانتظار تأكيد المضيف...</p>
+                  )}
+               </div>
+             )}
+          </div>
+        </div>
+      )}
 
       {showExitConfirm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
