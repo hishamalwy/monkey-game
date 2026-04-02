@@ -151,16 +151,20 @@ export function useRoom(roomCode) {
     const exactIdx = normalizedCategory.findIndex(w => w === normNewWord);
     
     // Auto-completion check: NORMAL COMPLETION = NO PENALTY, JUST ROUND END
-    if (exactIdx !== -1 && !usedWords.includes(normNewWord)) {
+    if (exactIdx !== -1 && !usedWords.map(w => normalizeArabic(w)).includes(normNewWord)) {
        playSound('win');
        const updatedUsed = [...usedWords, normNewWord];
        
-       // Note: We don't call applyPenalty here because completion is "Safe" normally.
-       // We just end the round to Reset/Next letter.
        await updateGameState(roomCode, {
           status: 'round_result',
+          'gameState.currentWord': newWordString, // Sync the visual word too
           'gameState.usedWords': updatedUsed,
-          lastResult: { type: 'word_complete', loserUid: null, reason: `اكتملت الدولة: ${categoryWords[exactIdx]}`, word: categoryWords[exactIdx] },
+          lastResult: { 
+            type: 'word_complete', 
+            loserUid: null, 
+            reason: `اكتملت الدولة: ${categoryWords[exactIdx]}`, 
+            word: categoryWords[exactIdx] 
+          },
        });
        return;
     }
@@ -307,6 +311,17 @@ export function useRoom(roomCode) {
       'gameState.currentWord': '',
     });
   }, [isHost, roomCode]);
+
+  const normalizeArabic = (text) => {
+    return text
+      .replace(/[أإآا]/g, 'ا')
+      .replace(/[ىي]/g, 'ى')
+      .replace(/[ةه]/g, 'ه')
+      .replace(/ئ/g, 'ى')
+      .replace(/ؤ/g, 'و')
+      .replace(/[^\u0621-\u064A\s]/g, '') // Strip everything except Arabic letters and spaces
+      .trim();
+  };
 
   return {
     room,

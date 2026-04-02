@@ -11,7 +11,7 @@ const EN_TO_AR = {
 
 export default function GameScreen({
   currentWord, timeRemaining, timeLimit,
-  currentPlayer, onKeyPress, onChallenge, isAiTurn, onDelete
+  currentPlayer, onKeyPress, onChallenge, isAiTurn
 }) {
   const pct = timeLimit > 0 ? (timeRemaining / timeLimit) * 100 : 100;
   const isUrgent = timeLimit > 0 && timeRemaining <= 5;
@@ -44,7 +44,6 @@ export default function GameScreen({
     const handleKeyDown = (e) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
       if (e.target === inputRef.current) return;
-      if (e.key === 'Backspace') { e.preventDefault(); onDelete(); return; }
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onKeyPress(' '); return; }
       let char = e.key;
       // 1. If it's already an Arabic char from a native layout, accept it
@@ -60,9 +59,7 @@ export default function GameScreen({
   const handleInputChange = (e) => {
     if (isAiTurn) return;
     const val = e.target.value;
-    if (val.length < currentWord.length) {
-      onDelete();
-    } else {
+    if (val.length > currentWord.length) {
       let char = val.slice(currentWord.length);
       char = char[char.length - 1];
       if (!char) return;
@@ -172,13 +169,13 @@ export default function GameScreen({
         </div>
 
         {/* Action Button: ONLY ONE as requested */}
-        <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 360 }}>
+        <div style={{ padding: '0 20px', width: '100%', maxWidth: 360 }}>
           <button
             onClick={onChallenge}
             disabled={isAiTurn || !currentWord}
             className="btn"
             style={{
-              flex: 1,
+              width: '100%',
               background: 'var(--bg-pink)', color: '#FFF',
               padding: '16px', fontSize: '1.25rem',
               opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
@@ -187,20 +184,6 @@ export default function GameScreen({
             }}
           >
             أشك! 🧐
-          </button>
-          
-          <button
-            onClick={onDelete}
-            disabled={isAiTurn || !currentWord}
-            className="btn btn-white"
-            style={{
-              flex: 0.4,
-              padding: '16px', fontSize: '1.4rem',
-              opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
-              border: '5px solid var(--bg-dark-purple)',
-            }}
-          >
-             ⌫
           </button>
         </div>
 
