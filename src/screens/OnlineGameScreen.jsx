@@ -7,6 +7,8 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio } from '../utils/audio';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { connectSocket, disconnectSocket, emitSound } from '../services/socket';
+import { appCategories } from '../data/categories';
+import { normalizeArabic } from '../utils/textUtils';
 
 export default function OnlineGameScreen({ nav, roomCode }) {
   const { user } = useAuth(); // keeps auth context alive
@@ -146,7 +148,11 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   })();
 
   return (
-    <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+    <div 
+      onClick={() => warmAudio()}
+      onTouchStart={() => warmAudio()}
+      style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}
+    >
       <header style={{ padding: '16px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <h2 className="title-glitch" style={{ margin: 0, fontSize: 24, transform: 'none', lineHeight: 1 }}>كلكس!</h2>
