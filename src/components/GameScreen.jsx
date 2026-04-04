@@ -161,7 +161,7 @@ export default function GameScreen({
           style={{
             width: '100%', maxWidth: 360, position: 'relative',
             display: 'flex', alignItems: 'center', gap: 6,
-            flexDirection: 'row-reverse', flexWrap: 'wrap',
+            flexDirection: 'row', flexWrap: 'wrap',
             alignContent: 'center', justifyContent: 'center',
             minHeight: 100,
             cursor: 'pointer'

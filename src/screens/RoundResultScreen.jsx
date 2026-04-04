@@ -1,34 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRoom } from '../hooks/useRoom';
+import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 import UserAvatar from '../components/ui/UserAvatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
-export default function RoundResultScreen({ nav, roomCode }) {
+export default function RoundResultScreen() {
+  const roomCode = useRoomCode();
+  const nav = useNavigation();
   const { room, players, isHost, confirmNextRound } = useRoom(roomCode);
   const { user } = useAuth();
   const [countdown, setCountdown] = useState(5);
 
-  const navRef = useRef(nav);
-  useEffect(() => { navRef.current = nav; });
-
   const mountedRef = useRef(false);
   useEffect(() => {
     // If explicitly null from Firestore, the room is gone
-    if (room === null) { navRef.current.toHome(); return; }
-    if (room === undefined) return; // Wait for first load
+    if (room === null) { nav.toHome(); return; }
+    if (room === undefined) return;
     
-    if (room.status === 'playing') navRef.current.toGame();
-    if (room.status === 'game_over') navRef.current.toGameOver();
+    if (room.status === 'playing') nav.toGame();
+    if (room.status === 'game_over') nav.toGameOver();
     
     if (room.status === 'lobby' && mountedRef.current) {
-        navRef.current.toLobby(roomCode);
+        nav.toLobby(roomCode);
     }
     
     if (room.status === 'round_result') {
         mountedRef.current = true;
     }
-  }, [room?.status, room === null]);
+  }, [room?.status, room === null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Countdown timer logic
   useEffect(() => {

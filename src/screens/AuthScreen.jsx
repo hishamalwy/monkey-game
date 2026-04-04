@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AvatarPicker from '../components/ui/AvatarPicker';
-import hero from '../assets/hero.png';
+import hero from '../assets/hero.webp';
 
 export default function AuthScreen() {
   const { login, register } = useAuth();
@@ -58,18 +58,18 @@ export default function AuthScreen() {
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <img src={hero} alt="monkey" style={{ width: 80, height: 80, objectFit: 'contain' }} />
         <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-header)', margin: '8px 0 0' }}>
-          القرد بيتكلم!
+          كلكس!
         </h1>
       </div>
 
       {/* Card */}
       <div style={{
-        background: 'var(--color-card)', borderRadius: 24,
+        background: 'var(--color-card)',
         padding: '28px 24px', width: '100%', maxWidth: 400,
         boxShadow: '0 8px 40px rgba(28,16,64,0.12)',
       }}>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(28,16,64,0.1)' }}>
+        <div style={{ display: 'flex', gap: 0, marginBottom: 24, overflow: 'hidden', border: 'var(--brutal-border)' }}>
           {[['login', 'تسجيل دخول'], ['register', 'حساب جديد']].map(([key, label]) => (
             <button key={key} onClick={() => { setTab(key); setError(''); }}
               style={{

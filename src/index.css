@@ -5,65 +5,115 @@
 @tailwind utilities;
 
 :root {
-  /* Neobrutalism Palette */
-  --bg-yellow: #FFE300;
-  --bg-pink: #FF006E;
-  --bg-green: #39FF14;
-  --bg-purple: #E6E6FA; /* Light purple for ranks */
-  --bg-dark-purple: #2D1B4E; /* Almost black purple for borders/text */
-  --bg-orange: #FF6B00; /* For challenge button */
+  /* Neobrutalism Palette - More vibrant & coherent */
+  --bg-yellow: #FFD200;
+  --bg-pink: #FF1F8E;
+  --bg-green: #00E06D;
+  --bg-blue: #3E8BFF;
+  --bg-purple: #9061FF;
+  --bg-dark-purple: #1C1040;
 
   --brutal-border: 4px solid var(--bg-dark-purple);
-  --brutal-shadow: 4px 4px 0px var(--bg-dark-purple);
-  --brutal-radius: 0px;
+  --brutal-shadow: 6px 6px 0px var(--bg-dark-purple);
+  --brutal-radius-sm: 8px;
+  --brutal-radius-md: 16px;
+  --brutal-radius-lg: 24px;
 
-  /* Spacing Scale */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-2xl: 48px;
-  --space-3xl: 64px;
+  /* Glassmorphism Accents */
+  --glass-white: rgba(255, 255, 255, 0.9);
+  --glass-dark: rgba(28, 16, 64, 0.85);
 
-  /* ── Semantic aliases (screens using --color-* will map to brand) ── */
   --color-bg: var(--bg-yellow);
   --color-card: #FFFFFF;
   --color-primary: var(--bg-pink);
-  --color-primary-glow: rgba(255, 0, 110, 0.2);
-  --color-secondary: var(--bg-orange);
   --color-header: var(--bg-dark-purple);
-  --color-muted: rgba(45, 27, 78, 0.45);
+  --color-muted: rgba(28, 16, 64, 0.5);
   --color-success: var(--bg-green);
-  --color-danger: var(--bg-pink);
+
+  /* Game-mode defaults (Light) */
+  --game-bg: #2D1B4E;
+  --game-surface: rgba(255, 255, 255, 0.1);
+  --game-surface-strong: rgba(255, 255, 255, 0.18);
+  --game-text: #FFFFFF;
+  --game-text-muted: rgba(255, 255, 255, 0.55);
+  --game-accent: #FFD600;
+  --game-success: #76FF03;
+  --game-danger: #FF4757;
 }
 
 .dark {
-  /* ── Backgrounds ── */
-  --bg-yellow:      #1A0D38;   /* deep warm purple — main screen bg */
-  --color-bg:       #1A0D38;
-  --color-card:     #27155A;   /* slightly lighter purple for cards */
+  --bg-yellow: #0F0921;
+  --color-bg: #0F0921;
+  --color-card: #1C1040;
+  --bg-dark-purple: #FFE300; 
+  --color-header: #FFE300;
+  --color-muted: rgba(255, 227, 0, 0.4);
+  --bg-pink: #FF3B9A;
+  --bg-green: #05FF82;
+  --brutal-shadow: 4px 4px 0px #FFE300;
+  --brutal-border: 3px solid #FFE300;
 
-  /* ── Text + borders (flip to warm cream-yellow, not eye-searing pure yellow) ── */
-  --bg-dark-purple: #E2CC00;
-  --color-header:   #E2CC00;
-  --color-muted:    rgba(226, 204, 0, 0.4);
-
-  /* ── Accents — slightly dimmed for dark comfort ── */
-  --bg-pink:   #D9005E;   /* less harsh on dark */
-  --bg-orange: #D95C00;
-  --bg-green:  #28B80A;
-
-  /* ── Semantic ── */
-  --color-primary:      #D9005E;
-  --color-primary-glow: rgba(217, 0, 94, 0.25);
-  --color-success:      #28B80A;
-  --color-danger:       #D9005E;
-
-  /* ── Shadows + borders ── */
-  --brutal-shadow: 3px 3px 0px #E2CC00;
-  --brutal-border: 3px solid #E2CC00;
+  /* Game mode (Dark override) */
+  --game-bg: #0F0A1F;
+  --game-surface: rgba(226, 204, 0, 0.08);
+  --game-surface-strong: rgba(226, 204, 0, 0.15);
+  --game-text: #FFE300;
+  --game-text-muted: rgba(255, 227, 0, 0.5);
+  --game-accent: #FFE300;
+  --game-success: #05FF82;
+  --game-danger: #FF3B9A;
 }
+
+/* ── Unified Brutal Background ── */
+.brutal-bg {
+  background: var(--bg-yellow);
+  background-image: radial-gradient(var(--bg-dark-purple) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle background stickers */
+.bg-stickers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+/* Animations */
+@keyframes wizardFloat {
+  0%, 100% { transform: translateY(0) rotate(6deg); }
+  50% { transform: translateY(-12px) rotate(8deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-15px) rotate(-1deg); }
+}
+
+@keyframes wizardPop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(50px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes rainbowBorder {
+  0% { border-color: var(--bg-pink); }
+  33% { border-color: var(--bg-green); }
+  66% { border-color: var(--bg-blue); }
+  100% { border-color: var(--bg-pink); }
+}
+
+.wizard-card { animation: wizardPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+.slide-in-right { animation: slideInRight 0.3s ease-out both; }
+.card-rainbow { border-width: 4px; animation: rainbowBorder 4s linear infinite; }
+
 
 /* Cards, white-bg elements, inputs, keyboard */
 .dark .card        { background: var(--color-card) !important; color: var(--bg-dark-purple) !important; border-color: #E2CC00 !important; }
@@ -167,6 +217,7 @@ body, html {
 .btn-primary { background: var(--bg-pink);        color: #FFF; }
 .btn-danger  { background: var(--bg-pink);        color: #FFF; }
 .btn-ghost   { background: transparent; color: var(--bg-dark-purple); box-shadow: none; }
+.btn-green   { background: var(--bg-green); color: var(--bg-dark-purple); }
 
 .card {
   border: var(--brutal-border);
@@ -174,90 +225,65 @@ body, html {
   background: #FFF;
 }
 
-/* ── Modern Bottom Nav (Floating Island) ── */
+/* ── Neobrutalist Nav (Square + Shadow) ── */
 .bottom-nav-container {
   position: absolute;
-  bottom: 20px;
-  left: 16px;
-  right: 16px;
-  height: 68px;
-  z-index: 100;
+  bottom: 0; left: 0; right: 0;
+  height: 84px;
+  background: #FFF;
+  border-top: var(--brutal-border);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 2px solid var(--bg-dark-purple);
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(28, 16, 63, 0.15), var(--brutal-shadow);
-  padding: 0 8px;
-}
-
-.dark .bottom-nav-container {
-  background: rgba(39, 21, 90, 0.8);
-  border-color: var(--bg-dark-purple);
+  padding: 0 10px;
+  z-index: 100;
 }
 
 .nav-item {
-  position: relative;
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  border: none;
+  gap: 4px;
   background: transparent;
+  border: none;
   cursor: pointer;
-  outline: none;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  color: var(--bg-dark-purple);
-  gap: 2px;
-}
-
-.nav-item .icon {
-  font-size: 24px;
-  transition: transform 0.2s ease;
-  z-index: 2;
-}
-
-.nav-item .label {
-  font-size: 10px;
-  font-weight: 900;
-  opacity: 0.7;
-  transition: all 0.2s ease;
-  z-index: 2;
+  padding: 8px;
+  border-radius: var(--brutal-radius-sm);
+  transition: all 0.1s ease;
+  min-width: 70px;
+  position: relative;
+  height: 70%;
 }
 
 .nav-item.active {
+  background: var(--bg-yellow);
+  border: 3px solid var(--bg-dark-purple);
+  box-shadow: 4px 4px 0px var(--bg-dark-purple);
   transform: translateY(-4px);
 }
 
-.nav-item.active .icon {
-  transform: scale(1.1);
+.nav-item .icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
-.nav-item.active .label {
-  opacity: 1;
-  color: var(--bg-pink);
+.nav-item .label {
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--bg-dark-purple);
 }
 
-/* Active indicator pill */
-.nav-active-pill {
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  background: var(--bg-pink);
-  border-radius: 16px;
-  opacity: 0.15;
-  z-index: 1;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.dark .nav-active-pill {
-  background: var(--bg-pink);
-  opacity: 0.3;
+.top-nav-brutal {
+  background: #FFF;
+  border-bottom: var(--brutal-border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+  box-shadow: 0 4px 0px rgba(0,0,0,0.05);
 }
 
 /* ── Inputs ── */
@@ -298,6 +324,11 @@ body, html {
 ::-webkit-scrollbar { display: none; }
 
 /* ── Animations ── */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 
 /* Entrance slide-up (overlays, result cards) */
 @keyframes slideUp {

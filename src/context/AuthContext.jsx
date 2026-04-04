@@ -24,10 +24,17 @@ export function AuthProvider({ children }) {
           if (snap.exists()) {
             const data = snap.data();
             // Migrate old profiles
-            if (data.wins_draw === undefined || data.coins === undefined) {
+            if (data.wins_draw === undefined || data.coins === undefined || data.xp === undefined || data.purchases === undefined) {
                updateDoc(doc(db, 'users', firebaseUser.uid), {
                  wins_draw: data.wins_draw ?? 0,
-                 coins: data.coins ?? 500
+                 coins: data.coins ?? 500,
+                 xp: data.xp ?? 0,
+                 purchases: data.purchases ?? [],
+                 loginStreak: data.loginStreak ?? 0,
+                 lastLoginDate: data.lastLoginDate ?? null,
+                 monkeyPlayed: data.monkeyPlayed ?? 0,
+                 drawPlayed: data.drawPlayed ?? 0,
+                 survivalPlayed: data.survivalPlayed ?? 0,
                });
             }
             setUserProfile(data);

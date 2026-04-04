@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRoom } from '../hooks/useRoom';
+import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 import UserAvatar from '../components/ui/UserAvatar';
 import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -10,17 +11,16 @@ import { connectSocket, disconnectSocket, emitSound, togglePlayerMute, isPlayerM
 import { appCategories } from '../data/categories';
 import { normalizeArabic } from '../utils/textUtils';
 
-export default function OnlineGameScreen({ nav, roomCode }) {
-  const { user } = useAuth(); // keeps auth context alive
+export default function OnlineGameScreen() {
+  const roomCode = useRoomCode();
+  const nav = useNavigation();
+  const { user } = useAuth();
   const {
     room, players, isMyTurn, computedTimer, isHost,
     pressLetter, pressDelete, pressChallenge, leaveRoom, submitSuspectWord, resolveSuspect,
     triggerHorn, pressFinishWord, resolveFinishWord, passTurn, resetToLobby,
   } = useRoom(roomCode);
   const vh = useVisualViewport();
-
-  const navRef = useRef(nav);
-  useEffect(() => { navRef.current = nav; });
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isHonking, setIsHonking] = useState(false);
@@ -89,20 +89,20 @@ export default function OnlineGameScreen({ nav, roomCode }) {
   const mountedRef = useRef(false);
   useEffect(() => {
     // If explicitly null from Firestore, the room is gone
-    if (room === null) { navRef.current.toHome(); return; }
-    if (room === undefined) return; // Wait for first load
+    if (room === null) { nav.toHome(); return; }
+    if (room === undefined) return;
     
-    if (room.status === 'round_result') navRef.current.toRoundResult();
-    if (room.status === 'game_over') navRef.current.toGameOver();
+    if (room.status === 'round_result') nav.toRoundResult();
+    if (room.status === 'game_over') nav.toGameOver();
     
     if (room.status === 'lobby' && mountedRef.current) {
-      navRef.current.toLobby(roomCode);
+      nav.toLobby(roomCode);
     }
     
     if (room.status === 'playing' || room.status === 'suspect_question') {
       mountedRef.current = true;
     }
-  }, [room?.status, room === null]);
+  }, [room?.status, room === null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -151,27 +151,15 @@ export default function OnlineGameScreen({ nav, roomCode }) {
 
   const handleExit = async () => {
     await leaveRoom();
-    navRef.current.toHome();
-  };
-
-  const handleReturnToLobby = async () => {
-     if (!isHost) return;
-     const { resetToLobby } = useRoom(roomCode); // Oops, can't call hook here
-     // I will use resetToLobby from the destructured object above
+    nav.toHome();
   };
 
   if (!room?.gameState) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
 
   const currentPlayerUid = room.gameState.currentPlayerUid;
-  const currentPlayerData = room.players[currentPlayerUid];
-  const currentPlayer = {
-    name: currentPlayerData?.username || '...',
-    avatarId: currentPlayerData?.avatarId ?? 0,
-  };
 
   const userId = user?.uid;
   const isSuspected = room.status === 'suspect_question' && room.gameState.suspectedUid === userId;
-  const isChallenger = room.status === 'suspect_question' && room.gameState.challengerUid === userId;
 
   const currentCategoryWords = (() => {
     if (!room?.category) return [];
@@ -409,8 +397,6 @@ export default function OnlineGameScreen({ nav, roomCode }) {
               <button 
                 onClick={() => {
                   if (isHost) {
-                    const { resetRoomToLobby } = import('../firebase/rooms'); // Dynamically? No, useRoom provides it
-                    // I'll use the hook's resetToLobby
                     resetToLobby();
                   } else {
                     handleExit();

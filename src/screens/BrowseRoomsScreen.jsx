@@ -5,8 +5,10 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Toast from '../components/ui/Toast';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
+import { useNavigation } from '../hooks/useNavigation';
 
-export default function BrowseRoomsScreen({ nav }) {
+export default function BrowseRoomsScreen() {
+  const nav = useNavigation();
   const { userProfile } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,7 @@ export default function BrowseRoomsScreen({ nav }) {
     try {
       const data = await fetchPublicRooms();
       setRooms(data);
-    } catch (e) {
+    } catch {
       setToast('فشل تحميل الغرف');
     } finally {
       setLoading(false);

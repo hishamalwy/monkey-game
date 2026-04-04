@@ -216,7 +216,6 @@ export async function endDrawRound(roomCode) {
 
   if (!ds || ds.roundStatus !== 'drawing') return; 
 
-  const guessers = (room.playerOrder || []).filter(uid => uid !== ds.drawerUid);
   const correctCount = ds.guessersDone?.length || 0;
   const drawerPoints = correctCount; // +1 point for each person who guessed
 

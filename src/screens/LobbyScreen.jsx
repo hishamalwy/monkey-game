@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings } from '../firebase/rooms';
 import { startDrawGame } from '../firebase/drawRooms';
 import { startSurvivalGame } from '../firebase/survivalRooms';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
-import { AVATAR_EMOJIS } from '../components/ui/AvatarPicker';
 import UserAvatar from '../components/ui/UserAvatar';
 import Toast from '../components/ui/Toast';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 
 // Placeholder avatars for empty slots (animals not in AVATAR_EMOJIS)
 const SLOT_PLACEHOLDERS = ['🦉', '🦊', '🐢', '🐸', '🦋', '🐬', '🦚'];
@@ -97,7 +97,9 @@ function EmptySlotRow({ index }) {
   );
 }
 
-export default function LobbyScreen({ nav, roomCode }) {
+export default function LobbyScreen() {
+  const roomCode = useRoomCode();
+  const nav = useNavigation();
   const { userProfile } = useAuth();
   const [room, setRoom] = useState(null);
   const [toast, setToast] = useState('');
@@ -105,21 +107,18 @@ export default function LobbyScreen({ nav, roomCode }) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const navRef = useRef(nav);
-  useEffect(() => { navRef.current = nav; });
-
   useEffect(() => {
     const unsub = listenToRoom(roomCode, (data) => {
-      if (!data) { navRef.current.toHome(); return; }
+      if (!data) { nav.toHome(); return; }
       setRoom(data);
       if (data.status === 'playing') {
-        if (data.mode === 'draw') navRef.current.toDrawGame?.();
-        else if (data.mode === 'survival') navRef.current.toSurvivalGame?.();
-        else navRef.current.toGame();
+        if (data.mode === 'draw') nav.toDrawGame();
+        else if (data.mode === 'survival') nav.toSurvivalGame();
+        else nav.toGame();
       }
     });
     return unsub;
-  }, [roomCode]);
+  }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!room) {
     return (
@@ -215,7 +214,7 @@ export default function LobbyScreen({ nav, roomCode }) {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <h1 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 4px', textTransform: 'uppercase' }}>
-                  {room.mode === 'draw' ? 'خمن و ارسم' : room.mode === 'survival' ? 'البقاء للأقوى' : 'القرد بيتكلم'}
+                  {room.mode === 'draw' ? 'خمن و ارسم' : room.mode === 'survival' ? 'البقاء للأقوى' : 'كلكس!'}
                 </h1>
                 <span style={{
                   fontSize: 11, background: 'var(--bg-pink)', color: '#FFF',

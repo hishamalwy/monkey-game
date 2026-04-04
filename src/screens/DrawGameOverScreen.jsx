@@ -1,27 +1,19 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/ui/UserAvatar';
-import { useState, useEffect } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
 import { listenToRoom, leaveRoom, resetRoomToLobby } from '../firebase/rooms';
+import { useNavigation, useRoomCode } from '../hooks/useNavigation';
+import { useConfetti } from '../components/shared/Confetti';
+import { recordWin, recordLoss } from '../firebase/leaderboard';
+import { awardCoins } from '../firebase/store';
+import { recordMatch } from '../firebase/stats';
+import { incrementDailyStat } from '../firebase/retention';
+import { COIN_REWARDS } from '../utils/store';
+import { XP_REWARDS } from '../utils/xp';
 
-function useConfetti() {
-  return useMemo(() => {
-    const colors = ['#FF006E', '#FF6B00', '#FFE300', '#1C1040', '#FFFFFF', '#39FF14'];
-    return Array.from({ length: 28 }, (_, i) => ({
-      id: i,
-      left: `${(i * 3.6) % 100}%`,
-      delay: `${(i * 0.07) % 1.4}s`,
-      duration: `${1.4 + (i * 0.07) % 1.4}s`,
-      color: colors[i % colors.length],
-      width: `${8 + (i * 3) % 8}px`,
-      height: `${6 + (i * 2) % 6}px`,
-    }));
-  }, []);
-}
-
-export default function DrawGameOverScreen({ nav, roomCode }) {
+export default function DrawGameOverScreen() {
+  const roomCode = useRoomCode();
+  const nav = useNavigation();
   const { userProfile } = useAuth();
   const [room, setRoom] = useState(null);
   const confetti = useConfetti();
@@ -34,9 +26,31 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
       }
     });
     return unsub;
-  }, [roomCode, nav]);
+  }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isHost = room?.hostUid === userProfile?.uid;
+
+  useEffect(() => {
+    if (!room?.drawState || !userProfile) return;
+    const ds = room.drawState;
+    const players = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
+    const sorted = [...players].sort((a, b) => (ds.scores?.[b.uid] || 0) - (ds.scores?.[a.uid] || 0));
+    const w = sorted[0];
+    if (!w) return;
+    const won = w.uid === userProfile.uid;
+    if (won) {
+      recordWin(userProfile.uid, 'draw').catch(() => {});
+      awardCoins(userProfile.uid, COIN_REWARDS.DRAW_WIN).catch(() => {});
+    } else {
+      recordLoss(userProfile.uid, 'draw').catch(() => {});
+      awardCoins(userProfile.uid, COIN_REWARDS.LOSS).catch(() => {});
+    }
+    incrementDailyStat(userProfile.uid, 'games').catch(() => {});
+    incrementDailyStat(userProfile.uid, 'draw').catch(() => {});
+    if (won) incrementDailyStat(userProfile.uid, 'wins').catch(() => {});
+    incrementDailyStat(userProfile.uid, 'xp', won ? XP_REWARDS.WIN : XP_REWARDS.LOSS).catch(() => {});
+    recordMatch(userProfile.uid, { mode: 'draw', won: won, players: (room.playerOrder || []).length }).catch(() => {});
+  }, [!!room?.drawState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResetToLobby = async () => {
     if (!isHost) return;
@@ -64,10 +78,6 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
   const sorted = [...players].sort((a, b) => (ds.scores?.[b.uid] || 0) - (ds.scores?.[a.uid] || 0));
   const winner = sorted[0];
   const iWon = winner?.uid === userProfile?.uid;
-
-  // Stats
-  const drawerCounts = {};
-  // (simplified: we don't track per-drawer history here)
 
   return (
     <div style={{
@@ -104,10 +114,10 @@ export default function DrawGameOverScreen({ nav, roomCode }) {
         {iWon && (
           <div style={{
             border: 'var(--brutal-border)', background: 'var(--bg-yellow)',
-            padding: '10px', marginBottom: 16,
+            padding: '8px', marginBottom: 16,
             fontSize: 15, fontWeight: 900, color: 'var(--bg-dark-purple)',
           }}>
-            🎉 أنت الفائز!
+            🎉 أنت الفائز! +{XP_REWARDS.WIN} XP
           </div>
         )}
 

@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { listenToRoom, leaveRoom } from '../firebase/rooms';
+import { listenToRoom } from '../firebase/rooms';
 import { submitSurvivalAnswer, survivalReveal, survivalNextQuestion, endSurvivalGame } from '../firebase/survivalRooms';
 import UserAvatar from '../components/ui/UserAvatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Toast from '../components/ui/Toast';
+import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 
-export default function SurvivalGameScreen({ nav, roomCode }) {
+export default function SurvivalGameScreen() {
+  const roomCode = useRoomCode();
+  const nav = useNavigation();
   const { userProfile } = useAuth();
   const [room, setRoom] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -24,7 +27,7 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
       }
     });
     return unsub;
-  }, [roomCode, nav]);
+  }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (room?.survivalState?.status === 'question' && room?.survivalState?.roundStartTime) {
@@ -46,13 +49,14 @@ export default function SurvivalGameScreen({ nav, roomCode }) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = setInterval(updateTimer, 1000);
       
-      setSelectedAnswer(null); // Reset selection for new question
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedAnswer(null);
     } else {
       clearInterval(timerIntervalRef.current);
     }
     
     return () => clearInterval(timerIntervalRef.current);
-  }, [room?.survivalState?.currentQuestionIndex, room?.survivalState?.status, room?.survivalState?.roundStartTime]);
+  }, [room?.survivalState?.currentQuestionIndex, room?.survivalState?.status, room?.survivalState?.roundStartTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!room || !room.survivalState) {
     return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;

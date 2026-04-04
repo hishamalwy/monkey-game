@@ -1,26 +1,19 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRoom } from '../hooks/useRoom';
+import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 import UserAvatar from '../components/ui/UserAvatar';
 import { recordWin, recordLoss } from '../firebase/leaderboard';
+import { awardCoins } from '../firebase/store';
+import { recordMatch } from '../firebase/stats';
+import { incrementDailyStat } from '../firebase/retention';
+import { COIN_REWARDS } from '../utils/store';
+import { useConfetti } from '../components/shared/Confetti';
+import { XP_REWARDS } from '../utils/xp';
 
-// Generate confetti pieces with stable values
-function useConfetti() {
-  return useMemo(() => {
-    const colors = ['#E91E8C', '#FF6B35', '#FFD700', '#1C1040', 'var(--color-card)', '#4CAF50'];
-    return Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      left: `${(i * 3.4) % 100}%`,
-      delay: `${(i * 0.07) % 1.5}s`,
-      duration: `${1.5 + (i * 0.06) % 1.5}s`,
-      color: colors[i % colors.length],
-      width: `${8 + (i * 3) % 8}px`,
-      height: `${6 + (i * 2) % 6}px`,
-    }));
-  }, []);
-}
-
-export default function GameOverScreen({ nav, roomCode }) {
+export default function GameOverScreen() {
+  const roomCode = useRoomCode();
+  const nav = useNavigation();
   const { userProfile } = useAuth();
   const { room, players, isHost, leaveRoom, resetToLobby } = useRoom(roomCode);
   const confetti = useConfetti();
@@ -38,15 +31,21 @@ export default function GameOverScreen({ nav, roomCode }) {
     const mode = room?.mode || 'monkey';
     if (iWon) {
       recordWin(userProfile.uid, mode).catch(() => {});
+      awardCoins(userProfile.uid, COIN_REWARDS.WIN).catch(() => {});
     } else {
-      recordLoss(userProfile.uid).catch(() => {});
+      recordLoss(userProfile.uid, mode).catch(() => {});
+      awardCoins(userProfile.uid, COIN_REWARDS.LOSS).catch(() => {});
     }
-  }, [!!winner]);
+    incrementDailyStat(userProfile.uid, 'games').catch(() => {});
+    if (iWon) incrementDailyStat(userProfile.uid, 'wins').catch(() => {});
+    incrementDailyStat(userProfile.uid, 'xp', iWon ? XP_REWARDS.WIN : XP_REWARDS.LOSS).catch(() => {});
+    recordMatch(userProfile.uid, { mode: mode, won: iWon, players: players.length }).catch(() => {});
+  }, [!!winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync lobby redirect
   useEffect(() => {
     if (room?.status === 'lobby') nav.toLobby(roomCode);
-  }, [room?.status]);
+  }, [room?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLeave = async () => {
     await leaveRoom();
@@ -74,7 +73,7 @@ export default function GameOverScreen({ nav, roomCode }) {
 
       {/* Card */}
       <div className="slide-up" style={{
-        background: 'var(--color-card)', borderRadius: 28,
+        background: 'var(--color-card)',
         padding: '40px 28px', width: '100%', maxWidth: 400,
         textAlign: 'center', boxShadow: '0 16px 60px rgba(28,16,64,0.2)',
         position: 'relative', zIndex: 10,
@@ -88,13 +87,12 @@ export default function GameOverScreen({ nav, roomCode }) {
           🏆 فاز باللعبة!
         </p>
 
-        {iWon && (
-          <div style={{
-            background: 'rgba(233,30,140,0.08)', border: '2px solid var(--color-primary)',
-            borderRadius: 14, padding: '12px', marginBottom: 20,
-            fontSize: 15, color: 'var(--color-primary)', fontWeight: 700,
+          {iWon && (
+            <div style={{
+            background: 'var(--bg-yellow)', border: 'var(--brutal-border)', padding: 8,
+            fontSize: 13, fontWeight: 900, marginBottom: 0,
           }}>
-            🎉 أنت الفائز!
+            +{XP_REWARDS.WIN} XP 🏆
           </div>
         )}
 
@@ -140,4 +138,3 @@ export default function GameOverScreen({ nav, roomCode }) {
     </div>
   );
 }
-

@@ -4,12 +4,14 @@ import UserAvatar from '../components/ui/UserAvatar';
 import { listenToRoom } from '../firebase/rooms';
 import {
   chooseDrawWord, submitDrawGuess, addStroke, clearDrawCanvas,
-  fillBackground, endDrawRound, nextDrawRound, revealHint, undoLastStroke,
+  endDrawRound, nextDrawRound, revealHint, undoLastStroke,
   revealWordLength,
 } from '../firebase/drawRooms';
+import ExitConfirmModal from '../components/shared/ExitConfirmModal';
 import Toast from '../components/ui/Toast';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { leaveRoom } from '../firebase/rooms';
+import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 
 const COLORS = [
   '#000000', '#545454', '#9E9E9E', '#FFFFFF',
@@ -70,7 +72,9 @@ function drawStrokeOnCtx(ctx, stroke, W, H) {
   ctx.stroke();
 }
 
-export default function DrawGameScreen({ nav, roomCode }) {
+export default function DrawGameScreen() {
+  const roomCode = useRoomCode();
+  const nav = useNavigation();
   const { userProfile } = useAuth();
   const [room, setRoom] = useState(null);
   const [toast, setToast] = useState('');
@@ -89,8 +93,8 @@ export default function DrawGameScreen({ nav, roomCode }) {
 
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
-  const [brushSize, setBrushSize] = useState('medium');
-  const [isFilled, setIsFilled] = useState(false);
+  const [brushSize] = useState('medium');
+  const [isFilled] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const chatRef = useRef(null);
   const vh = useVisualViewport();
@@ -100,17 +104,14 @@ export default function DrawGameScreen({ nav, roomCode }) {
   useEffect(() => { brushRef.current = brushSize; }, [brushSize]);
   useEffect(() => { isFilledRef.current = isFilled; }, [isFilled]);
 
-  const navRef = useRef(nav);
-  useEffect(() => { navRef.current = nav; });
-
   useEffect(() => {
     const unsub = listenToRoom(roomCode, (data) => {
-      if (!data) { navRef.current.toHome(); return; }
+      if (!data) { nav.toHome(); return; }
       setRoom(data);
-      if (data.status === 'draw_over') navRef.current.toDrawGameOver();
+      if (data.status === 'draw_over') nav.toDrawGameOver();
     });
     return unsub;
-  }, [roomCode]);
+  }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ds = room?.drawState;
   const myUid = userProfile?.uid;
@@ -128,7 +129,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
     ctx.fillStyle = ds?.bgFill || '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     lastStrokesLen.current = 0;
-  }, [ds?.roundStatus]);
+  }, [ds?.roundStatus, ds?.bgFill]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -179,7 +180,7 @@ export default function DrawGameScreen({ nav, roomCode }) {
     if (!ds || ds.roundStatus !== 'reveal' || !isHost) return;
     const id = setTimeout(() => nextDrawRound(roomCode).catch(() => {}), 4500);
     return () => clearTimeout(id);
-  }, [ds?.roundStatus, isHost, roomCode]);
+  }, [ds?.roundStatus, isHost, roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (hintCooldown <= 0) return;
@@ -251,40 +252,37 @@ export default function DrawGameScreen({ nav, roomCode }) {
     await submitDrawGuess(roomCode, myUid, userProfile.username, text, room?.drawTime || 80);
   };
 
-  const handleExit = async () => { await leaveRoom(roomCode, myUid, isHost); navRef.current.toHome(); };
+  const handleExit = async () => { await leaveRoom(roomCode, myUid, isHost); nav.toHome(); };
 
-  if (!room || !ds) return <div style={{ width: '100%', height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a2a6c', color: 'white', fontSize: 32 }}>🎨</div>;
+  if (!room || !ds) return <div style={{ width: '100%', height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-game-bg)', color: 'var(--game-text)', fontSize: 32 }}>🎨</div>;
 
   const players = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
   const drawerPlayer = room.players[ds.drawerUid];
   const myAlreadyGuessed = (ds.guessersDone || []).includes(myUid);
   const isLowTime = (timeLeft ?? 0) <= 10 && (timeLeft ?? 0) > 0;
 
-  // ────────────────────────────────────────────
-  // PHASES
-  // ────────────────────────────────────────────
   if (ds.roundStatus === 'choosing') {
     return (
-      <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'linear-gradient(160deg,#1a2a6c 0%,#b21f1f 50%,#fdbb2d 100%)', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'var(--color-game-bg)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
-          <button onClick={() => setShowExitConfirm(true)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', borderRadius: 12, padding: '6px 14px', fontWeight: 900 }}>✕</button>
-          <div style={{ textAlign: 'center' }}><div style={{ color: 'white', fontSize: 18, fontWeight: 900 }}>جولة {ds.currentRound}</div></div>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900 }}>{timeLeft}</div>
+          <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ padding: '6px 14px', fontSize: 14 }}>✕</button>
+          <div style={{ textAlign: 'center' }}><div style={{ color: 'var(--game-text)', fontSize: 18, fontWeight: 900 }}>جولة {ds.currentRound}</div></div>
+          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFF', color: 'var(--bg-dark-purple)', fontWeight: 900, border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)' }}>{timeLeft}</div>
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           {isDrawer ? (
             <div style={{ width: '100%', maxWidth: 340 }}>
-              <h2 style={{ color: 'white', textAlign: 'center', fontWeight: 900, marginBottom: 20 }}>اختر كلمتك!</h2>
+              <h2 style={{ color: 'var(--game-text)', textAlign: 'center', fontWeight: 900, marginBottom: 20 }}>اختر كلمتك!</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {(ds.wordOptions || []).map((word) => (
-                  <button key={word} onClick={() => chooseDrawWord(roomCode, word)} style={{ padding: '18px', fontSize: 20, fontWeight: 900, background: 'white', color: '#1a2a6c', border: 'none', borderRadius: 18, cursor: 'pointer' }}>{word}</button>
+                  <button key={word} onClick={() => chooseDrawWord(roomCode, word)} className="btn btn-yellow" style={{ padding: '18px', fontSize: 20 }}>{word}</button>
                 ))}
               </div>
             </div>
           ) : (
             <div style={{ textAlign: 'center' }}>
               <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={80} />
-              <h3 style={{ color: 'white', marginTop: 12 }}>{drawerPlayer?.username} بيختار...</h3>
+              <h3 style={{ color: 'var(--game-text)', marginTop: 12 }}>{drawerPlayer?.username} بيختار...</h3>
             </div>
           )}
         </div>
@@ -298,17 +296,17 @@ export default function DrawGameScreen({ nav, roomCode }) {
     const roundScores = ds.roundScores || {};
     const sortedPlayers = [...players].sort((a, b) => (ds.scores?.[b.uid] || 0) - (ds.scores?.[a.uid] || 0));
     return (
-      <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: '#0f2027', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'var(--color-game-bg)', overflow: 'hidden' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>الكلمة كانت</div>
-          <div style={{ color: 'white', fontSize: 32, fontWeight: 900, marginBottom: 24 }}>{ds.chosenWord}</div>
+          <div style={{ color: 'var(--game-text-muted)', marginBottom: 4 }}>الكلمة كانت</div>
+          <div style={{ color: 'var(--game-text)', fontSize: 32, fontWeight: 900, marginBottom: 24 }}>{ds.chosenWord}</div>
           <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {sortedPlayers.map((p, i) => (
-              <div key={p.uid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: 14 }}>
+            {sortedPlayers.map((p) => (
+              <div key={p.uid} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#FFF' }}>
                 <UserAvatar avatarId={p.avatarId ?? 0} size={36} />
-                <div style={{ flex: 1, color: 'white', fontWeight: 900 }}>{p.username}</div>
-                {roundScores[p.uid] > 0 && <div style={{ color: '#76FF03', fontWeight: 900 }}>+{roundScores[p.uid]}</div>}
-                <div style={{ color: 'white', fontWeight: 900 }}>{ds.scores?.[p.uid] || 0}</div>
+                <div style={{ flex: 1, color: 'var(--bg-dark-purple)', fontWeight: 900 }}>{p.username}</div>
+                {roundScores[p.uid] > 0 && <div style={{ color: 'var(--bg-green)', fontWeight: 900 }}>+{roundScores[p.uid]}</div>}
+                <div style={{ color: 'var(--bg-dark-purple)', fontWeight: 900 }}>{ds.scores?.[p.uid] || 0}</div>
               </div>
             ))}
           </div>
@@ -317,35 +315,32 @@ export default function DrawGameScreen({ nav, roomCode }) {
     );
   }
 
-  // ────────────────────────────────────────────
-  // DRAWING PHASE (Restructured)
-  // ────────────────────────────────────────────
   return (
-    <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: '#1e3c72', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'var(--color-game-bg)', overflow: 'hidden' }}>
       
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', flexShrink: 0 }}>
-        <button onClick={() => setShowExitConfirm(true)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: 10, padding: '5px 12px', fontWeight: 900 }}>✕</button>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: '4px 10px' }}>
+        <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ padding: '5px 12px', fontSize: 14 }}>✕</button>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--game-surface)', padding: '4px 10px', border: '2px solid var(--game-text)', boxShadow: '2px 2px 0 rgba(0,0,0,0.2)' }}>
           <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={28} />
-          <div style={{ color: 'white', fontSize: 12, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{drawerPlayer?.username}</div>
+          <div style={{ color: 'var(--game-text)', fontSize: 12, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{drawerPlayer?.username}</div>
         </div>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: isLowTime ? '#FF4757' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900 }}>{timeLeft}</div>
+        <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isLowTime ? 'var(--game-danger)' : 'var(--game-surface-strong)', color: 'var(--game-text)', fontWeight: 900, border: `3px solid ${isLowTime ? '#FFF' : 'var(--game-text)'}`, boxShadow: isLowTime ? '3px 3px 0 #FFF' : '2px 2px 0 rgba(0,0,0,0.2)' }}>{timeLeft}</div>
       </div>
 
       {/* ── WORD HINT ── */}
       <div style={{ padding: '8px', flexShrink: 0, display: 'flex', justifyContent: 'center', minHeight: 48 }}>
         {isDrawer ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.2)', borderRadius: 14, padding: '8px 16px' }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>الكلمة:</span>
-            <span style={{ color: '#FFD600', fontSize: 22, fontWeight: 900 }}>{ds.chosenWord}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--game-surface)', padding: '8px 16px', border: '3px solid var(--game-accent)', boxShadow: '3px 3px 0 rgba(0,0,0,0.2)' }}>
+            <span style={{ color: 'var(--game-text-muted)', fontSize: 13 }}>الكلمة:</span>
+            <span style={{ color: 'var(--game-accent)', fontSize: 22, fontWeight: 900 }}>{ds.chosenWord}</span>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
             {ds.showWordLength ? (ds.hint || '').split('').map((ch, i) => (
               ch === ' ' ? <div key={i} style={{ width: 10 }} /> :
-              <div key={i} style={{ width: 22, height: 32, borderRadius: 6, background: ch !== '_' ? '#FFF' : 'rgba(255,255,255,0.1)', border: '2px solid #FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e3c72', fontWeight: 900 }}>{ch !== '_' ? ch : ''}</div>
-            )) : <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, background: 'rgba(0,0,0,0.2)', padding: '5px 15px', borderRadius: 20 }}>يختفي عدد الحروف... 🔒</div>}
+              <div key={i} style={{ width: 22, height: 32, background: ch !== '_' ? '#FFF' : 'var(--game-surface)', border: `3px solid ${ch !== '_' ? 'var(--bg-dark-purple)' : 'var(--game-text)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-dark-purple)', fontWeight: 900, boxShadow: ch !== '_' ? '2px 2px 0 var(--bg-dark-purple)' : 'none' }}>{ch !== '_' ? ch : ''}</div>
+            )) : <div style={{ color: 'var(--game-text-muted)', fontSize: 13, background: 'var(--game-surface)', padding: '5px 15px', border: '2px solid var(--game-text)' }}>يختفي عدد الحروف... 🔒</div>}
           </div>
         )}
       </div>
@@ -353,19 +348,19 @@ export default function DrawGameScreen({ nav, roomCode }) {
       {/* ── SCORES STRIP ── */}
       <div style={{ display: 'flex', gap: 6, padding: '0 12px 10px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none' }}>
         {players.map(p => (
-          <div key={p.uid} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 50, padding: '6px', borderRadius: 10, background: p.uid === ds.drawerUid ? 'rgba(255,214,0,0.2)' : (ds.guessersDone?.includes(p.uid) ? 'rgba(118,255,3,0.2)' : 'rgba(255,255,255,0.1)') }}>
+          <div key={p.uid} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 50, padding: '6px', background: p.uid === ds.drawerUid ? 'var(--game-surface-strong)' : (ds.guessersDone?.includes(p.uid) ? 'rgba(118,255,3,0.15)' : 'var(--game-surface)'), border: `2px solid ${p.uid === ds.drawerUid ? 'var(--game-accent)' : (ds.guessersDone?.includes(p.uid) ? 'var(--game-success)' : 'var(--game-text)')}` }}>
             <UserAvatar avatarId={p.avatarId ?? 0} size={24} />
-            <div style={{ color: 'white', fontSize: 9, fontWeight: 900, marginTop: 2 }}>{p.username.slice(0,6)}</div>
-            <div style={{ color: '#FFD600', fontSize: 10, fontWeight: 900 }}>{ds.scores?.[p.uid] || 0}</div>
+            <div style={{ color: 'var(--game-text)', fontSize: 9, fontWeight: 900, marginTop: 2 }}>{p.username.slice(0,6)}</div>
+            <div style={{ color: 'var(--game-accent)', fontSize: 10, fontWeight: 900 }}>{ds.scores?.[p.uid] || 0}</div>
           </div>
         ))}
       </div>
 
-      {/* ── CANVAS AREA (Fixed) ── */}
+      {/* ── CANVAS AREA ── */}
       <div style={{ flex: '0 0 auto', padding: '0 10px 10px', display: 'flex', justifyContent: 'center' }}>
-        <div style={{ position: 'relative', aspectRatio: '1/1', width: 'min(90vw, 360px)', borderRadius: 16, overflow: 'hidden', border: '4px solid #FFF', background: '#FFF' }}>
+        <div style={{ position: 'relative', aspectRatio: '1/1', width: 'min(90vw, 360px)', overflow: 'hidden', border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)', background: '#FFF' }}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', touchAction: 'none' }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} />
-          {myAlreadyGuessed && !isDrawer && <div style={{ position: 'absolute', inset: 0, background: 'rgba(118,255,3,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ background: '#FFF', width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, border: '4px solid #76FF03', color: '#76FF03' }}>✅</div></div>}
+          {myAlreadyGuessed && !isDrawer && <div style={{ position: 'absolute', inset: 0, background: 'rgba(118,255,3,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ background: '#FFF', width: 60, height: 60, border: '4px solid var(--bg-green)', color: 'var(--bg-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, boxShadow: '3px 3px 0 var(--bg-dark-purple)' }}>✅</div></div>}
         </div>
       </div>
 
@@ -374,17 +369,17 @@ export default function DrawGameScreen({ nav, roomCode }) {
         {isDrawer ? (
           <div style={{ padding: '8px 12px' }}>
             <div style={{ display: 'flex', gap: 5, overflowX: 'auto', marginBottom: 8 }}>
-              {COLORS.map(c => <button key={c} onClick={() => setColor(c)} style={{ minWidth: 30, height: 30, borderRadius: '50%', background: c, border: color === c ? '3px solid #FFD600' : '2px solid rgba(255,255,255,0.3)', cursor: 'pointer' }} />)}
+              {COLORS.map(c => <button key={c} onClick={() => setColor(c)} style={{ minWidth: 30, height: 30, background: c, border: color === c ? '3px solid var(--game-accent)' : '2px solid var(--game-text-muted)', cursor: 'pointer' }} />)}
             </div>
-            <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', borderRadius: '12px 12px 0 0', padding: '8px' }}>
-              {TOOLS.map(t => <button key={t.id} onClick={() => setTool(t.id)} style={{ width: 40, height: 40, background: tool === t.id ? 'rgba(255,214,0,0.3)' : 'none', border: 'none', borderRadius: 8 }}>{t.icon}</button>)}
+            <div style={{ display: 'flex', gap: 4, background: 'var(--game-surface)', border: '2px solid var(--game-text)', padding: '8px' }}>
+              {TOOLS.map(t => <button key={t.id} onClick={() => setTool(t.id)} style={{ width: 40, height: 40, background: tool === t.id ? 'var(--game-surface-strong)' : 'none', border: tool === t.id ? '2px solid var(--game-accent)' : '2px solid transparent' }}>{t.icon}</button>)}
               <div style={{ flex: 1 }} />
-              <button onClick={() => undoLastStroke(roomCode)} style={{ width: 40, height: 40, background: 'none', border: 'none' }}>↩️</button>
-              <button onClick={() => clearDrawCanvas(roomCode)} style={{ width: 40, height: 40, background: 'none', border: 'none' }}>🗑️</button>
+              <button onClick={() => undoLastStroke(roomCode)} style={{ width: 40, height: 40, background: 'none', border: '2px solid var(--game-text)' }}>↩️</button>
+              <button onClick={() => clearDrawCanvas(roomCode)} style={{ width: 40, height: 40, background: 'none', border: '2px solid var(--game-text)' }}>🗑️</button>
             </div>
-            <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 12px 12px', padding: '8px' }}>
-              <button disabled={timeLeft > (room.drawTime || 80) / 2 || ds.showWordLength} onClick={() => revealWordLength(roomCode)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(255,214,0,0.3)', color: 'white', border: 'none', fontWeight: 900, fontSize: 13 }}>{ds.showWordLength ? 'تم الكشف ✅' : 'إظهار العدد 🔢'}</button>
-              <button onClick={() => { if (ds.hintRevealCount < (ds.wordLength || 0) - 1 && hintCooldown <= 0) { revealHint(roomCode); setHintCooldown(12); } }} disabled={ds.hintRevealCount >= (ds.wordLength || 0) - 1 || hintCooldown > 0} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', fontWeight: 900, fontSize: 13 }}>{hintCooldown > 0 ? `${hintCooldown}ث` : '💡 تلميح'}</button>
+            <div style={{ display: 'flex', gap: 4, background: 'var(--game-surface)', borderTop: 'none', border: '2px solid var(--game-text)', padding: '8px' }}>
+              <button disabled={timeLeft > (room.drawTime || 80) / 2 || ds.showWordLength} onClick={() => revealWordLength(roomCode)} className="btn" style={{ flex: 1, padding: '10px', background: ds.showWordLength ? 'var(--game-surface)' : 'var(--game-surface-strong)', color: 'var(--game-text)', border: '2px solid var(--game-text)', fontSize: 13, fontWeight: 900 }}>{ds.showWordLength ? 'تم الكشف ✅' : 'إظهار العدد 🔢'}</button>
+              <button onClick={() => { if (ds.hintRevealCount < (ds.wordLength || 0) - 1 && hintCooldown <= 0) { revealHint(roomCode); setHintCooldown(12); } }} disabled={ds.hintRevealCount >= (ds.wordLength || 0) - 1 || hintCooldown > 0} className="btn" style={{ flex: 1, padding: '10px', background: 'var(--game-surface)', color: 'var(--game-text)', border: '2px solid var(--game-text)', fontSize: 13, fontWeight: 900 }}>{hintCooldown > 0 ? `${hintCooldown}ث` : '💡 تلميح'}</button>
             </div>
           </div>
         ) : (
@@ -392,38 +387,23 @@ export default function DrawGameScreen({ nav, roomCode }) {
             <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, scrollbarWidth: 'none', paddingBottom: 10 }}>
               {(ds.messages || []).map((m, i) => (
                 <div key={i} style={{ display: 'flex', gap: 6, flexDirection: 'row-reverse', alignItems: 'center' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 900, fontSize: 11 }}>{m.username}:</span>
-                  <span style={{ background: m.isCorrect ? 'rgba(118,255,3,0.2)' : 'rgba(255,255,255,0.1)', color: 'white', padding: '4px 12px', borderRadius: 14, fontSize: 13 }}>{m.isCorrect && m.uid !== myUid ? 'خمّن!' : m.text}</span>
+                  <span style={{ color: 'var(--game-text-muted)', fontWeight: 900, fontSize: 11 }}>{m.username}:</span>
+                  <span style={{ background: m.isCorrect ? 'rgba(118,255,3,0.2)' : 'var(--game-surface)', color: 'var(--game-text)', padding: '4px 12px', border: m.isCorrect ? '2px solid var(--game-success)' : '2px solid var(--game-text)', fontSize: 13 }}>{m.isCorrect && m.uid !== myUid ? 'خمّن!' : m.text}</span>
                 </div>
               ))}
             </div>
             {!myAlreadyGuessed ? (
-              <div style={{ display: 'flex', gap: 8, background: 'rgba(255,255,255,0.15)', borderRadius: 14, padding: '8px 12px', border: '2px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
-                <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendGuess()} placeholder="اكتب تخمينك..." style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'white', fontWeight: 700, direction: 'rtl' }} />
-                <button onClick={handleSendGuess} style={{ background: '#2979FF', color: 'white', border: 'none', borderRadius: 10, padding: '6px 16px', fontWeight: 900 }}>خمّن</button>
+              <div style={{ display: 'flex', gap: 8, background: 'var(--game-surface)', padding: '8px 12px', border: '3px solid var(--game-text)', boxShadow: '3px 3px 0 rgba(0,0,0,0.2)', flexShrink: 0 }}>
+                <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendGuess()} placeholder="اكتب تخمينك..." style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--game-text)', fontWeight: 700, direction: 'rtl', fontFamily: 'Cairo, sans-serif' }} />
+                <button onClick={handleSendGuess} className="btn btn-yellow" style={{ padding: '6px 16px', fontSize: 14 }}>خمّن</button>
               </div>
-            ) : <div style={{ textAlign: 'center', color: '#76FF03', fontWeight: 900, fontSize: 15, padding: '10px', background: 'rgba(118,255,3,0.1)', borderRadius: 14 }}>✅ خمّنت صلح!</div>}
+            ) : <div style={{ textAlign: 'center', color: 'var(--game-success)', fontWeight: 900, fontSize: 15, padding: '10px', background: 'rgba(118,255,3,0.1)', border: '3px solid var(--game-success)' }}>✅ خمّنت صلح!</div>}
           </div>
         )}
       </div>
 
       {showExitConfirm && <ExitConfirmModal onCancel={() => setShowExitConfirm(false)} onConfirm={handleExit} />}
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
-    </div>
-  );
-}
-
-function ExitConfirmModal({ onCancel, onConfirm }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div className="card" style={{ padding: 24, width: '100%', maxWidth: 300, textAlign: 'center' }}>
-        <h3 style={{ margin: '0 0 10px', color: 'var(--bg-dark-purple)' }}>تغادر الغرفة؟</h3>
-        <p style={{ margin: '0 0 20px', fontSize: 14, color: '#666' }}>ستخسر تقدمك في هذه الجولة.</p>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onCancel} className="btn btn-white" style={{ flex: 1 }}>لأ</button>
-          <button onClick={onConfirm} className="btn btn-pink" style={{ flex: 1 }}>أيوة</button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
-import { listenToRoom, updateGameState, leaveRoom, resolveChallenge, resetRoomToLobby } from '../firebase/rooms';
+import { serverTimestamp } from 'firebase/firestore';
+import { auth } from '../firebase/config';
+import { listenToRoom, updateGameState, leaveRoom, resetRoomToLobby } from '../firebase/rooms';
 import { normalizeArabic } from '../utils/textUtils';
 import { appCategories } from '../data/categories';
-import { playSound, getHornType, startHorn, stopHorn, warmAudio } from '../utils/audio';
+import { playSound, getHornType, startHorn, stopHorn } from '../utils/audio';
 import { isPlayerMuted } from '../services/socket';
 
 const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
