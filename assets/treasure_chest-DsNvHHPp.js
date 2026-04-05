@@ -1,0 +1,1 @@
+var e=`/monkey-game/assets/single_coin-D9PAQiF6.png`,t=`/monkey-game/assets/treasure_chest-Dd3KNjKj.png`;export{e as n,t};
