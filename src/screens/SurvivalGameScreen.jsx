@@ -68,7 +68,7 @@ export default function SurvivalGameScreen() {
   const status = survivalState?.status; // 'question' or 'reveal' or 'finished'
 
   const answeredCount = Object.keys(survivalState?.answers || {}).length;
-  const players = (room.playerOrder || []).map(uid => ({ ...room.players[uid], uid, lives: survivalState?.alivePlayers?.[uid] || 0 })).filter(p => !!p.uid);
+  const players = (room?.playerOrder || []).map(uid => ({ ...room?.players?.[uid], uid, lives: survivalState?.alivePlayers?.[uid] || 0 })).filter(p => !!p.uid);
   const totalAlive = players.filter(p => p.lives > 0).length;
   const labels = ['أ', 'ب', 'ج', 'د'];
 
