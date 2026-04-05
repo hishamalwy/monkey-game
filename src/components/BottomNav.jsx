@@ -1,8 +1,8 @@
 import React from 'react';
 
 const TABS = [
-  { key: 'settings', label: 'الإعدادات', src: 'settings.png' },
-  { key: 'store', label: 'المتجر', src: 'shop.png' },
+  { key: 'settings', label: 'الإعدادات', src: 'settings_gear.png' },
+  { key: 'store', label: 'المتجر', src: 'treasure_chest.png' },
   { key: 'leaderboard', label: 'الترتيب', src: 'leaderboard.png' },
   { key: 'home', label: 'الرئيسية', src: 'home.png' },
 ];

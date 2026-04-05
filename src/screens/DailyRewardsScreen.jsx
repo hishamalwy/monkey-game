@@ -13,6 +13,9 @@ import { claimDailyBonus, claimChallenge } from '../firebase/retention';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import Toast from '../components/ui/Toast';
+import singleCoinIcon from '../assets/icons/single_coin.png';
+import coinsBundleIcon from '../assets/icons/coins_bundle.png';
+import treasureChestIcon from '../assets/icons/treasure_chest.png';
 
 export default function DailyRewardsScreen() {
   const { userProfile } = useAuth();
@@ -38,6 +41,7 @@ export default function DailyRewardsScreen() {
     try {
       await claimDailyBonus(userProfile.uid, userProfile);
       setClaimedToday(true);
+      setToast('تم استلام الهدية! 🥥');
     } catch (e) {
       console.error(e);
     } finally {
@@ -48,73 +52,133 @@ export default function DailyRewardsScreen() {
   const handleClaimChallenge = async (challenge) => {
     try {
       await claimChallenge(userProfile.uid, challenge, userProfile);
-      setToast(`+${challenge.reward} 🪙`);
+      setToast(`+${challenge.reward} عملة! 💎`);
     } catch (e) {
       setToast(e.message || 'حدث خطأ');
     }
   };
 
   return (
-    <div className="brutal-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="brutal-bg" style={{ 
+      width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', 
+      overflow: 'hidden', background: 'var(--bg-dark-purple)' 
+    }}>
       
-      {/* Background Decor */}
-      <div className="bg-stickers">
-        <div style={{ position: 'absolute', top: '15%', left: '5%', fontSize: 32, transform: 'rotate(-15deg)' }}>🎁</div>
-        <div style={{ position: 'absolute', top: '40%', right: '8%', fontSize: 36, transform: 'rotate(12deg)' }}>🎯</div>
-        <div style={{ position: 'absolute', bottom: '25%', left: '10%', fontSize: 28, transform: 'rotate(10deg)' }}>🔥</div>
-      </div>
+      {/* Dynamic Background */}
+      <div style={{ position: 'absolute', inset: 0, opacity: 0.1, pointerEvents: 'none', zIndex: 1, backgroundImage: 'radial-gradient(#FFF 2px, transparent 2px)', backgroundSize: '30px 30px' }} />
 
       {/* Header */}
-      <div className="top-nav-brutal" style={{ background: '#FFF', position: 'relative', zIndex: 10 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>مركز المكافآت</h1>
+      <div className="top-nav-brutal" style={{ 
+        background: 'var(--bg-yellow)', borderBottom: '5px solid var(--bg-dark-purple)', 
+        position: 'relative', zIndex: 10, padding: '16px 20px', justifyContent: 'center'
+      }}>
+        <div style={{ position: 'absolute', left: 16 }}>
+          <button onClick={() => nav.toHome()} className="btn btn-white" style={{ width: 40, height: 40, borderRadius: '12px', fontSize: 20 }}>✕</button>
+        </div>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 950, color: 'var(--bg-dark-purple)', textShadow: '2px 2px 0 #FFF' }}>مركز الهدايا 🎁</h1>
       </div>
 
-      <div className="content-with-nav" style={{ flex: 1, overflowY: 'auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, position: 'relative', zIndex: 5 }}>
+      <div className="content-with-nav" style={{ 
+        flex: 1, overflowY: 'auto', padding: '24px 16px env(safe-area-inset-bottom)', 
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, 
+        position: 'relative', zIndex: 5 
+      }}>
         
-        {/* Daily Streak Card */}
-        <div className="card" style={{ width: '100%', maxWidth: 400, padding: '24px', background: '#FFF', borderRadius: 'var(--brutal-radius-lg)', border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>{getStreakEmoji(streak)}</div>
-          <h2 style={{ fontSize: 24, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 4px' }}>ستريك {streak} أيام! 🔥</h2>
+        {/* Streak Dashboard */}
+        <div className="card slide-up" style={{ 
+          width: '100%', maxWidth: 410, padding: '24px 16px', background: '#FFF', 
+          borderRadius: '28px', border: '5.5px solid var(--bg-dark-purple)', 
+          boxShadow: '10px 10px 0 var(--bg-pink)', position: 'relative'
+        }}>
+          {/* Subtle bg monkey removed for clarity if it was occluding text */}
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, margin: '24px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, padding: '0 4px' }}>
+            <div style={{ flex: 1, textAlign: 'right', direction: 'rtl' }}>
+              <h2 style={{ fontSize: 'clamp(22px, 6vw, 28px)', fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.1 }}>ستريك {streak} أيام</h2>
+              <p style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-pink)', margin: '4px 0 0' }}>استمر كل يوم للجائزة الكبرى! 🔥</p>
+            </div>
+            <div style={{ fontSize: 'clamp(40px, 10vw, 54px)', marginRight: 12 }}>{getStreakEmoji(streak)}</div>
+          </div>
+          
+          <div style={{ 
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px 8px', marginBottom: 26,
+            direction: 'rtl' 
+          }}>
             {[1, 2, 3, 4, 5, 6, 7].map((d) => {
               const isCurrent = d === streak;
               const isPast = d < streak;
+              let icon = singleCoinIcon;
+              if (d >= 4 && d <= 6) icon = coinsBundleIcon;
+              if (d === 7) icon = treasureChestIcon;
+
               return (
-                <div key={d} className="card" style={{ padding: '12px 4px', borderRadius: '12px', background: isPast ? 'var(--bg-green)' : isCurrent ? 'var(--bg-pink)' : '#F3F4F6', color: (isPast || isCurrent) ? '#FFF' : 'var(--bg-dark-purple)', border: '3px solid var(--bg-dark-purple)', boxShadow: isCurrent ? '4px 4px 0 var(--bg-dark-purple)' : 'none', transform: isCurrent ? 'scale(1.1) rotate(-3deg)' : 'none' }}>
-                  <div style={{ fontSize: 10, fontWeight: 950 }}>يوم {d}</div>
-                  <div style={{ fontSize: 16 }}>{isPast ? '✅' : '🪙'}</div>
+                <div key={d} className="card pop" style={{ 
+                  padding: '12px 4px', borderRadius: '18px', 
+                  background: isPast ? 'var(--bg-green)' : isCurrent ? 'var(--bg-yellow)' : '#F5F5FF', 
+                  color: 'var(--bg-dark-purple)', 
+                  border: isCurrent ? '4.5px solid var(--bg-dark-purple)' : '3.5px solid var(--bg-dark-purple)', 
+                  boxShadow: isCurrent ? '0px 0px 12px rgba(255,227,0,0.4)' : 'none', 
+                  transform: isCurrent ? 'scale(1.08) rotate(-2deg)' : 'none',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  position: 'relative'
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 950, opacity: 0.8 }}>ي {d}</div>
+                  <img src={icon} style={{ width: d === 7 ? 38 : 28, height: d === 7 ? 38 : 28, objectFit: 'contain' }} />
+                  <div style={{ fontSize: 10, fontWeight: 950, color: isCurrent || isPast ? 'var(--bg-dark-purple)' : '#999', display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {d * 50} <img src={singleCoinIcon} style={{ width: 12, height: 12 }} />
+                  </div>
+                  {isPast && (
+                    <div style={{ 
+                      position: 'absolute', top: -6, right: -6, background: 'var(--bg-dark-purple)', 
+                      color: '#FFF', width: 20, height: 20, borderRadius: '50%', 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11,
+                      border: '2px solid #FFF', zIndex: 10
+                    }}>✓</div>
+                  )}
                 </div>
               );
             })}
-             <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: streak >= 7 ? 'var(--bg-blue)' : '#EEE', color: (streak >= 7) ? '#FFF' : '#AAA', borderRadius: '12px', border: '3px solid var(--bg-dark-purple)' }}>
-               <span style={{ fontSize: 20 }}>🎁</span>
-             </div>
           </div>
 
           {(isNewDay && !claimedToday) ? (
-            <button onClick={handleClaim} disabled={claiming} className="btn btn-pink" style={{ width: '100%', padding: '18px', fontSize: 18, borderRadius: '16px' }}>
-              {claiming ? '...' : 'استلم هدية اليوم! 🪙'}
+            <button 
+              onClick={handleClaim} 
+              disabled={claiming} 
+              className="btn btn-yellow pop" 
+              style={{ width: '100%', padding: '20px', fontSize: 20, borderRadius: '18px', boxShadow: '5px 5px 0 var(--bg-dark-purple)' }}
+            >
+              {claiming ? 'جاري الاستلام...' : 'استلم هديتك الآن! 🎁'}
             </button>
           ) : (
-            <div style={{ padding: 18, background: 'var(--bg-green)', color: 'var(--bg-dark-purple)', borderRadius: '16px', fontWeight: 950, border: '3px solid var(--bg-dark-purple)', fontSize: 16 }}>تم استلام هدية اليوم! ✅</div>
+            <div style={{ 
+              padding: 20, background: 'var(--bg-green)', color: '#FFF', 
+              borderRadius: '18px', fontWeight: 950, border: '4px solid var(--bg-dark-purple)', 
+              fontSize: 18, textAlign: 'center', boxShadow: '4px 4px 0 var(--bg-dark-purple)' 
+            }}>
+               تم استلام هدية اليوم! ✅
+            </div>
           )}
         </div>
 
-        {/* Challenges Wizard */}
+        {/* Challenges Section */}
         <div style={{ width: '100%', maxWidth: 400 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, direction: 'rtl' }}>
-            <span style={{ fontSize: 24 }}>🎯</span>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>تحديات اليوم</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, direction: 'rtl', padding: '0 8px' }}>
+            <div style={{ background: 'var(--bg-pink)', width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid var(--bg-dark-purple)', fontSize: 24 }}>🎯</div>
+            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 950, color: '#FFF' }}>تحديات يومية</h3>
             <div style={{ flex: 1 }} />
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
               {challenges.map((_, idx) => (
-                <div key={idx} style={{ width: activeChallengeIndex === idx ? 16 : 6, height: 6, background: activeChallengeIndex === idx ? 'var(--bg-pink)' : 'rgba(28,16,64,0.2)', borderRadius: 3, transition: 'all 0.3s ease' }} />
+                <div key={idx} style={{ width: activeChallengeIndex === idx ? 20 : 8, height: 8, background: activeChallengeIndex === idx ? 'var(--bg-yellow)' : 'rgba(255,255,255,0.2)', borderRadius: 4, transition: 'all 0.3s ease' }} />
               ))}
             </div>
           </div>
 
-          <div className="card" style={{ padding: '24px', minHeight: 180, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', borderRadius: '24px', background: '#FFF', border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
+          <div className="card slide-up" style={{ 
+            padding: '24px', minHeight: 220, display: 'flex', flexDirection: 'column', 
+            justifyContent: 'center', position: 'relative', borderRadius: '28px', 
+            background: '#FFF', border: '5px solid var(--bg-dark-purple)', 
+            boxShadow: '8px 8px 0 var(--bg-blue)' 
+          }}>
             {(() => {
               const ch = challenges[activeChallengeIndex];
               if (!ch) return null;
@@ -123,40 +187,84 @@ export default function DailyRewardsScreen() {
               const claimed = isChallengeClaimed(ch, userProfile);
               const pct = Math.min(100, (progress / ch.target) * 100);
               return (
-                <div key={ch.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, direction: 'rtl' }}>
-                    <div style={{ fontSize: 32, width: 64, height: 64, background: 'var(--bg-blue)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>{ch.emoji}</div>
+                <div key={ch.id} style={{ animation: 'fadeIn 0.3s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24, direction: 'rtl' }}>
+                    <div style={{ 
+                      fontSize: 40, width: 75, height: 75, background: 'var(--bg-blue)', 
+                      borderRadius: '18px', display: 'flex', alignItems: 'center', 
+                      justifyContent: 'center', border: '4px solid var(--bg-dark-purple)', 
+                      boxShadow: '4px 4px 0 var(--bg-dark-purple)' 
+                    }}>{ch.emoji}</div>
                     <div style={{ flex: 1, textAlign: 'right' }}>
-                      <div style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>{ch.label}</div>
-                      <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--bg-pink)', marginTop: 4 }}>الجائزة: {ch.reward} 🪙</div>
+                      <div style={{ fontSize: 20, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.2 }}>{ch.label}</div>
+                      <div style={{ 
+                        fontSize: 14, fontWeight: 950, color: 'var(--bg-pink)', 
+                        marginTop: 6, display: 'flex', alignItems: 'center', 
+                        justifyContent: 'flex-end', gap: 6 
+                      }}>
+                        الجائزة: {ch.reward} <img src={singleCoinIcon} style={{ width: 18, height: 18 }} />
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1, height: 16, background: '#F0F0F0', border: '3px solid var(--bg-dark-purple)', borderRadius: 10, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: complete ? 'var(--bg-green)' : 'var(--bg-pink)', transition: 'width 0.5s ease' }} />
+                  
+                  <div style={{ marginBottom: 25 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, direction: 'rtl', fontWeight: 950, fontSize: 13 }}>
+                        <span>الإنجاز:</span>
+                        <span>{progress} / {ch.target}</span>
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 950, minWidth: 44 }}>{progress}/{ch.target}</div>
+                    <div style={{ width: '100%', height: 20, background: '#F0F0F0', border: '3.5px solid var(--bg-dark-purple)', borderRadius: 12, overflow: 'hidden' }}>
+                      <div style={{ 
+                        height: '100%', width: `${pct}%`, 
+                        background: complete ? 'var(--bg-green)' : 'var(--bg-pink)', 
+                        transition: 'width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)'
+                      }} />
+                    </div>
                   </div>
-                  <div style={{ marginTop: 24 }}>
-                    {claimed ? <div className="btn btn-white" style={{ width: '100%', padding: 14, opacity: 0.7, borderRadius: '14px' }}>تم الاستلام ✅</div> : complete ? <button onClick={() => handleClaimChallenge(ch)} className="btn btn-green" style={{ width: '100%', padding: 14, borderRadius: '14px' }}>استلم المكافأة! 🪙</button> : <button disabled className="btn btn-white" style={{ width: '100%', padding: 14, opacity: 0.5, borderRadius: '14px' }}>خلص المهمة 🐒</button>}
+
+                  <div>
+                    {claimed ? (
+                      <div className="btn btn-white" style={{ width: '100%', padding: 16, opacity: 0.7, borderRadius: '16px', background: '#EEE' }}>تم الاستلام ✅</div>
+                    ) : complete ? (
+                      <button onClick={() => handleClaimChallenge(ch)} className="btn btn-green pop" style={{ width: '100%', padding: 16, borderRadius: '16px', fontSize: 18, boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>استلم المكافأة! 🔥</button>
+                    ) : (
+                      <button disabled className="btn btn-white" style={{ width: '100%', padding: 16, opacity: 0.5, borderRadius: '16px', fontSize: 16 }}>العب وجرب حظك! 🐒</button>
+                    )}
                   </div>
                 </div>
               );
             })()}
-            {/* Navigation buttons moved for better responsiveness */}
-            <button onClick={() => setActiveChallengeIndex(i => (i - 1 + challenges.length) % challenges.length)} style={{ position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, padding: 0, zIndex: 10 }} className="btn btn-yellow">←</button>
-            <button onClick={() => setActiveChallengeIndex(i => (i + 1) % challenges.length)} style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, padding: 0, zIndex: 10 }} className="btn btn-yellow">→</button>
+            {/* Nav Controls Inside Card */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+              <button 
+                onClick={() => setActiveChallengeIndex(i => (i - 1 + challenges.length) % challenges.length)} 
+                className="btn btn-yellow" 
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: 18 }}
+              >
+                السابق
+              </button>
+              <button 
+                onClick={() => setActiveChallengeIndex(i => (i + 1) % challenges.length)} 
+                className="btn btn-yellow" 
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: 18 }}
+              >
+                التالي
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Global Strategy Box */}
-        <div className="card" style={{ padding: '20px', width: '100%', maxWidth: 400, borderRadius: '20px', background: 'var(--bg-dark-purple)', color: '#FFF', border: 'none' }}>
-           <h3 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 950, color: '#FFE300' }}>قواعد المكافآت 💡</h3>
-           <ul style={{ margin: 0, paddingRight: 20, fontSize: 14, fontWeight: 800, textAlign: 'right', direction: 'rtl', lineHeight: 1.6 }}>
-             <li>ادخل كل يوم عشان ستريكك ميروحش 🔥</li>
-             <li>خلص المهام عشان تجمع عملات بسرعة 🪙</li>
-             <li>اليوم السابع فيه جايزة كبرى مستنياك! 🏆</li>
-           </ul>
+        {/* Tip Box */}
+        <div className="card" style={{ 
+          padding: '16px 20px', width: '100%', maxWidth: 400, borderRadius: '24px', 
+          background: 'var(--bg-green)', color: 'var(--bg-dark-purple)', 
+          border: '4px solid var(--bg-dark-purple)', boxShadow: '5px 5px 0 var(--bg-yellow)',
+          display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20
+        }}>
+           <div style={{ fontSize: 32 }}>💡</div>
+           <p style={{ margin: 0, fontSize: 14, fontWeight: 950, textAlign: 'right', direction: 'rtl', lineHeight: 1.4 }}>
+             اليوم السابع فيه **صندوق الكنز** جايزة كبرى! اوعى تفوت الستريك بتاعك 🔥
+           </p>
         </div>
 
       </div>

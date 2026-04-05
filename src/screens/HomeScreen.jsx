@@ -14,6 +14,7 @@ import DailyBonusModal from '../components/shared/DailyBonusModal';
 import ReconnectModal from '../components/shared/ReconnectModal';
 import ConnectionStatus from '../components/shared/ConnectionStatus';
 import hero from '../assets/hero.webp';
+import singleCoinIcon from '../assets/icons/single_coin.png';
 
 export default function HomeScreen() {
   const { userProfile, logout } = useAuth();
@@ -176,12 +177,13 @@ export default function HomeScreen() {
         {/* Shortened Tip Box */}
         <div className="card pop" style={{ 
            marginTop: 4, padding: '10px 16px', background: '#FFF', 
-           borderRadius: '14px', fontSize: 12, fontWeight: 950, color: 'var(--bg-dark-purple)',
+           borderRadius: '14px', fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)',
            width: '100%', maxWidth: 380, textAlign: 'center',
            border: '2.5px solid var(--bg-dark-purple)',
-           boxShadow: '3px 3px 0px var(--bg-dark-purple)'
+           boxShadow: '3px 3px 0px var(--bg-dark-purple)',
+           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
         }}>
-           💡 <span style={{ color: 'var(--bg-pink)' }}>نصيحة:</span> خلص المهام واكسب كوينز أكتر! 🪙
+           💡 <span style={{ color: 'var(--bg-pink)' }}>نصيحة:</span> خلص المهام واكسب عملات أكتر! <img src={singleCoinIcon} style={{ width: 20, height: 20 }} />
         </div>
 
       </div>

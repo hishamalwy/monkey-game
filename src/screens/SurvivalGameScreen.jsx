@@ -14,7 +14,7 @@ export default function SurvivalGameScreen() {
   const [room, setRoom] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [toast, setToast] = useState('');
-  const [timer, setTimer] = useState(0);
+  const [timer, setTimer] = useState(15);
   const timerIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -60,29 +60,29 @@ export default function SurvivalGameScreen() {
 
   // Auto-reveal logic moved below declarations
 
+  const survivalState = room?.survivalState;
+  const isHost = room?.hostUid === userProfile?.uid;
+  const isAlive = survivalState?.alivePlayers?.[userProfile.uid];
+  const currentQ = survivalState?.questions?.[survivalState.currentQuestionIndex];
+  const status = survivalState?.status; // 'question' or 'reveal' or 'finished'
+
+  const answeredCount = Object.keys(survivalState?.answers || {}).length;
+  const totalAlive = Object.values(survivalState?.alivePlayers || {}).filter(v => v).length;
+  const labels = ['أ', 'ب', 'ج', 'د'];
+
   useEffect(() => {
     if (isHost && status === 'question') {
       if (answeredCount >= totalAlive && totalAlive > 0) {
         handleReveal();
-      } else if (timer === 0 && room?.survivalState?.roundStartTime) { // only if timer actually reached 0 and not just starting
+      } else if (timer === 0 && survivalState?.roundStartTime) { 
         handleReveal();
       }
     }
-  }, [isHost, status, answeredCount, totalAlive, timer]);
+  }, [isHost, status, answeredCount, totalAlive, timer, survivalState?.roundStartTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!room || !room.survivalState) {
+  if (!room || !survivalState) {
     return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
   }
-
-  const { survivalState } = room;
-  const isHost = room.hostUid === userProfile.uid;
-  const isAlive = survivalState.alivePlayers[userProfile.uid];
-  const currentQ = survivalState.questions[survivalState.currentQuestionIndex];
-  const status = survivalState.status; // 'question' or 'reveal' or 'finished'
-
-  const answeredCount = Object.keys(survivalState.answers || {}).length;
-  const totalAlive = Object.values(survivalState.alivePlayers).filter(v => v).length;
-  const labels = ['أ', 'ب', 'ج', 'د'];
   
   const handleAnswer = async (idx) => {
     if (status !== 'question' || !isAlive || selectedAnswer !== null) return;
@@ -175,7 +175,10 @@ export default function SurvivalGameScreen() {
             السؤال {survivalState.currentQuestionIndex + 1}
           </div>
           
-          <div className="card slide-up" style={{ padding: '24px 20px', borderRadius: '20px', border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-pink)' }}>
+          <div className="card slide-up" style={{ 
+            padding: '20px 16px', borderRadius: '16px', border: '4px solid var(--bg-dark-purple)', 
+            boxShadow: '4px 4px 0 var(--bg-pink)', width: 'calc(100% - 10px)', margin: '0 auto' 
+          }}>
             <h2 style={{ fontSize: 22, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.4, margin: 0 }}>
                 {currentQ.q}
             </h2>
@@ -271,15 +274,7 @@ export default function SurvivalGameScreen() {
 
         {isHost && (
           <div style={{ display: 'flex', gap: 12 }}>
-            {status === 'question' ? (
-              <button 
-                onClick={handleReveal}
-                className="btn btn-pink" 
-                style={{ flex: 1, padding: '16px', fontSize: 18, borderRadius: '16px', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}
-              >
-                  اكشف الإجابة 🔍
-              </button>
-            ) : (
+            {status === 'reveal' && (
               <button 
                 onClick={handleNext}
                 className="btn btn-green" 
@@ -287,6 +282,11 @@ export default function SurvivalGameScreen() {
               >
                   {totalAlive <= 1 ? 'نهاية المسابقة 🏁' : 'السؤال التالي ➡️'}
               </button>
+            )}
+            {status === 'question' && (
+               <div style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.05)', borderRadius: '12px', fontSize: 13, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>
+                  ⏳ بانتظار الجميع أو انتهاء الوقت...
+               </div>
             )}
           </div>
         )}

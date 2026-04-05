@@ -11,6 +11,7 @@ import { HORN_TYPES, getHornType, setHornType, previewHorn } from '../utils/audi
 import { useNavigation } from '../hooks/useNavigation';
 import { getLevel, getLevelProgress, getLevelTitle, getLevelEmoji, xpForNextLevel } from '../utils/xp';
 import { getOwnedHorns } from '../utils/store';
+import settingsGearIcon from '../assets/icons/settings_gear.png';
 
 export default function SettingsScreen() {
   const nav = useNavigation();
@@ -92,13 +93,16 @@ export default function SettingsScreen() {
 
       {/* Background Decor */}
       <div className="bg-stickers">
-        <div style={{ position: 'absolute', top: '15%', right: '10%', fontSize: 32, transform: 'rotate(20deg)' }}>⚙️</div>
+        <div style={{ position: 'absolute', top: '15%', right: '10%', opacity: 0.6 }}>
+          <img src={settingsGearIcon} style={{ width: 48, height: 48, transform: 'rotate(20deg)' }} />
+        </div>
         <div style={{ position: 'absolute', bottom: '15%', left: '10%', fontSize: 40, transform: 'rotate(-15deg)' }}>🐵</div>
       </div>
 
       {/* Header */}
-      <div className="top-nav-brutal" style={{ background: '#FFF', position: 'relative', zIndex: 10 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0 }}>⚙️ الإعدادات</h1>
+      <div className="top-nav-brutal" style={{ background: '#FFF', position: 'relative', zIndex: 10, gap: 10 }}>
+        <img src={settingsGearIcon} style={{ width: 32, height: 32 }} />
+        <h1 style={{ fontSize: 22, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0 }}>الإعدادات</h1>
       </div>
 
       <div className="content-with-nav" style={{ flex: 1, overflowY: 'auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 20, position: 'relative', zIndex: 5 }}>
@@ -140,7 +144,10 @@ export default function SettingsScreen() {
 
         {/* Account Details */}
         <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, background: '#FFF', border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-dark-purple)' }}>
-           <h3 style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0 }}>⚙️ اسم اللاعب</h3>
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+             <img src={settingsGearIcon} style={{ width: 22, height: 22 }} />
+             <h3 style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0 }}>اسم اللاعب</h3>
+           </div>
            <div style={{ display: 'flex', gap: 10 }}>
              <input className="input-field" value={newUsername} onChange={e => setNewUsername(e.target.value)} placeholder="ادخل اسم جديد" style={{ flex: 1, padding: '14px' }} />
              <button onClick={handleSaveUsername} disabled={savingUser || newUsername === userProfile?.username} className="btn btn-yellow" style={{ padding: '0 20px', borderRadius: '12px', opacity: (savingUser || newUsername === userProfile?.username) ? 0.5 : 1 }}>{savingUser ? '...' : 'حفظ'}</button>

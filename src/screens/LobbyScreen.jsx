@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings } from '../firebase/rooms';
+import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings, kickPlayer } from '../firebase/rooms';
 import { startDrawGame } from '../firebase/drawRooms';
 import { startSurvivalGame } from '../firebase/survivalRooms';
 import { appCategories } from '../data/categories';
@@ -15,7 +15,7 @@ const SLOT_PLACEHOLDERS = ['🦉', '🦊', '🐢', '🐸', '🦋', '🐬', '🦚
 
 
 
-function PlayerRow({ player, isHost, isMe }) {
+function PlayerRow({ player, isHost, isMe, canKick, onKick }) {
   const ready = player.isReady;
   return (
     <div style={{
@@ -23,12 +23,12 @@ function PlayerRow({ player, isHost, isMe }) {
       padding: '14px 16px',
       background: '#FFF',
       border: 'var(--brutal-border)',
-      marginBottom: -4, // overlap borders for seamless list
+      marginBottom: -4, 
+      boxSizing: 'border-box',
+      width: '100%'
     }}>
-      {/* Avatar circle */}
       <UserAvatar avatarId={player.avatarId ?? 1} size={54} />
 
-      {/* Name + host badge */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 14, fontWeight: 900, color: 'var(--bg-dark-purple)',
@@ -36,25 +36,37 @@ function PlayerRow({ player, isHost, isMe }) {
           direction: 'ltr', textAlign: 'left',
         }}>
           {player.username}
-          {isMe && <span style={{ fontSize: 10, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 5px', fontFamily: 'Cairo, sans-serif' }}>أنت</span>}
-          {isHost && <span style={{ fontSize: 10, background: 'var(--bg-dark-purple)', color: 'var(--bg-yellow)', padding: '1px 5px', fontFamily: 'Cairo, sans-serif' }}>مضيف</span>}
+          {isMe && <span style={{ fontSize: 10, background: 'var(--bg-pink)', color: '#FFF', padding: '1px 5px' }}>أنت</span>}
+          {isHost && <span style={{ fontSize: 10, background: 'var(--bg-dark-purple)', color: 'var(--bg-yellow)', padding: '1px 5px' }}>مضيف</span>}
         </div>
       </div>
 
-      {/* Ready status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-        <span style={{
-          width: 10, height: 10, borderRadius: '50%',
-          background: ready ? '#22C55E' : '#9CA3AF',
-          border: '2px solid rgba(0,0,0,0.15)',
-          display: 'inline-block',
-        }} />
-        <span style={{
-          fontSize: 13, fontWeight: 900,
-          color: ready ? '#22C55E' : '#9CA3AF',
-        }}>
-          {ready ? 'جاهز' : 'انتظار...'}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        {canKick && !isMe && (
+          <button 
+            onClick={() => onKick(player.uid)}
+            style={{ 
+              background: '#FF4D4D', border: '2px solid var(--bg-dark-purple)', 
+              color: '#FFF', padding: '4px 8px', fontSize: 10, fontWeight: 950,
+              borderRadius: '6px', cursor: 'pointer', boxShadow: '2px 2px 0 var(--bg-dark-purple)'
+            }}
+          >
+            طرد 👟
+          </button>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: ready ? '#22C55E' : '#9CA3AF',
+            border: '2px solid rgba(0,0,0,0.1)',
+          }} />
+          <span style={{
+            fontSize: 12, fontWeight: 900,
+            color: ready ? '#22C55E' : '#9CA3AF',
+          }}>
+            {ready ? 'جاهز' : '..'}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -157,6 +169,14 @@ export default function LobbyScreen() {
   const handleLeave = async () => {
     await leaveRoom(roomCode, userProfile.uid, isHost, room.playerOrder);
     nav.toHome();
+  };
+  const handleKick = async (targetUid) => {
+    if (isHost) {
+      try {
+        await kickPlayer(roomCode, targetUid);
+        setToast('تم طرد اللاعب');
+      } catch (e) { setToast(e.message); }
+    }
   };
   const copyCode = () => {
     navigator.clipboard?.writeText(roomCode).catch(() => { });
@@ -353,6 +373,8 @@ export default function LobbyScreen() {
             player={p}
             isHost={p.uid === room.hostUid}
             isMe={p.uid === userProfile?.uid}
+            canKick={isHost}
+            onKick={handleKick}
           />
         ))}
         {Array.from({ length: emptyCount }, (_, i) => (

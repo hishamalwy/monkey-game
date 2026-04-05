@@ -263,7 +263,7 @@ export default function DrawGameScreen() {
 
   if (ds.roundStatus === 'choosing') {
     return (
-      <div className="brutal-bg" style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="brutal-bg" style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div className="top-nav-brutal" style={{ background: '#FFF', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
           <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ width: 44, height: 44, fontSize: 18, borderRadius: '12px' }}>✕</button>
           <div style={{ textAlign: 'center' }}>
@@ -312,7 +312,7 @@ export default function DrawGameScreen() {
     const roundScores = ds.roundScores || {};
     const sortedPlayers = [...players].sort((a, b) => (ds.scores?.[b.uid] || 0) - (ds.scores?.[a.uid] || 0));
     return (
-      <div className="brutal-bg" style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="brutal-bg" style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div className="top-nav-brutal" style={{ background: '#FFF', justifyContent: 'center', position: 'relative', zIndex: 10 }}>
            <h2 style={{ color: 'var(--bg-dark-purple)', fontWeight: 950, fontSize: 24, margin: 0 }}>النتائج 📊</h2>
         </div>
@@ -336,8 +336,10 @@ export default function DrawGameScreen() {
     );
   }
 
+  const isKeyboardOpen = vh < 580; // Heuristic for mobile keyboard
+
   return (
-    <div className="brutal-bg" style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="brutal-bg" style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
       {/* ── HEADER ── */}
       <div className="top-nav-brutal" style={{ background: '#FFF', justifyContent: 'space-between', padding: '10px 16px', position: 'relative', zIndex: 10 }}>
@@ -401,25 +403,27 @@ export default function DrawGameScreen() {
       </div>
 
       {/* ── PLAYERS STRIP ── */}
-      <div style={{ display: 'flex', gap: 10, padding: '0 16px 16px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none', position: 'relative', zIndex: 10 }}>
-        {players.map(p => {
-          const isMe = p.uid === myUid;
-          const guessed = ds.guessersDone?.includes(p.uid);
-          const isCurrentDrawer = p.uid === ds.drawerUid;
-          return (
-            <div key={p.uid} className="card" style={{ 
-              display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 64, padding: '8px', 
-              background: guessed ? 'var(--bg-green)' : (isCurrentDrawer ? 'var(--bg-yellow)' : '#FFF'), 
-              borderRadius: '12px', border: isMe ? '3px solid var(--bg-pink)' : '3px solid var(--bg-dark-purple)',
-              boxShadow: isMe ? '4px 4px 0 var(--bg-pink)' : 'none'
-            }}>
-              <UserAvatar avatarId={p.avatarId ?? 1} size={30} />
-              <div style={{ color: 'var(--bg-dark-purple)', fontSize: 10, fontWeight: 950, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textWidth: 50 }}>{p.username.slice(0,8)}</div>
-              <div style={{ color: 'var(--bg-dark-purple)', fontSize: 12, fontWeight: 950 }}>{ds.scores?.[p.uid] || 0}</div>
-            </div>
-          );
-        })}
-      </div>
+      {!isKeyboardOpen && (
+        <div style={{ display: 'flex', gap: 10, padding: '0 16px 16px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none', position: 'relative', zIndex: 10 }}>
+          {players.map(p => {
+            const isMe = p.uid === myUid;
+            const guessed = ds.guessersDone?.includes(p.uid);
+            const isCurrentDrawer = p.uid === ds.drawerUid;
+            return (
+              <div key={p.uid} className="card" style={{ 
+                display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 64, padding: '8px', 
+                background: guessed ? 'var(--bg-green)' : (isCurrentDrawer ? 'var(--bg-yellow)' : '#FFF'), 
+                borderRadius: '12px', border: isMe ? '3px solid var(--bg-pink)' : '3px solid var(--bg-dark-purple)',
+                boxShadow: isMe ? '4px 4px 0 var(--bg-pink)' : 'none'
+              }}>
+                <UserAvatar avatarId={p.avatarId ?? 1} size={30} />
+                <div style={{ color: 'var(--bg-dark-purple)', fontSize: 10, fontWeight: 950, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textWidth: 50 }}>{p.username.slice(0,8)}</div>
+                <div style={{ color: 'var(--bg-dark-purple)', fontSize: 12, fontWeight: 950 }}>{ds.scores?.[p.uid] || 0}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── BOTTOM AREA: TOOLS OR CHAT ── */}
       <div className="card" style={{ flex: '0 0 auto', background: '#FFF', borderTop: '4px solid var(--bg-dark-purple)', borderBottom: 'none', borderLeft: 'none', borderRight: 'none', borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderRadius: '32px 32px 0 0', padding: '16px 16px 30px', position: 'relative', zIndex: 20, boxShadow: '0 -4px 10px rgba(0,0,0,0.1)' }}>

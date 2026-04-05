@@ -1,5 +1,7 @@
 import { getStreakEmoji } from '../../utils/retention';
 import { useNavigate } from 'react-router-dom';
+import singleCoinIcon from '../../assets/icons/single_coin.png';
+import treasureChestIcon from '../../assets/icons/treasure_chest.png';
 
 const STREAK_DAYS = [1, 2, 3, 4, 5, 6, 7];
 
@@ -55,9 +57,10 @@ export default function DailyBonusModal({ streak, bonus, onClaim }) {
           background: '#FFF', border: 'var(--brutal-border)',
           padding: '24px 40px', marginBottom: 40, fontWeight: 950, fontSize: 32,
           color: 'var(--bg-dark-purple)', borderRadius: '20px',
-          boxShadow: 'var(--brutal-shadow)'
+          boxShadow: 'var(--brutal-shadow)',
+          display: 'flex', alignItems: 'center', gap: 12
         }}>
-          +{bonus} <span style={{ fontSize: 40 }}>🪙</span>
+          +{bonus} <img src={streak === 7 ? treasureChestIcon : singleCoinIcon} style={{ width: 54, height: 54 }} />
         </div>
 
         <button 

@@ -65,105 +65,108 @@ export default function SurvivalGameOverScreen() {
   const bgColor = isWinner ? 'var(--bg-yellow)' : 'var(--bg-dark-purple)';
   const titleColor = isWinner ? 'var(--bg-dark-purple)' : '#FFF';
   const titleShadow = isWinner ? '4px 4px 0 #FFF' : '4px 4px 0 var(--bg-pink)';
-  const cardShadow = isWinner ? '12px 12px 0 var(--bg-pink)' : '12px 12px 0 var(--bg-green)';
+  const cardShadow = isWinner ? '6px 6px 0 var(--bg-pink)' : '6px 6px 0 var(--bg-green)';
   const xpGained = isWinner ? 50 : 10;
 
   return (
-    <div style={{
-      width: '100%', height: '100%',
+    <div className="brutal-bg" style={{
+      width: '100%', height: '100dvh',
       display: 'flex', flexDirection: 'column',
-      padding: '24px',
+      padding: '12px',
       alignItems: 'center',
       justifyContent: 'center',
       textAlign: 'center',
       background: bgColor,
       position: 'relative',
+      boxSizing: 'border-box',
       overflow: 'hidden'
     }}>
-      <div style={{ position: 'absolute', top: 20, left: 20, fontSize: 40, opacity: isWinner ? 0.4 : 0.1, transform: 'rotate(-15deg)' }}>🏆</div>
-      <div style={{ position: 'absolute', bottom: 40, right: 30, fontSize: 50, opacity: isWinner ? 0.4 : 0.1, transform: 'rotate(20deg)' }}>💀</div>
+      <div style={{ position: 'absolute', top: 12, left: 12, fontSize: 24, opacity: isWinner ? 1 : 0.05, transform: 'rotate(-10deg)', zIndex: 1 }}>🏆</div>
+      <div style={{ position: 'absolute', bottom: 24, right: 16, fontSize: 32, opacity: isWinner ? 0.3 : 0.05, transform: 'rotate(15deg)', zIndex: 1 }}>💀</div>
 
       <h1 className="title-glitch pop" style={{
-        fontSize: isWinner ? 50 : 40,
-        marginBottom: 24,
+        fontSize: isWinner ? 'clamp(26px, 8vw, 42px)' : 'clamp(22px, 7vw, 32px)',
+        marginBottom: 16,
         color: titleColor,
-        textShadow: titleShadow
+        textShadow: titleShadow,
+        lineHeight: 1
       }}>
         {isWinner ? 'البطل الوحيد! 👑' : 'تم استبعادك! 💀'}
       </h1>
 
       <div className="card slide-up" style={{
-        padding: '40px 24px',
-        marginBottom: 32,
-        width: '100%',
-        maxWidth: 420,
+        padding: '16px 12px',
+        marginBottom: 16,
+        width: '92%',
+        maxWidth: 300,
         background: '#FFF',
-        border: '6px solid var(--bg-dark-purple)',
+        border: '3.5px solid var(--bg-dark-purple)',
         boxShadow: cardShadow,
-        position: 'relative'
+        position: 'relative',
+        boxSizing: 'border-box'
       }}>
           <div style={{
-            position: 'absolute', top: -15, right: '50%', transform: 'translateX(50%) rotate(-2deg)',
-            background: 'var(--bg-dark-purple)', color: '#FFF', padding: '4px 16px',
-            fontWeight: 950, fontSize: 12, border: '2px solid #FFF', whiteSpace: 'nowrap'
+            position: 'absolute', top: -10, right: '50%', transform: 'translateX(50%) rotate(-2deg)',
+            background: 'var(--bg-dark-purple)', color: '#FFF', padding: '2px 8px',
+            fontWeight: 950, fontSize: 10, border: '1.5px solid #FFF', whiteSpace: 'nowrap'
           }}>
             {isWinner ? 'ناجي مذهل' : 'استسلم مؤسف'}
           </div>
 
-          <div className="pop" style={{ fontSize: 90, marginBottom: 16 }}>{isWinner ? '🦁' : '🤕'}</div>
+          <div className="pop" style={{ fontSize: 54, marginBottom: 8 }}>{isWinner ? '🦁' : '🤕'}</div>
 
-          <h2 style={{ fontSize: 28, fontWeight: 950, color: 'var(--bg-dark-purple)', marginBottom: 8, lineHeight: 1.1 }}>
-              {isWinner ? 'سيطرة كاملة!' : 'حظ موفق المرة القادمة'}
+          <h2 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', marginBottom: 4, lineHeight: 1.1 }}>
+              {isWinner ? 'سيطرة كاملة!' : 'حظ موفق'}
           </h2>
 
           <div style={{
             background: isWinner ? 'var(--bg-green)' : 'var(--bg-pink)',
-            color: '#FFF', padding: '8px 20px', display: 'inline-block',
-            fontWeight: 950, fontSize: 18, marginTop: 12, border: '4px solid var(--bg-dark-purple)'
+            color: '#FFF', padding: '4px 12px', display: 'inline-block',
+            fontWeight: 950, fontSize: 13, marginTop: 4, border: '3px solid var(--bg-dark-purple)'
           }}>
             {winner ? winner.username : 'لا يوجد فائز'}
           </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginBottom: 32, width: '100%', maxWidth: 420 }}>
-          <div style={{ flex: 1, background: '#FFF', border: '5px solid var(--bg-dark-purple)', padding: 18, boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>
-              <div style={{ fontSize: 11, fontWeight: 950, color: 'var(--bg-pink)', textTransform: 'uppercase', marginBottom: 4 }}>الجولات</div>
-              <div style={{ fontSize: 36, fontWeight: 950 }}>{survivalState.currentQuestionIndex + 1}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 16, width: '92%', maxWidth: 300 }}>
+          <div style={{ background: '#FFF', border: '3.5px solid var(--bg-dark-purple)', padding: 8, boxShadow: '3px 3px 0 var(--bg-dark-purple)', boxSizing: 'border-box' }}>
+              <div style={{ fontSize: 8, fontWeight: 950, color: 'var(--bg-pink)', textTransform: 'uppercase' }}>جولة</div>
+              <div style={{ fontSize: 20, fontWeight: 950 }}>{survivalState.currentQuestionIndex + 1}</div>
           </div>
-          <div style={{ flex: 1, background: '#FFF', border: '5px solid var(--bg-dark-purple)', padding: 18, boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>
-              <div style={{ fontSize: 11, fontWeight: 950, color: 'var(--bg-green)', textTransform: 'uppercase', marginBottom: 4 }}>الناجون</div>
-              <div style={{ fontSize: 36, fontWeight: 950 }}>{alivePlayersUids.length}</div>
+          <div style={{ background: '#FFF', border: '3.5px solid var(--bg-dark-purple)', padding: 8, boxShadow: '3px 3px 0 var(--bg-dark-purple)', boxSizing: 'border-box' }}>
+              <div style={{ fontSize: 8, fontWeight: 950, color: 'var(--bg-green)', textTransform: 'uppercase' }}>ناجٍ</div>
+              <div style={{ fontSize: 20, fontWeight: 950 }}>{alivePlayersUids.length}</div>
           </div>
-          <div style={{ flex: 1, background: '#FFF', border: '5px solid var(--bg-dark-purple)', padding: 18, boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>
-              <div style={{ fontSize: 11, fontWeight: 950, color: 'var(--bg-yellow)', textTransform: 'uppercase', marginBottom: 4 }}>XP</div>
-              <div style={{ fontSize: 36, fontWeight: 950 }}>+{xpGained}</div>
+          <div style={{ background: '#FFF', border: '3.5px solid var(--bg-dark-purple)', padding: 8, boxShadow: '3px 3px 0 var(--bg-dark-purple)', boxSizing: 'border-box' }}>
+              <div style={{ fontSize: 8, fontWeight: 950, color: 'var(--bg-yellow)', textTransform: 'uppercase' }}>XP</div>
+              <div style={{ fontSize: 20, fontWeight: 950 }}>+{xpGained}</div>
           </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 420, zIndex: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '92%', maxWidth: 300, zIndex: 10 }}>
         {isHost ? (
           <button
             onClick={handleResetToLobby}
             className="btn btn-yellow"
-            style={{ padding: '20px', fontSize: 24, boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}
+            style={{ padding: '12px', fontSize: 16, boxShadow: '4px 4px 0 var(--bg-dark-purple)', borderRadius: '10px' }}
           >
               🔄 العودة للروم
           </button>
         ) : (
           <div style={{
             background: 'rgba(255,255,255,0.1)', border: '2px dashed #FFF', color: '#FFF',
-            padding: 12, fontWeight: 900, fontSize: 14
+            padding: 8, fontWeight: 900, fontSize: 11
           }}>
-            ⏳ بانتظار الهوست لإعطاء أمر العودة...
+            ⏳ بانتظار الهوست للعودة...
           </div>
         )}
 
         <button
           onClick={handleReturnAction}
           className="btn btn-white"
-          style={{ padding: '16px', fontSize: 18, opacity: 0.9 }}
+          style={{ padding: '10px', fontSize: 13, border: '3px solid var(--bg-dark-purple)', borderRadius: '10px' }}
         >
-            الانسحاب للشاشة الرئيسية 🏠
+            الانسحاب 🏠
         </button>
       </div>
     </div>

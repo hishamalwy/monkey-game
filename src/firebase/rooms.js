@@ -24,6 +24,16 @@ async function generateUniqueCode() {
 }
 
 export async function createRoom(userProfile, settings = {}) {
+  // 🧹 Cleanup: Delete any existing rooms created by this user
+  try {
+    const q = query(collection(db, 'rooms'), where('hostUid', '==', userProfile.uid));
+    const snap = await getDocs(q);
+    const batch = snap.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(batch);
+  } catch (err) {
+    console.error('Room cleanup failed:', err);
+  }
+
   const code = await generateUniqueCode();
   const roomRef = doc(db, 'rooms', code);
 
@@ -121,12 +131,18 @@ export async function updateRoomSettings(code, settings) {
 
 export async function leaveRoom(code, uid, isHost) {
   const roomRef = doc(db, 'rooms', code);
+  
+  // 🚪 If host leaves, kill the room for everyone
+  if (isHost) {
+    await deleteDoc(roomRef);
+    return;
+  }
+
   const snap = await getDoc(roomRef);
   if (!snap.exists()) return;
 
   const room = snap.data();
-  const playersMap = room.players || {};
-  const currentUids = Object.keys(playersMap);
+  const currentUids = Object.keys(room.players || {});
   const remainingUids = currentUids.filter(id => id !== uid);
 
   // If nobody left, delete the room
@@ -140,14 +156,15 @@ export async function leaveRoom(code, uid, isHost) {
     playerOrder: arrayRemove(uid),
   };
 
-  // If the host is leaving, promote someone else
-  if (isHost || room.hostUid === uid) {
-    if (remainingUids.length > 0) {
-      patch.hostUid = remainingUids[0];
-    }
-  }
-
   await updateDoc(roomRef, patch);
+}
+
+export async function kickPlayer(code, uid) {
+  const roomRef = doc(db, 'rooms', code);
+  await updateDoc(roomRef, {
+    [`players.${uid}`]: deleteField(),
+    playerOrder: arrayRemove(uid),
+  });
 }
 
 export async function resetRoomToLobby(code) {
