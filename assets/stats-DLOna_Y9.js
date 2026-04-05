@@ -1,1 +1,0 @@
-import{a as e,b as t,d as n,m as r,o as i,p as a,u as o,w as s}from"./AuthContext-CTOfCPGq.js";async function c(n,r){await i(t(e,`users`,n,`matches`),{...r,playedAt:s()})}async function l(i,s=20){return(await o(r(t(e,`users`,i,`matches`),a(`playedAt`,`desc`),n(s)))).docs.map(e=>({id:e.id,...e.data()}))}export{c as n,l as t};
