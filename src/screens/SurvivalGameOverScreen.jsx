@@ -7,6 +7,7 @@ import { recordMatch } from '../firebase/stats';
 import { incrementDailyStat } from '../firebase/retention';
 import { COIN_REWARDS } from '../utils/store';
 import { XP_REWARDS } from '../utils/xp';
+import UserAvatar from '../components/ui/UserAvatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 
@@ -27,15 +28,25 @@ export default function SurvivalGameOverScreen() {
   }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!room || !room.survivalState) {
-    return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   const { survivalState } = room;
-  const isHost = room.hostUid === userProfile.uid;
-  const alivePlayersUids = Object.keys(survivalState.alivePlayers).filter(uid => survivalState.alivePlayers[uid]);
-  const isWinner = alivePlayersUids.includes(userProfile.uid);
-  const winnerUid = alivePlayersUids[0];
-  const winner = room.players[winnerUid];
+  const isHost = room.hostUid === userProfile?.uid;
+  const aliveUids = Object.keys(survivalState.alivePlayers).filter(uid => survivalState.alivePlayers[uid] > 0);
+  const isWinner = aliveUids.includes(userProfile?.uid);
+  const winnerUid = aliveUids[0];
+  const winner = room.players?.[winnerUid];
+
+  // Sort all players: alive first, then by lives desc
+  const allPlayers = (room.playerOrder || []).map(uid => ({
+    ...room.players?.[uid], uid,
+    lives: survivalState.alivePlayers?.[uid] || 0,
+  })).sort((a, b) => b.lives - a.lives);
 
   if (!coinsAwarded && userProfile) {
     setCoinsAwarded(true);
@@ -54,7 +65,7 @@ export default function SurvivalGameOverScreen() {
   }
 
   const handleReturnAction = async () => {
-    await leaveRoom(roomCode, userProfile.uid, isHost, room.playerOrder);
+    await leaveRoom(roomCode, userProfile?.uid, isHost, room.playerOrder);
     nav.toHome();
   };
 
@@ -62,111 +73,184 @@ export default function SurvivalGameOverScreen() {
     if (isHost) await resetRoomToLobby(roomCode);
   };
 
-  const bgColor = isWinner ? 'var(--bg-yellow)' : 'var(--bg-dark-purple)';
-  const titleColor = isWinner ? 'var(--bg-dark-purple)' : '#FFF';
-  const titleShadow = isWinner ? '4px 4px 0 #FFF' : '4px 4px 0 var(--bg-pink)';
-  const cardShadow = isWinner ? '6px 6px 0 var(--bg-pink)' : '6px 6px 0 var(--bg-green)';
-  const xpGained = isWinner ? 50 : 10;
+  const Heart = ({ filled }) => (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill={filled ? '#FF1F8E' : 'rgba(28,16,64,0.15)'} stroke={filled ? '#C0006E' : 'rgba(28,16,64,0.25)'} strokeWidth="1">
+      <path d="M10 17s-7-5.25-7-9.5A4.5 4.5 0 0 1 10 4.16 4.5 4.5 0 0 1 17 7.5C17 11.75 10 17 10 17z" />
+    </svg>
+  );
 
   return (
-    <div className="brutal-bg" style={{
-      width: '100%', height: '100dvh',
-      display: 'flex', flexDirection: 'column',
-      padding: '12px',
-      alignItems: 'center',
-      justifyContent: 'center',
-      textAlign: 'center',
-      background: bgColor,
-      position: 'relative',
-      boxSizing: 'border-box',
-      overflow: 'hidden'
-    }}>
-      <div style={{ position: 'absolute', top: 12, left: 12, fontSize: 24, opacity: isWinner ? 1 : 0.05, transform: 'rotate(-10deg)', zIndex: 1 }}>🏆</div>
-      <div style={{ position: 'absolute', bottom: 24, right: 16, fontSize: 32, opacity: isWinner ? 0.3 : 0.05, transform: 'rotate(15deg)', zIndex: 1 }}>💀</div>
-
-      <h1 className="title-glitch pop" style={{
-        fontSize: isWinner ? 'clamp(26px, 8vw, 42px)' : 'clamp(22px, 7vw, 32px)',
-        marginBottom: 16,
-        color: titleColor,
-        textShadow: titleShadow,
-        lineHeight: 1
-      }}>
-        {isWinner ? 'البطل الوحيد! 👑' : 'تم استبعادك! 💀'}
-      </h1>
-
-      <div className="card slide-up" style={{
-        padding: '16px 12px',
-        marginBottom: 16,
-        width: '92%',
-        maxWidth: 300,
-        background: '#FFF',
-        border: '3.5px solid var(--bg-dark-purple)',
-        boxShadow: cardShadow,
+    <div
+      className="brutal-bg"
+      style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+    >
+      {/* ── HEADER BANNER ── */}
+      <div style={{
+        background: isWinner ? 'var(--bg-yellow)' : 'var(--bg-dark-purple)',
+        borderBottom: '4px solid var(--bg-dark-purple)',
+        padding: '18px 16px 14px',
+        textAlign: 'center',
+        flexShrink: 0,
         position: 'relative',
-        boxSizing: 'border-box'
       }}>
-          <div style={{
-            position: 'absolute', top: -10, right: '50%', transform: 'translateX(50%) rotate(-2deg)',
-            background: 'var(--bg-dark-purple)', color: '#FFF', padding: '2px 8px',
-            fontWeight: 950, fontSize: 10, border: '1.5px solid #FFF', whiteSpace: 'nowrap'
-          }}>
-            {isWinner ? 'ناجي مذهل' : 'استسلم مؤسف'}
-          </div>
-
-          <div className="pop" style={{ fontSize: 54, marginBottom: 8 }}>{isWinner ? '🦁' : '🤕'}</div>
-
-          <h2 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', marginBottom: 4, lineHeight: 1.1 }}>
-              {isWinner ? 'سيطرة كاملة!' : 'حظ موفق'}
-          </h2>
-
-          <div style={{
-            background: isWinner ? 'var(--bg-green)' : 'var(--bg-pink)',
-            color: '#FFF', padding: '4px 12px', display: 'inline-block',
-            fontWeight: 950, fontSize: 13, marginTop: 4, border: '3px solid var(--bg-dark-purple)'
-          }}>
-            {winner ? winner.username : 'لا يوجد فائز'}
-          </div>
+        <div style={{ fontSize: 40, lineHeight: 1 }}>{isWinner ? '🏆' : '💀'}</div>
+        <h1 style={{
+          margin: '6px 0 0',
+          fontSize: 22, fontWeight: 950,
+          color: isWinner ? 'var(--bg-dark-purple)' : '#FFF',
+          textShadow: isWinner ? '3px 3px 0 #FFF' : '3px 3px 0 var(--bg-pink)',
+          lineHeight: 1.1,
+        }}>
+          {isWinner ? 'البطل الوحيد! 👑' : 'تم استبعادك! 💔'}
+        </h1>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 16, width: '92%', maxWidth: 300 }}>
-          <div style={{ background: '#FFF', border: '3.5px solid var(--bg-dark-purple)', padding: 8, boxShadow: '3px 3px 0 var(--bg-dark-purple)', boxSizing: 'border-box' }}>
-              <div style={{ fontSize: 8, fontWeight: 950, color: 'var(--bg-pink)', textTransform: 'uppercase' }}>جولة</div>
-              <div style={{ fontSize: 20, fontWeight: 950 }}>{survivalState.currentQuestionIndex + 1}</div>
+      {/* ── WINNER CARD ── */}
+      <div style={{ padding: '16px 16px 0', flexShrink: 0 }}>
+        <div style={{
+          background: '#FFF',
+          border: '4px solid var(--bg-dark-purple)',
+          borderRadius: '18px',
+          boxShadow: '6px 6px 0 var(--bg-pink)',
+          padding: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          position: 'relative',
+        }}>
+          <div style={{
+            position: 'absolute', top: -14, left: 16,
+            background: 'var(--bg-dark-purple)', color: 'var(--bg-yellow)',
+            padding: '2px 10px', borderRadius: '100px',
+            fontWeight: 950, fontSize: 11,
+            border: '3px solid var(--bg-dark-purple)',
+          }}>
+            🏆 الفائز
           </div>
-          <div style={{ background: '#FFF', border: '3.5px solid var(--bg-dark-purple)', padding: 8, boxShadow: '3px 3px 0 var(--bg-dark-purple)', boxSizing: 'border-box' }}>
-              <div style={{ fontSize: 8, fontWeight: 950, color: 'var(--bg-green)', textTransform: 'uppercase' }}>ناجٍ</div>
-              <div style={{ fontSize: 20, fontWeight: 950 }}>{alivePlayersUids.length}</div>
+          <div style={{
+            border: '4px solid var(--bg-yellow)',
+            borderRadius: '50%',
+            boxShadow: '4px 4px 0 var(--bg-dark-purple)',
+            flexShrink: 0,
+          }}>
+            <UserAvatar avatarId={winner?.avatarId ?? 1} size={54} />
           </div>
-          <div style={{ background: '#FFF', border: '3.5px solid var(--bg-dark-purple)', padding: 8, boxShadow: '3px 3px 0 var(--bg-dark-purple)', boxSizing: 'border-box' }}>
-              <div style={{ fontSize: 8, fontWeight: 950, color: 'var(--bg-yellow)', textTransform: 'uppercase' }}>XP</div>
-              <div style={{ fontSize: 20, fontWeight: 950 }}>+{xpGained}</div>
+          <div>
+            <div style={{ fontWeight: 950, fontSize: 19, color: 'var(--bg-dark-purple)', lineHeight: 1.1 }}>
+              {winner?.username || 'لا يوجد فائز'}
+            </div>
+            <div style={{
+              display: 'inline-block',
+              background: 'var(--bg-green)', color: '#FFF',
+              border: '3px solid var(--bg-dark-purple)',
+              padding: '2px 10px', borderRadius: '100px',
+              fontWeight: 950, fontSize: 11, marginTop: 4,
+            }}>
+              ✔️ ناجٍ
+            </div>
           </div>
+          {/* Stats */}
+          <div style={{ marginLeft: 'auto', textAlign: 'center' }}>
+            <div style={{ fontWeight: 950, fontSize: 24, color: 'var(--bg-pink)', lineHeight: 1 }}>
+              {survivalState.currentQuestionIndex + 1}
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--bg-dark-purple)', opacity: 0.6 }}>جولة</div>
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '92%', maxWidth: 300, zIndex: 10 }}>
+      {/* ── PLAYER LEADERBOARD ── */}
+      <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {allPlayers.map((p, i) => {
+          const isMe = p.uid === userProfile?.uid;
+          const alive = p.lives > 0;
+          return (
+            <div
+              key={p.uid}
+              style={{
+                background: isMe ? 'var(--bg-yellow)' : '#FFF',
+                border: `3.5px solid var(--bg-dark-purple)`,
+                borderRadius: '14px',
+                boxShadow: isMe ? '4px 4px 0 var(--bg-dark-purple)' : '3px 3px 0 rgba(28,16,64,0.2)',
+                padding: '10px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                opacity: alive ? 1 : 0.6,
+              }}
+            >
+              <span style={{ fontWeight: 950, fontSize: 13, color: 'var(--bg-dark-purple)', width: 22, textAlign: 'center' }}>
+                {alive ? (i === 0 ? '🥇' : `#${i + 1}`) : '💀'}
+              </span>
+              <div style={{
+                borderRadius: '50%',
+                border: `3px solid ${alive ? 'var(--bg-dark-purple)' : '#CCC'}`,
+                filter: alive ? 'none' : 'grayscale(1)',
+                flexShrink: 0,
+              }}>
+                <UserAvatar avatarId={p.avatarId ?? 1} size={34} />
+              </div>
+              <span style={{ flex: 1, fontWeight: 950, fontSize: 14, color: 'var(--bg-dark-purple)' }}>
+                {p.username}
+                {isMe && <span style={{ fontSize: 10, marginRight: 4, opacity: 0.7 }}>(أنت)</span>}
+              </span>
+              {/* Hearts */}
+              <div style={{ display: 'flex', gap: 2 }}>
+                <Heart filled={p.lives >= 1} />
+                <Heart filled={p.lives >= 2} />
+                <Heart filled={p.lives >= 3} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── XP BANNER ── */}
+      <div style={{
+        margin: '0 16px 12px',
+        background: isWinner ? 'var(--bg-green)' : 'var(--bg-dark-purple)',
+        border: '3px solid var(--bg-dark-purple)',
+        borderRadius: '14px',
+        boxShadow: '4px 4px 0 var(--bg-dark-purple)',
+        padding: '10px',
+        textAlign: 'center',
+        color: isWinner ? 'var(--bg-dark-purple)' : 'var(--bg-yellow)',
+        fontWeight: 950, fontSize: 14,
+        flexShrink: 0,
+      }}>
+        +{isWinner ? XP_REWARDS.WIN : XP_REWARDS.LOSS} XP {isWinner ? '🏆' : '📚'}
+      </div>
+
+      {/* ── FOOTER ACTIONS ── */}
+      <div style={{
+        background: '#FFF',
+        borderTop: '4px solid var(--bg-dark-purple)',
+        padding: '12px 16px env(safe-area-inset-bottom)',
+        display: 'flex', flexDirection: 'column', gap: 8,
+        flexShrink: 0,
+      }}>
         {isHost ? (
           <button
             onClick={handleResetToLobby}
             className="btn btn-yellow"
-            style={{ padding: '12px', fontSize: 16, boxShadow: '4px 4px 0 var(--bg-dark-purple)', borderRadius: '10px' }}
+            style={{ padding: '14px', fontSize: 16, boxShadow: '4px 4px 0 var(--bg-dark-purple)', borderRadius: '12px', fontWeight: 950 }}
           >
-              🔄 العودة للروم
+            🔄 العودة للروم
           </button>
         ) : (
           <div style={{
-            background: 'rgba(255,255,255,0.1)', border: '2px dashed #FFF', color: '#FFF',
-            padding: 8, fontWeight: 900, fontSize: 11
+            textAlign: 'center', fontWeight: 900, fontSize: 12,
+            color: 'var(--bg-dark-purple)', opacity: 0.6,
           }}>
             ⏳ بانتظار الهوست للعودة...
           </div>
         )}
-
         <button
           onClick={handleReturnAction}
           className="btn btn-white"
-          style={{ padding: '10px', fontSize: 13, border: '3px solid var(--bg-dark-purple)', borderRadius: '10px' }}
+          style={{ padding: '11px', fontSize: 14, border: '3px solid var(--bg-dark-purple)', borderRadius: '12px' }}
         >
-            الانسحاب 🏠
+          🏠 الانسحاب
         </button>
       </div>
     </div>
