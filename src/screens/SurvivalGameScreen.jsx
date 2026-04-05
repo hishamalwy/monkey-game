@@ -281,11 +281,16 @@ export default function SurvivalGameScreen() {
                 <div style={{ 
                   width: 24, height: 24, borderRadius: '50%', 
                   background: isSelected || isCorrect || isWrong ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.08)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11,
+                  flexShrink: 0
                 }}>
                   {labels[i]}
                 </div>
-                <span style={{ textAlign: 'center', fontSize: 13 }}>{ans}</span>
+                <span style={{ 
+                  textAlign: 'center', 
+                  fontSize: ans.length > 80 ? 10 : ans.length > 45 ? 11 : 13,
+                  lineHeight: 1.3
+                }}>{ans}</span>
               </button>
             );
           })}
