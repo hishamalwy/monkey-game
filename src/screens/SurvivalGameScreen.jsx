@@ -62,12 +62,14 @@ export default function SurvivalGameScreen() {
 
   const survivalState = room?.survivalState;
   const isHost = room?.hostUid === userProfile?.uid;
-  const isAlive = survivalState?.alivePlayers?.[userProfile.uid];
+  const lives = survivalState?.alivePlayers?.[userProfile.uid] || 0;
+  const isAlive = lives > 0;
   const currentQ = survivalState?.questions?.[survivalState.currentQuestionIndex];
   const status = survivalState?.status; // 'question' or 'reveal' or 'finished'
 
   const answeredCount = Object.keys(survivalState?.answers || {}).length;
-  const totalAlive = Object.values(survivalState?.alivePlayers || {}).filter(v => v).length;
+  const players = (room.playerOrder || []).map(uid => ({ ...room.players[uid], uid, lives: survivalState?.alivePlayers?.[uid] || 0 })).filter(p => !!p.uid);
+  const totalAlive = players.filter(p => p.lives > 0).length;
   const labels = ['أ', 'ب', 'ج', 'د'];
 
   useEffect(() => {
@@ -103,12 +105,15 @@ export default function SurvivalGameScreen() {
     const eliminatedThisRound = [];
     
     Object.keys(survivalState.alivePlayers).forEach(uid => {
-      if (!survivalState.alivePlayers[uid]) return;
+      const currentLives = survivalState.alivePlayers[uid];
+      if (currentLives <= 0) return;
       
       const playerAnswer = survivalState.answers[uid]?.answer;
       if (playerAnswer === undefined || playerAnswer !== correctIdx) {
-        newAlivePlayers[uid] = false;
-        eliminatedThisRound.push(uid);
+        newAlivePlayers[uid] = currentLives - 1;
+        if (newAlivePlayers[uid] <= 0) {
+           eliminatedThisRound.push(uid);
+        }
       }
     });
 
@@ -122,7 +127,7 @@ export default function SurvivalGameScreen() {
   const handleNext = async () => {
     if (!isHost || status !== 'reveal') return;
     
-    const aliveCount = Object.values(survivalState.alivePlayers).filter(v => v).length;
+    const aliveCount = Object.values(survivalState.alivePlayers).filter(v => v > 0).length;
     
     // If only one (or zero) survives, it's Game Over
     if (aliveCount <= 1 || survivalState.currentQuestionIndex >= survivalState.questions.length - 1) {
@@ -137,6 +142,14 @@ export default function SurvivalGameScreen() {
     }
   };
 
+
+  const PixelHeart = ({ filled }) => (
+    <div style={{ width: 14, height: 14, position: 'relative', display: 'inline-block' }}>
+      <svg viewBox="0 0 8 8" fill={filled ? "#FF4D4D" : "#CCC"} stroke="none">
+        <path d="M2,1 H3 M5,1 H6 M1,2 H4 M5,2 H8 M1,3 H8 M1,4 H8 M2,5 H7 M3,6 H6 M4,7 H5" />
+      </svg>
+    </div>
+  );
 
   return (
     <div className="brutal-bg" style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -163,32 +176,61 @@ export default function SurvivalGameScreen() {
         </div>
       </div>
 
-      {/* ── CONTENT ── */}
-      <div style={{ flex: 1, padding: '16px 20px', display: 'flex', flexDirection: 'column', overflowY: 'auto', position: 'relative', zIndex: 5 }}>
+      {/* ── PLAYER LIST (SCROLLABLE STRIP) ── */}
+      <div style={{ padding: '10px 16px', display: 'flex', gap: 10, overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none', background: 'rgba(255,255,255,0.3)', borderBottom: '3px solid var(--bg-dark-purple)' }}>
+         {players.map(p => (
+           <div key={p.uid} style={{ 
+             display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 50, 
+             opacity: p.lives <= 0 ? 0.4 : 1, filter: p.lives <= 0 ? 'grayscale(1)' : 'none'
+           }}>
+             <div style={{ position: 'relative' }}>
+                <UserAvatar avatarId={p.avatarId ?? 1} size={32} />
+                {p.uid === userProfile.uid && <div style={{ position: 'absolute', top: -4, right: -4, background: 'var(--bg-pink)', width: 8, height: 8, borderRadius: '50%', border: '1px solid #FFF' }} />}
+             </div>
+             <div style={{ display: 'flex', gap: 2, marginTop: 4 }}>
+                <PixelHeart filled={p.lives >= 1} />
+                <PixelHeart filled={p.lives >= 2} />
+                <PixelHeart filled={p.lives >= 3} />
+             </div>
+           </div>
+         ))}
+      </div>
+
+      {/* ── BOARD AREA ── */}
+      <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', position: 'relative', overflow: 'hidden' }}>
         
-        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        {/* The "Blackboard" wrapper */}
+        <div className="card" style={{ 
+          position: 'relative', width: 'min(90vw, 400px)', padding: '24px 20px', 
+          background: 'var(--bg-dark-purple)', // Chalkboard style
+          border: '10px solid #8d6e63', // Wooden frame
+          borderRadius: '12px',
+          boxShadow: '10px 10px 0 rgba(0,0,0,0.15)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: 180, textAlign: 'center'
+        }}>
           <div style={{ 
-            display: 'inline-block', background: 'var(--bg-dark-purple)', color: '#FFF', 
-            padding: '4px 14px', fontSize: 12, fontWeight: 950, borderRadius: '6px',
-            marginBottom: 10, transform: 'rotate(-1deg)'
+            position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(255,255,255,0.1)', color: '#FFF', padding: '2px 10px', fontSize: 10, borderRadius: 20
           }}>
-            السؤال {survivalState.currentQuestionIndex + 1}
+            AraSTEM • سؤال {survivalState.currentQuestionIndex + 1}
           </div>
           
-          <div className="card slide-up" style={{ 
-            padding: '20px 16px', borderRadius: '16px', border: '4px solid var(--bg-dark-purple)', 
-            boxShadow: '4px 4px 0 var(--bg-pink)', width: 'calc(100% - 10px)', margin: '0 auto' 
-          }}>
-            <h2 style={{ fontSize: 22, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.4, margin: 0 }}>
-                {currentQ.q}
-            </h2>
-          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 950, color: '#FFF', lineHeight: 1.4, margin: 0, textShadow: '2px 2px 0 rgba(0,0,0,0.3)' }}>
+              {currentQ.q}
+          </h2>
+          
+          {/* Subtle chalk dust effect or decorative marks */}
+          <div style={{ position: 'absolute', bottom: 10, right: 10, opacity: 0.2, fontSize: 32 }}>✏️</div>
         </div>
 
         {/* Answers Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+        <div style={{ 
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: 'min(90vw, 400px)', marginTop: 24
+        }}>
           {currentQ.a.map((ans, i) => {
-            const isSelected = selectedAnswer === i || survivalState.answers[userProfile.uid]?.answer === i;
+            const myAns = survivalState.answers[userProfile.uid]?.answer;
+            const isSelected = selectedAnswer === i || myAns === i;
             const isCorrect = status === 'reveal' && i === currentQ.correct;
             const isWrong = status === 'reveal' && isSelected && i !== currentQ.correct;
             
@@ -215,17 +257,17 @@ export default function SurvivalGameScreen() {
             return (
               <button
                 key={i}
-                disabled={!isAlive || status !== 'question' || selectedAnswer !== null}
+                disabled={!isAlive || status !== 'question' || selectedAnswer !== null || myAns !== undefined}
                 onClick={() => handleAnswer(i)}
                 className="pop"
                 style={{ 
                   background: bgColor,
                   color: textColor,
                   border: `3px solid ${borderColor}`,
-                  padding: '16px 10px',
+                  padding: '12px 8px',
                   borderRadius: '12px',
                   fontWeight: 950,
-                  fontSize: 16,
+                  fontSize: 15,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -237,13 +279,13 @@ export default function SurvivalGameScreen() {
                 }}
               >
                 <div style={{ 
-                  width: 28, height: 28, borderRadius: '50%', 
+                  width: 24, height: 24, borderRadius: '50%', 
                   background: isSelected || isCorrect || isWrong ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.08)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11
                 }}>
                   {labels[i]}
                 </div>
-                <span style={{ textAlign: 'center', fontSize: 14 }}>{ans}</span>
+                <span style={{ textAlign: 'center', fontSize: 13 }}>{ans}</span>
               </button>
             );
           })}
@@ -251,10 +293,10 @@ export default function SurvivalGameScreen() {
 
         {!isAlive && status === 'question' && (
           <div className="pop" style={{ 
-            textAlign: 'center', padding: '12px', background: 'var(--bg-dark-purple)', 
+            marginTop: 20, textAlign: 'center', padding: '12px', background: 'var(--bg-dark-purple)', 
             color: 'var(--bg-yellow)', fontWeight: 950, borderRadius: '12px', border: '3px solid var(--bg-pink)' 
           }}>
-             لقد خرجت من المسابقة! 💀<br/><span style={{fontSize: 11, opacity: 0.8}}>انتظر انتهاء الجولة...</span>
+             لقد خسرت كل قلوبك! 💔<br/><span style={{fontSize: 11, opacity: 0.8}}>انتظر انتهاء الجولة...</span>
           </div>
         )}
 
@@ -263,15 +305,6 @@ export default function SurvivalGameScreen() {
       {/* ── FOOTER ACTIONS ── */}
       <div style={{ background: '#FFF', borderTop: '5px solid var(--bg-dark-purple)', padding: '16px 20px env(safe-area-inset-bottom)', position: 'relative', zIndex: 10 }}>
         
-        {/* Progress Info */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-           <span style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>تقدّم الإجابات:</span>
-           <span style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-pink)' }}>{answeredCount} / {totalAlive}</span>
-        </div>
-        <div style={{ width: '100%', height: 14, background: '#EEE', borderRadius: 20, overflow: 'hidden', border: '3px solid var(--bg-dark-purple)', marginBottom: 20 }}>
-           <div style={{ width: `${(answeredCount / (totalAlive || 1)) * 100}%`, height: '100%', background: 'var(--bg-green)', transition: 'width 0.4s ease' }} />
-        </div>
-
         {isHost && (
           <div style={{ display: 'flex', gap: 12 }}>
             {status === 'reveal' && (
@@ -284,11 +317,22 @@ export default function SurvivalGameScreen() {
               </button>
             )}
             {status === 'question' && (
-               <div style={{ flex: 1, textAlign: 'center', padding: '12px', background: 'rgba(0,0,0,0.05)', borderRadius: '12px', fontSize: 13, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>
-                  ⏳ بانتظار الجميع أو انتهاء الوقت...
+               <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                     <span style={{ fontSize: 12, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>تقدّم الإجابات:</span>
+                     <span style={{ fontSize: 12, fontWeight: 950, color: 'var(--bg-pink)' }}>{answeredCount} / {totalAlive}</span>
+                  </div>
+                  <div style={{ width: '100%', height: 10, background: '#EEE', borderRadius: 20, overflow: 'hidden', border: '2px solid var(--bg-dark-purple)' }}>
+                     <div style={{ width: `${(answeredCount / (totalAlive || 1)) * 100}%`, height: '100%', background: 'var(--bg-green)', transition: 'width 0.4s ease' }} />
+                  </div>
                </div>
             )}
           </div>
+        )}
+        {!isHost && status === 'question' && (
+           <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>
+             {selectedAnswer !== null || survivalState.answers[userProfile.uid] ? 'تم استلام إجابتك! 👍' : 'اختر أسرع إجابة! ⚡'}
+           </div>
         )}
       </div>
 

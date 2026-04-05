@@ -11,7 +11,7 @@ export async function startSurvivalGame(code) {
   
   const initialAlivePlayers = {};
   room.playerOrder.forEach(uid => {
-    initialAlivePlayers[uid] = true;
+    initialAlivePlayers[uid] = 3; // 3 lives/hearts
   });
 
   await updateDoc(doc(db, 'rooms', code), {
