@@ -62,7 +62,7 @@ export default function SurvivalGameScreen() {
 
   const survivalState = room?.survivalState;
   const isHost = room?.hostUid === userProfile?.uid;
-  const lives = survivalState?.alivePlayers?.[userProfile.uid] || 0;
+  const lives = survivalState?.alivePlayers?.[userProfile?.uid] || 0;
   const isAlive = lives > 0;
   const currentQ = survivalState?.questions?.[survivalState.currentQuestionIndex];
   const status = survivalState?.status; // 'question' or 'reveal' or 'finished'
@@ -185,7 +185,7 @@ export default function SurvivalGameScreen() {
            }}>
              <div style={{ position: 'relative' }}>
                 <UserAvatar avatarId={p.avatarId ?? 1} size={32} />
-                {p.uid === userProfile.uid && <div style={{ position: 'absolute', top: -4, right: -4, background: 'var(--bg-pink)', width: 8, height: 8, borderRadius: '50%', border: '1px solid #FFF' }} />}
+                {p.uid === userProfile?.uid && <div style={{ position: 'absolute', top: -4, right: -4, background: 'var(--bg-pink)', width: 8, height: 8, borderRadius: '50%', border: '1px solid #FFF' }} />}
              </div>
              <div style={{ display: 'flex', gap: 2, marginTop: 4 }}>
                 <PixelHeart filled={p.lives >= 1} />
@@ -229,7 +229,7 @@ export default function SurvivalGameScreen() {
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: 'min(90vw, 400px)', marginTop: 24
         }}>
           {currentQ.a.map((ans, i) => {
-            const myAns = survivalState.answers[userProfile.uid]?.answer;
+            const myAns = survivalState.answers[userProfile?.uid]?.answer;
             const isSelected = selectedAnswer === i || myAns === i;
             const isCorrect = status === 'reveal' && i === currentQ.correct;
             const isWrong = status === 'reveal' && isSelected && i !== currentQ.correct;
@@ -336,7 +336,7 @@ export default function SurvivalGameScreen() {
         )}
         {!isHost && status === 'question' && (
            <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>
-             {selectedAnswer !== null || survivalState.answers[userProfile.uid] ? 'تم استلام إجابتك! 👍' : 'اختر أسرع إجابة! ⚡'}
+             {selectedAnswer !== null || survivalState.answers[userProfile?.uid] ? 'تم استلام إجابتك! 👍' : 'اختر أسرع إجابة! ⚡'}
            </div>
         )}
       </div>
