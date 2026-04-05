@@ -1,4 +1,4 @@
-export const getHornType = () => localStorage.getItem('hornType') || 'classic';
+export const getHornType = () => localStorage.getItem('hornType') || 'ambulance';
 export const setHornType = (id) => localStorage.setItem('hornType', id);
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -60,7 +60,6 @@ export const playSound = (type) => {
 
 // ── Horn sound type ─────────────────────────────────────────────────
 export const HORN_TYPES = [
-  { id: 'classic',   label: 'كلاكس سيارة', src: 'horn_classic.png' },
   { id: 'ambulance', label: 'إسعاف 🚨',      src: 'horn_ambulance.png' },
   { id: 'duck',      label: 'بطة حقيقية 🦆', src: 'horn_duck.png' },
   { id: 'laser',     label: 'ليزر فضائي ⚡', emoji: '⚡' },
@@ -97,19 +96,7 @@ function _doStartHorn(overrideType) {
   gain.connect(audioCtx.destination);
   const now = audioCtx.currentTime;
 
-  if (type === 'classic') {
-    // Two-tone sawtooth car horn: A4 + C#5
-    const osc1 = audioCtx.createOscillator();
-    const osc2 = audioCtx.createOscillator();
-    osc1.connect(gain); osc2.connect(gain);
-    osc1.type = 'sawtooth'; osc1.frequency.value = 440;
-    osc2.type = 'sawtooth'; osc2.frequency.value = 554;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.35, now + 0.04);
-    osc1.start(); osc2.start();
-    hornNodes = { oscs: [osc1, osc2], gain };
-
-  } else if (type === 'ambulance') {
+  if (type === 'ambulance') {
     // Ambulance Siren: Alternating frequencies between 650Hz and 900Hz every 0.3s
     const osc = audioCtx.createOscillator();
     osc.connect(gain);

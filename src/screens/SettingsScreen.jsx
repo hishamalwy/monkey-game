@@ -15,7 +15,7 @@ import { getOwnedHorns } from '../utils/store';
 export default function SettingsScreen() {
   const nav = useNavigation();
   const { userProfile, logout } = useAuth();
-  const [avatarId, setAvatarId] = useState(userProfile?.avatarId ?? 0);
+  const [avatarId, setAvatarId] = useState(userProfile?.avatarId ?? 1);
   const [newUsername, setNewUsername] = useState(userProfile?.username || '');
   const [saving, setSaving] = useState(false);
   const [savingUser, setSavingUser] = useState(false);
@@ -107,7 +107,7 @@ export default function SettingsScreen() {
         <div className="card" style={{ padding: '24px', background: '#FFF', borderRadius: 'var(--brutal-radius-lg)', border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
           <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginBottom: 20 }}>
             <div onClick={() => setActiveWizard('avatar')} style={{ position: 'relative', cursor: 'pointer' }}>
-              <UserAvatar avatarId={userProfile?.avatarId ?? 0} size={84} />
+              <UserAvatar avatarId={userProfile?.avatarId ?? 1} size={84} />
               <div style={{ 
                 position: 'absolute', bottom: -5, right: -5, background: 'var(--bg-pink)', 
                 borderRadius: '8px', width: 34, height: 34, display: 'flex', alignItems: 'center', 

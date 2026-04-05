@@ -80,7 +80,7 @@ export default function DrawGameOverScreen() {
   const iWon = winner?.uid === userProfile?.uid;
 
   return (
-    <div style={{
+    <div className="brutal-bg" style={{
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',

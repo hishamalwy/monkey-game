@@ -139,7 +139,10 @@ body, html {
   overflow: hidden;
   height: 100%; width: 100%;
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   user-select: none;
+  overflow-x: hidden;
+  position: fixed; /* Prevents scroll on some mobile browsers */
 }
 
 /* Ensure content doesn't hide behind floating nav */
@@ -157,6 +160,8 @@ body, html {
   margin: 0 auto;
   position: relative;
   background: var(--bg-yellow);
+  padding-bottom: env(safe-area-inset-bottom);
+  overflow-x: hidden;
 }
 
 @media (min-width: 481px) {

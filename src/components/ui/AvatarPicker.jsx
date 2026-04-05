@@ -52,4 +52,4 @@ export default function AvatarPicker({ selected, onChange, purchases = [], onLoc
   );
 }
 
-export const getAvatarUrl = (idx) => `${import.meta.env.BASE_URL}avatars/${idx ?? 0}.jpg`;
+export const getAvatarUrl = (idx) => `${import.meta.env.BASE_URL}avatars/${idx ?? 1}.jpg`;

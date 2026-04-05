@@ -26,7 +26,7 @@ function PlayerRow({ player, isHost, isMe }) {
       marginBottom: -4, // overlap borders for seamless list
     }}>
       {/* Avatar circle */}
-      <UserAvatar avatarId={player.avatarId ?? 0} size={54} />
+      <UserAvatar avatarId={player.avatarId ?? 1} size={54} />
 
       {/* Name + host badge */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -120,6 +120,20 @@ export default function LobbyScreen() {
     return unsub;
   }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const players = room ? (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean) : [];
+  const maxPlayers = room?.maxPlayers || 5;
+  const isHost = room?.hostUid === userProfile?.uid;
+  const myPlayer = room?.players?.[userProfile?.uid];
+  const allReady = players.length >= 2 && players.every(p => p.isReady);
+  const isActivelyPlaying = room?.status === 'playing';
+
+  // Auto-ready host
+  useEffect(() => {
+    if (isHost && myPlayer && !myPlayer.isReady) {
+      setReady(roomCode, userProfile.uid, true).catch(() => { });
+    }
+  }, [isHost, myPlayer?.isReady, roomCode, userProfile?.uid]);
+
   if (!room) {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -128,14 +142,7 @@ export default function LobbyScreen() {
     );
   }
 
-  const players = (room.playerOrder || []).map(uid => room.players[uid]).filter(Boolean);
-  const maxPlayers = room.maxPlayers || 5;
   const emptyCount = Math.max(0, maxPlayers - players.length);
-  const isHost = room.hostUid === userProfile?.uid;
-  const myPlayer = room.players[userProfile?.uid];
-  const allReady = players.length >= 2 && players.every(p => p.isReady);
-  // Lock settings if game is actively running. If we are in lobby, host can change settings.
-  const isActivelyPlaying = room.status === 'playing';
 
   const handleReady = async () => { await setReady(roomCode, userProfile.uid, !myPlayer?.isReady); };
   const handleStart = async () => {

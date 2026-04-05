@@ -58,6 +58,18 @@ export default function SurvivalGameScreen() {
     return () => clearInterval(timerIntervalRef.current);
   }, [room?.survivalState?.currentQuestionIndex, room?.survivalState?.status, room?.survivalState?.roundStartTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-reveal logic moved below declarations
+
+  useEffect(() => {
+    if (isHost && status === 'question') {
+      if (answeredCount >= totalAlive && totalAlive > 0) {
+        handleReveal();
+      } else if (timer === 0 && room?.survivalState?.roundStartTime) { // only if timer actually reached 0 and not just starting
+        handleReveal();
+      }
+    }
+  }, [isHost, status, answeredCount, totalAlive, timer]);
+
   if (!room || !room.survivalState) {
     return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
   }
@@ -67,6 +79,9 @@ export default function SurvivalGameScreen() {
   const isAlive = survivalState.alivePlayers[userProfile.uid];
   const currentQ = survivalState.questions[survivalState.currentQuestionIndex];
   const status = survivalState.status; // 'question' or 'reveal' or 'finished'
+
+  const answeredCount = Object.keys(survivalState.answers || {}).length;
+  const totalAlive = Object.values(survivalState.alivePlayers).filter(v => v).length;
   const labels = ['أ', 'ب', 'ج', 'د'];
   
   const handleAnswer = async (idx) => {
@@ -122,11 +137,9 @@ export default function SurvivalGameScreen() {
     }
   };
 
-  const answeredCount = Object.keys(survivalState.answers || {}).length;
-  const totalAlive = Object.values(survivalState.alivePlayers).filter(v => v).length;
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '20px', overflowY: 'auto' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '20px', overflowY: 'auto', overflowX: 'hidden' }}>
       
       <style>{`
         .survival-header {

@@ -1,6 +1,6 @@
 export default function ExitConfirmModal({ onCancel, onConfirm, title = 'تخرج من الغرفة؟', icon = '🚪', confirmLabel = 'خروج', cancelLabel = 'رجوع للعب' }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 1000, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div className="card slide-up" style={{ padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>{icon}</div>
         <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 12px' }}>{title}</h3>

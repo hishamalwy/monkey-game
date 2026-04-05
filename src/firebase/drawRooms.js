@@ -109,7 +109,7 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
   const players = room.playerOrder || [];
   const playerCount = players.length;
   const rank = (ds.guessersDone || []).length; // 0-indexed rank of current correct guesser
-  const points = Math.max(1, playerCount - rank);
+  const points = Math.max(1, 15 - rank);
 
   const newMessage = {
     uid,

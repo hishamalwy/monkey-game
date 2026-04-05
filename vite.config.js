@@ -2,10 +2,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  // اسم المستودع على GitHub Pages
-  base: '/monkey-game/',
+  // Use '/' locally for dev server, and '/monkey-game/' for production (GitHub Pages)
+  base: mode === 'production' ? '/monkey-game/' : '/',
 
-  // لا تحتاج لتحديد PostCSS هنا؛ Vite سيقرأ تلقائيًا postcss.config.cjs
-});
+  server: {
+    historyApiFallback: true,
+  },
+}));

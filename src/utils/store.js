@@ -9,7 +9,6 @@ export const COIN_REWARDS = {
 
 export const STORE_ITEMS = {
   avatars: [
-    { id: 'avatar_0', type: 'avatar', avatarId: 0, label: 'قرد كلاسيك', price: 50 },
     { id: 'avatar_1', type: 'avatar', avatarId: 1, label: 'قرد بنظارة', price: 100 },
     { id: 'avatar_2', type: 'avatar', avatarId: 2, label: 'قرد سعيد', price: 100 },
     { id: 'avatar_3', type: 'avatar', avatarId: 3, label: 'قرد مندهش', price: 120 },
@@ -22,7 +21,6 @@ export const STORE_ITEMS = {
     { id: 'avatar_10', type: 'avatar', avatarId: 10, label: 'قرد رياضي', price: 350 },
   ],
   horns: [
-    { id: 'horn_classic', type: 'horn', hornId: 'classic', label: 'كلاسيك 🎺', price: 50 },
     { id: 'horn_ambulance', type: 'horn', hornId: 'ambulance', label: 'إسعاف 🚑', price: 100 },
     { id: 'horn_duck', type: 'horn', hornId: 'duck', label: 'بطة 🦆', price: 120 },
     { id: 'horn_laser', type: 'horn', hornId: 'laser', label: 'ليزر فضائي ⚡', price: 150 },
@@ -39,8 +37,8 @@ export const STORE_ITEMS = {
 };
 
 // We keep one default for fallback, or user can buy them cheap
-export const FREE_AVATARS = [0]; 
-export const FREE_HORNS = ['classic'];
+export const FREE_AVATARS = [1]; 
+export const FREE_HORNS = ['ambulance'];
 
 export function isItemOwned(purchases, itemId) {
   return (purchases || []).includes(itemId);

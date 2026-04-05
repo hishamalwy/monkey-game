@@ -75,7 +75,7 @@ export default function HomeScreen() {
             border: '3px solid var(--bg-dark-purple)', borderRadius: '12px', 
             padding: 2, background: '#FFF', boxShadow: '3px 3px 0 var(--bg-dark-purple)' 
           }}>
-            <UserAvatar avatarId={userProfile?.avatarId ?? 0} size={42} />
+            <UserAvatar avatarId={userProfile?.avatarId ?? 1} size={42} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <span style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1 }}>

@@ -143,8 +143,9 @@ export default function DailyRewardsScreen() {
                 </div>
               );
             })()}
-            <button onClick={() => setActiveChallengeIndex(i => (i - 1 + challenges.length) % challenges.length)} style={{ position: 'absolute', left: -20, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, padding: 0 }} className="btn btn-yellow">←</button>
-            <button onClick={() => setActiveChallengeIndex(i => (i + 1) % challenges.length)} style={{ position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, padding: 0 }} className="btn btn-yellow">→</button>
+            {/* Navigation buttons moved for better responsiveness */}
+            <button onClick={() => setActiveChallengeIndex(i => (i - 1 + challenges.length) % challenges.length)} style={{ position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, padding: 0, zIndex: 10 }} className="btn btn-yellow">←</button>
+            <button onClick={() => setActiveChallengeIndex(i => (i + 1) % challenges.length)} style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, padding: 0, zIndex: 10 }} className="btn btn-yellow">→</button>
           </div>
         </div>
 

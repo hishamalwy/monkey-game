@@ -263,26 +263,42 @@ export default function DrawGameScreen() {
 
   if (ds.roundStatus === 'choosing') {
     return (
-      <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'var(--color-game-bg)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
-          <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ padding: '6px 14px', fontSize: 14 }}>✕</button>
-          <div style={{ textAlign: 'center' }}><div style={{ color: 'var(--game-text)', fontSize: 18, fontWeight: 900 }}>جولة {ds.currentRound}</div></div>
-          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFF', color: 'var(--bg-dark-purple)', fontWeight: 900, border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)' }}>{timeLeft}</div>
+      <div className="brutal-bg" style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="top-nav-brutal" style={{ background: '#FFF', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
+          <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ width: 44, height: 44, fontSize: 18, borderRadius: '12px' }}>✕</button>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ color: 'var(--bg-dark-purple)', fontSize: 20, fontWeight: 950 }}>جولة {ds.currentRound}</div>
+          </div>
+          <div className="card" style={{ 
+            width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            background: 'var(--bg-dark-purple)', color: '#FFE300', fontWeight: 950, 
+            borderRadius: '12px', boxShadow: 'none' 
+          }}>{timeLeft}</div>
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', zIndex: 5 }}>
           {isDrawer ? (
-            <div style={{ width: '100%', maxWidth: 340 }}>
-              <h2 style={{ color: 'var(--game-text)', textAlign: 'center', fontWeight: 900, marginBottom: 20 }}>اختر كلمتك!</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="wizard-card card" style={{ width: '100%', maxWidth: 360, padding: 24, borderRadius: '24px', textAlign: 'center' }}>
+              <h2 style={{ color: 'var(--bg-dark-purple)', fontWeight: 950, marginBottom: 24, fontSize: 24 }}>اختر كلمتك! 🤔</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {(ds.wordOptions || []).map((word) => (
-                  <button key={word} onClick={() => chooseDrawWord(roomCode, word)} className="btn btn-yellow" style={{ padding: '18px', fontSize: 20 }}>{word}</button>
+                  <button 
+                    key={word} 
+                    onClick={() => chooseDrawWord(roomCode, word)} 
+                    className="btn btn-yellow" 
+                    style={{ padding: '20px', fontSize: 22, borderRadius: '16px' }}
+                  >
+                    {word}
+                  </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div style={{ textAlign: 'center' }}>
-              <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={80} />
-              <h3 style={{ color: 'var(--game-text)', marginTop: 12 }}>{drawerPlayer?.username} بيختار...</h3>
+            <div className="card" style={{ padding: '32px', borderRadius: '24px', textAlign: 'center', background: '#FFF' }}>
+              <UserAvatar avatarId={drawerPlayer?.avatarId ?? 1} size={100} style={{ margin: '0 auto' }} />
+              <h3 style={{ color: 'var(--bg-dark-purple)', marginTop: 20, fontWeight: 950, fontSize: 20 }}>
+                {drawerPlayer?.username} بيختار كلمة... ✍️
+              </h3>
             </div>
           )}
         </div>
@@ -296,19 +312,24 @@ export default function DrawGameScreen() {
     const roundScores = ds.roundScores || {};
     const sortedPlayers = [...players].sort((a, b) => (ds.scores?.[b.uid] || 0) - (ds.scores?.[a.uid] || 0));
     return (
-      <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'var(--color-game-bg)', overflow: 'hidden' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ color: 'var(--game-text-muted)', marginBottom: 4 }}>الكلمة كانت</div>
-          <div style={{ color: 'var(--game-text)', fontSize: 32, fontWeight: 900, marginBottom: 24 }}>{ds.chosenWord}</div>
-          <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {sortedPlayers.map((p) => (
-              <div key={p.uid} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#FFF' }}>
-                <UserAvatar avatarId={p.avatarId ?? 0} size={36} />
-                <div style={{ flex: 1, color: 'var(--bg-dark-purple)', fontWeight: 900 }}>{p.username}</div>
-                {roundScores[p.uid] > 0 && <div style={{ color: 'var(--bg-green)', fontWeight: 900 }}>+{roundScores[p.uid]}</div>}
-                <div style={{ color: 'var(--bg-dark-purple)', fontWeight: 900 }}>{ds.scores?.[p.uid] || 0}</div>
-              </div>
-            ))}
+      <div className="brutal-bg" style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="top-nav-brutal" style={{ background: '#FFF', justifyContent: 'center', position: 'relative', zIndex: 10 }}>
+           <h2 style={{ color: 'var(--bg-dark-purple)', fontWeight: 950, fontSize: 24, margin: 0 }}>النتائج 📊</h2>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', zIndex: 5 }}>
+          <div className="wizard-card card" style={{ width: '100%', maxWidth: 380, padding: 24, borderRadius: '24px', background: '#FFF' }}>
+            <div style={{ color: 'var(--bg-pink)', fontSize: 16, fontWeight: 950, marginBottom: 4 }}>الكلمة كانت</div>
+            <div style={{ color: 'var(--bg-dark-purple)', fontSize: 36, fontWeight: 950, marginBottom: 24 }}>{ds.chosenWord}</div>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {sortedPlayers.map((p) => (
+                <div key={p.uid} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: p.uid === ds.drawerUid ? 'var(--bg-yellow)' : '#FFF', borderRadius: '12px', border: '3px solid var(--bg-dark-purple)', boxShadow: 'none' }}>
+                  <UserAvatar avatarId={p.avatarId ?? 1} size={36} />
+                  <div style={{ flex: 1, color: 'var(--bg-dark-purple)', fontWeight: 950, textAlign: 'right', fontSize: 15 }}>{p.username}</div>
+                  {roundScores[p.uid] > 0 && <div style={{ color: 'var(--bg-green)', fontWeight: 950, fontSize: 16 }}>+{roundScores[p.uid]}</div>}
+                  <div style={{ color: 'var(--bg-dark-purple)', fontWeight: 950, fontSize: 18, minWidth: 40, textAlign: 'left' }}>{ds.scores?.[p.uid] || 0}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -316,88 +337,179 @@ export default function DrawGameScreen() {
   }
 
   return (
-    <div style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', background: 'var(--color-game-bg)', overflow: 'hidden' }}>
+    <div className="brutal-bg" style={{ width: '100%', height: vh, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
       {/* ── HEADER ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', flexShrink: 0 }}>
-        <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ padding: '5px 12px', fontSize: 14 }}>✕</button>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--game-surface)', padding: '4px 10px', border: '2px solid var(--game-text)', boxShadow: '2px 2px 0 rgba(0,0,0,0.2)' }}>
-          <UserAvatar avatarId={drawerPlayer?.avatarId ?? 0} size={28} />
-          <div style={{ color: 'var(--game-text)', fontSize: 12, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>{drawerPlayer?.username}</div>
+      <div className="top-nav-brutal" style={{ background: '#FFF', justifyContent: 'space-between', padding: '10px 16px', position: 'relative', zIndex: 10 }}>
+        <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ width: 40, height: 40, fontSize: 16, borderRadius: '10px' }}>✕</button>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-yellow)', padding: '4px 12px', borderRadius: '12px', border: '3px solid var(--bg-dark-purple)', boxShadow: 'none' }}>
+            <UserAvatar avatarId={drawerPlayer?.avatarId ?? 1} size={28} />
+            <div style={{ color: 'var(--bg-dark-purple)', fontSize: 13, fontWeight: 950, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>{drawerPlayer?.username}</div>
+          </div>
         </div>
-        <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isLowTime ? 'var(--game-danger)' : 'var(--game-surface-strong)', color: 'var(--game-text)', fontWeight: 900, border: `3px solid ${isLowTime ? '#FFF' : 'var(--game-text)'}`, boxShadow: isLowTime ? '3px 3px 0 #FFF' : '2px 2px 0 rgba(0,0,0,0.2)' }}>{timeLeft}</div>
+        <div className="card" style={{ 
+          width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+          background: isLowTime ? 'var(--bg-pink)' : 'var(--bg-dark-purple)', 
+          color: isLowTime ? '#FFF' : '#FFE300', fontWeight: 950, 
+          borderRadius: '12px', border: '3px solid var(--bg-dark-purple)', 
+          boxShadow: isLowTime ? '4px 4px 0 var(--bg-dark-purple)' : 'none',
+          animation: isLowTime ? 'pulse 1s infinite' : 'none'
+        }}>
+          {timeLeft}
+        </div>
       </div>
 
       {/* ── WORD HINT ── */}
-      <div style={{ padding: '8px', flexShrink: 0, display: 'flex', justifyContent: 'center', minHeight: 48 }}>
+      <div style={{ padding: '10px', flexShrink: 0, display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 5 }}>
         {isDrawer ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--game-surface)', padding: '8px 16px', border: '3px solid var(--game-accent)', boxShadow: '3px 3px 0 rgba(0,0,0,0.2)' }}>
-            <span style={{ color: 'var(--game-text-muted)', fontSize: 13 }}>الكلمة:</span>
-            <span style={{ color: 'var(--game-accent)', fontSize: 22, fontWeight: 900 }}>{ds.chosenWord}</span>
+          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#FFF', padding: '12px 24px', borderRadius: '16px', border: '4px solid var(--bg-pink)', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>
+            <span style={{ color: 'var(--bg-dark-purple)', fontSize: 14, fontWeight: 950 }}>الكلمة:</span>
+            <span style={{ color: 'var(--bg-pink)', fontSize: 24, fontWeight: 950 }}>{ds.chosenWord}</span>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
             {ds.showWordLength ? (ds.hint || '').split('').map((ch, i) => (
               ch === ' ' ? <div key={i} style={{ width: 10 }} /> :
-              <div key={i} style={{ width: 22, height: 32, background: ch !== '_' ? '#FFF' : 'var(--game-surface)', border: `3px solid ${ch !== '_' ? 'var(--bg-dark-purple)' : 'var(--game-text)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-dark-purple)', fontWeight: 900, boxShadow: ch !== '_' ? '2px 2px 0 var(--bg-dark-purple)' : 'none' }}>{ch !== '_' ? ch : ''}</div>
-            )) : <div style={{ color: 'var(--game-text-muted)', fontSize: 13, background: 'var(--game-surface)', padding: '5px 15px', border: '2px solid var(--game-text)' }}>يختفي عدد الحروف... 🔒</div>}
+              <div key={i} className="pop" style={{ 
+                width: 28, height: 38, background: ch !== '_' ? 'var(--bg-yellow)' : '#FFF', 
+                border: '3px solid var(--bg-dark-purple)', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                color: 'var(--bg-dark-purple)', fontWeight: 950, fontSize: 18,
+                boxShadow: ch !== '_' ? '3px 3px 0 var(--bg-dark-purple)' : 'none',
+                borderRadius: '6px'
+              }}>{ch !== '_' ? ch : ''}</div>
+            )) : (
+              <div className="card" style={{ color: 'var(--bg-dark-purple)', fontSize: 14, fontWeight: 950, background: '#FFF', padding: '8px 20px', borderRadius: '12px', border: '3px solid var(--bg-dark-purple)' }}>
+                يختفي عدد الحروف... 🔒
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* ── SCORES STRIP ── */}
-      <div style={{ display: 'flex', gap: 6, padding: '0 12px 10px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none' }}>
-        {players.map(p => (
-          <div key={p.uid} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 50, padding: '6px', background: p.uid === ds.drawerUid ? 'var(--game-surface-strong)' : (ds.guessersDone?.includes(p.uid) ? 'rgba(118,255,3,0.15)' : 'var(--game-surface)'), border: `2px solid ${p.uid === ds.drawerUid ? 'var(--game-accent)' : (ds.guessersDone?.includes(p.uid) ? 'var(--game-success)' : 'var(--game-text)')}` }}>
-            <UserAvatar avatarId={p.avatarId ?? 0} size={24} />
-            <div style={{ color: 'var(--game-text)', fontSize: 9, fontWeight: 900, marginTop: 2 }}>{p.username.slice(0,6)}</div>
-            <div style={{ color: 'var(--game-accent)', fontSize: 10, fontWeight: 900 }}>{ds.scores?.[p.uid] || 0}</div>
-          </div>
-        ))}
-      </div>
-
       {/* ── CANVAS AREA ── */}
-      <div style={{ flex: '0 0 auto', padding: '0 10px 10px', display: 'flex', justifyContent: 'center' }}>
-        <div style={{ position: 'relative', aspectRatio: '1/1', width: 'min(90vw, 360px)', overflow: 'hidden', border: 'var(--brutal-border)', boxShadow: 'var(--brutal-shadow)', background: '#FFF' }}>
+      <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px 16px', position: 'relative', zIndex: 5, overflow: 'hidden' }}>
+        <div className="card" style={{ position: 'relative', aspectRatio: '1/1', width: 'min(85vw, 360px)', overflow: 'hidden', padding: 0, borderRadius: '20px', background: '#FFF', border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', touchAction: 'none' }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} />
-          {myAlreadyGuessed && !isDrawer && <div style={{ position: 'absolute', inset: 0, background: 'rgba(118,255,3,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ background: '#FFF', width: 60, height: 60, border: '4px solid var(--bg-green)', color: 'var(--bg-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, boxShadow: '3px 3px 0 var(--bg-dark-purple)' }}>✅</div></div>}
+          {myAlreadyGuessed && !isDrawer && (
+            <div className="slide-up" style={{ position: 'absolute', inset: 0, background: 'rgba(0, 224, 109, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="card" style={{ background: '#FFF', width: 80, height: 80, borderRadius: '20px', border: '4px solid var(--bg-green)', color: 'var(--bg-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, boxShadow: '6px 6px 0 var(--bg-dark-purple)' }}>✓</div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* ── PLAYERS STRIP ── */}
+      <div style={{ display: 'flex', gap: 10, padding: '0 16px 16px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none', position: 'relative', zIndex: 10 }}>
+        {players.map(p => {
+          const isMe = p.uid === myUid;
+          const guessed = ds.guessersDone?.includes(p.uid);
+          const isCurrentDrawer = p.uid === ds.drawerUid;
+          return (
+            <div key={p.uid} className="card" style={{ 
+              display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 64, padding: '8px', 
+              background: guessed ? 'var(--bg-green)' : (isCurrentDrawer ? 'var(--bg-yellow)' : '#FFF'), 
+              borderRadius: '12px', border: isMe ? '3px solid var(--bg-pink)' : '3px solid var(--bg-dark-purple)',
+              boxShadow: isMe ? '4px 4px 0 var(--bg-pink)' : 'none'
+            }}>
+              <UserAvatar avatarId={p.avatarId ?? 1} size={30} />
+              <div style={{ color: 'var(--bg-dark-purple)', fontSize: 10, fontWeight: 950, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textWidth: 50 }}>{p.username.slice(0,8)}</div>
+              <div style={{ color: 'var(--bg-dark-purple)', fontSize: 12, fontWeight: 950 }}>{ds.scores?.[p.uid] || 0}</div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* ── BOTTOM AREA: TOOLS OR CHAT ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="card" style={{ flex: '0 0 auto', background: '#FFF', borderTop: '4px solid var(--bg-dark-purple)', borderBottom: 'none', borderLeft: 'none', borderRight: 'none', borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderRadius: '32px 32px 0 0', padding: '16px 16px 30px', position: 'relative', zIndex: 20, boxShadow: '0 -4px 10px rgba(0,0,0,0.1)' }}>
         {isDrawer ? (
-          <div style={{ padding: '8px 12px' }}>
-            <div style={{ display: 'flex', gap: 5, overflowX: 'auto', marginBottom: 8 }}>
-              {COLORS.map(c => <button key={c} onClick={() => setColor(c)} style={{ minWidth: 30, height: 30, background: c, border: color === c ? '3px solid var(--game-accent)' : '2px solid var(--game-text-muted)', cursor: 'pointer' }} />)}
+          <div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 12, paddingBottom: 4 }}>
+              {COLORS.map(c => (
+                <button 
+                  key={c} 
+                  onClick={() => setColor(c)} 
+                  style={{ 
+                    minWidth: 32, height: 32, background: c, borderRadius: '50%',
+                    border: color === c ? '3px solid var(--bg-dark-purple)' : '2px solid rgba(0,0,0,0.1)',
+                    transform: color === c ? 'scale(1.2)' : 'none',
+                    transition: 'all 0.1s ease',
+                    cursor: 'pointer'
+                  }} 
+                />
+              ))}
             </div>
-            <div style={{ display: 'flex', gap: 4, background: 'var(--game-surface)', border: '2px solid var(--game-text)', padding: '8px' }}>
-              {TOOLS.map(t => <button key={t.id} onClick={() => setTool(t.id)} style={{ width: 40, height: 40, background: tool === t.id ? 'var(--game-surface-strong)' : 'none', border: tool === t.id ? '2px solid var(--game-accent)' : '2px solid transparent' }}>{t.icon}</button>)}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 4, background: '#F0F0F0', borderRadius: '12px', padding: '4px' }}>
+                {TOOLS.map(t => (
+                  <button 
+                    key={t.id} 
+                    onClick={() => setTool(t.id)} 
+                    className={`nav-item ${tool === t.id ? 'active' : ''}`}
+                    style={{ width: 44, height: 44, fontSize: 20, minWidth: 'unset', padding: 0 }}
+                  >
+                    {t.icon}
+                  </button>
+                ))}
+              </div>
               <div style={{ flex: 1 }} />
-              <button onClick={() => undoLastStroke(roomCode)} style={{ width: 40, height: 40, background: 'none', border: '2px solid var(--game-text)' }}>↩️</button>
-              <button onClick={() => clearDrawCanvas(roomCode)} style={{ width: 40, height: 40, background: 'none', border: '2px solid var(--game-text)' }}>🗑️</button>
+              <button onClick={() => undoLastStroke(roomCode)} className="btn btn-white" style={{ width: 44, height: 44, borderRadius: '12px' }}>↩️</button>
+              <button onClick={() => clearDrawCanvas(roomCode)} className="btn btn-pink" style={{ width: 44, height: 44, borderRadius: '12px' }}>🗑️</button>
             </div>
-            <div style={{ display: 'flex', gap: 4, background: 'var(--game-surface)', borderTop: 'none', border: '2px solid var(--game-text)', padding: '8px' }}>
-              <button disabled={timeLeft > (room.drawTime || 80) / 2 || ds.showWordLength} onClick={() => revealWordLength(roomCode)} className="btn" style={{ flex: 1, padding: '10px', background: ds.showWordLength ? 'var(--game-surface)' : 'var(--game-surface-strong)', color: 'var(--game-text)', border: '2px solid var(--game-text)', fontSize: 13, fontWeight: 900 }}>{ds.showWordLength ? 'تم الكشف ✅' : 'إظهار العدد 🔢'}</button>
-              <button onClick={() => { if (ds.hintRevealCount < (ds.wordLength || 0) - 1 && hintCooldown <= 0) { revealHint(roomCode); setHintCooldown(12); } }} disabled={ds.hintRevealCount >= (ds.wordLength || 0) - 1 || hintCooldown > 0} className="btn" style={{ flex: 1, padding: '10px', background: 'var(--game-surface)', color: 'var(--game-text)', border: '2px solid var(--game-text)', fontSize: 13, fontWeight: 900 }}>{hintCooldown > 0 ? `${hintCooldown}ث` : '💡 تلميح'}</button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button 
+                disabled={timeLeft > (room.drawTime || 80) / 2 || ds.showWordLength} 
+                onClick={() => revealWordLength(roomCode)} 
+                className={`btn ${ds.showWordLength ? 'btn-green' : 'btn-yellow'}`} 
+                style={{ flex: 1, padding: '12px', fontSize: 13, borderRadius: '12px' }}
+              >
+                {ds.showWordLength ? 'تم الكشف ✅' : 'إظهار العدد 🔢'}
+              </button>
+              <button 
+                onClick={() => { if (ds.hintRevealCount < (ds.wordLength || 0) - 1 && hintCooldown <= 0) { revealHint(roomCode); setHintCooldown(12); } }} 
+                disabled={ds.hintRevealCount >= (ds.wordLength || 0) - 1 || hintCooldown > 0} 
+                className="btn btn-white" 
+                style={{ flex: 1, padding: '12px', fontSize: 13, borderRadius: '12px' }}
+              >
+                {hintCooldown > 0 ? `${hintCooldown}ث` : '💡 تلميح'}
+              </button>
             </div>
           </div>
         ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0 12px 10px' }}>
-            <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, scrollbarWidth: 'none', paddingBottom: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}>
+            <div ref={chatRef} style={{ height: 100, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, scrollbarWidth: 'none' }}>
               {(ds.messages || []).map((m, i) => (
-                <div key={i} style={{ display: 'flex', gap: 6, flexDirection: 'row-reverse', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--game-text-muted)', fontWeight: 900, fontSize: 11 }}>{m.username}:</span>
-                  <span style={{ background: m.isCorrect ? 'rgba(118,255,3,0.2)' : 'var(--game-surface)', color: 'var(--game-text)', padding: '4px 12px', border: m.isCorrect ? '2px solid var(--game-success)' : '2px solid var(--game-text)', fontSize: 13 }}>{m.isCorrect && m.uid !== myUid ? 'خمّن!' : m.text}</span>
+                <div key={i} style={{ display: 'flex', gap: 8, flexDirection: 'row-reverse', alignItems: 'center' }}>
+                  <div style={{ 
+                    background: m.isCorrect ? 'var(--bg-green)' : '#F0F0F0', 
+                    color: 'var(--bg-dark-purple)', padding: '6px 14px', 
+                    borderRadius: '12px', fontSize: 14, fontWeight: 950,
+                    border: m.isCorrect ? '2px solid var(--bg-dark-purple)' : 'none'
+                  }}>
+                    {m.isCorrect && m.uid !== myUid ? 'خمّن الكلمة! 🎉' : m.text}
+                  </div>
+                  <span style={{ color: 'var(--bg-dark-purple)', opacity: 0.6, fontWeight: 950, fontSize: 11 }}>{m.username}</span>
                 </div>
               ))}
             </div>
             {!myAlreadyGuessed ? (
-              <div style={{ display: 'flex', gap: 8, background: 'var(--game-surface)', padding: '8px 12px', border: '3px solid var(--game-text)', boxShadow: '3px 3px 0 rgba(0,0,0,0.2)', flexShrink: 0 }}>
-                <input value={guessInput} onChange={e => setGuessInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendGuess()} placeholder="اكتب تخمينك..." style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--game-text)', fontWeight: 700, direction: 'rtl', fontFamily: 'Cairo, sans-serif' }} />
-                <button onClick={handleSendGuess} className="btn btn-yellow" style={{ padding: '6px 16px', fontSize: 14 }}>خمّن</button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input 
+                  value={guessInput} 
+                  onChange={e => setGuessInput(e.target.value)} 
+                  onKeyDown={e => e.key === 'Enter' && handleSendGuess()} 
+                  placeholder="اكتب تخمينك..." 
+                  className="input-field"
+                  style={{ flex: 1, borderRadius: '12px', padding: '12px 18px', boxShadow: 'none' }}
+                />
+                <button onClick={handleSendGuess} className="btn btn-yellow" style={{ padding: '0 20px', borderRadius: '12px' }}>خمّن</button>
               </div>
-            ) : <div style={{ textAlign: 'center', color: 'var(--game-success)', fontWeight: 900, fontSize: 15, padding: '10px', background: 'rgba(118,255,3,0.1)', border: '3px solid var(--game-success)' }}>✅ خمّنت صلح!</div>}
+            ) : (
+              <div className="card" style={{ textAlign: 'center', color: '#FFF', background: 'var(--bg-green)', fontWeight: 950, fontSize: 16, padding: '12px', borderRadius: '12px', border: '3px solid var(--bg-dark-purple)' }}>
+                خمّنت صح! برافو عليك ✅
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -178,7 +178,7 @@ export default function RoundResultScreen() {
                 transform: isLoser ? 'scale(1.02)' : 'none',
                 transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
               }}>
-                <UserAvatar avatarId={p.avatarId ?? 0} size={44} />
+                <UserAvatar avatarId={p.avatarId ?? 1} size={44} />
                 <div style={{ flex: 1, textAlign: 'right' }}>
                   <div style={{ fontSize: 16, fontWeight: 900, color: isLoser ? '#FFF' : 'var(--bg-dark-purple)', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-start' }}>
                     {p.username}
