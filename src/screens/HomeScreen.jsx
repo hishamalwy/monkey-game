@@ -53,113 +53,120 @@ export default function HomeScreen() {
 
   return (
     <div className="brutal-bg" style={{
-      width: '100%', height: '100%',
-      display: 'flex', flexDirection: 'column'
+      width: '100%', height: '100dvh',
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden'
     }}>
       
       {/* Background Decor */}
-      <div className="bg-stickers">
-        <div style={{ position: 'absolute', top: '12%', left: '4%', fontSize: 28, transform: 'rotate(-15deg)' }}>🍌</div>
-        <div style={{ position: 'absolute', top: '35%', right: '6%', fontSize: 32, transform: 'rotate(12deg)' }}>🎺</div>
-        <div style={{ position: 'absolute', bottom: '30%', left: '8%', fontSize: 24, transform: 'rotate(8deg)' }}>🐵</div>
-        <div style={{ position: 'absolute', bottom: '20%', right: '12%', fontSize: 36, transform: 'rotate(-12deg)' }}>🪙</div>
+      <div className="bg-stickers" style={{ opacity: 0.1 }}>
+        <div style={{ position: 'absolute', top: '12%', left: '4%', fontSize: 24, transform: 'rotate(-15deg)' }}>🍌</div>
+        <div style={{ position: 'absolute', top: '35%', right: '6%', fontSize: 28, transform: 'rotate(12deg)' }}>🎺</div>
+        <div style={{ position: 'absolute', bottom: '30%', left: '8%', fontSize: 20, transform: 'rotate(8deg)' }}>🐵</div>
+        <div style={{ position: 'absolute', bottom: '20%', right: '12%', fontSize: 32, transform: 'rotate(-12deg)' }}>🪙</div>
       </div>
 
       {/* Header */}
-      <div className="top-nav-brutal" style={{ background: '#FFF', position: 'relative', zIndex: 10 }}>
+      <div className="top-nav-brutal" style={{ background: '#FFF', position: 'relative', zIndex: 10, padding: '12px 16px' }}>
         <div 
           onClick={nav.toSettings}
-          style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}
         >
           <div style={{ 
             border: '3px solid var(--bg-dark-purple)', borderRadius: '12px', 
-            padding: 2, background: '#FFF', boxShadow: '3px 3px 0 var(--bg-dark-purple)' 
+            padding: 2, background: '#FFF', boxShadow: '2px 2px 0 var(--bg-dark-purple)' 
           }}>
-            <UserAvatar avatarId={userProfile?.avatarId ?? 1} size={42} />
+            <UserAvatar avatarId={userProfile?.avatarId ?? 1} size={38} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.1 }}>
               {userProfile?.username || 'قردي'}
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-               <span style={{ fontSize: 11, fontWeight: 950 }}>لفل {getLevel(userProfile?.xp ?? 0)}</span>
-               <div style={{ width: 70, height: 7, background: '#EEE', borderRadius: 4, overflow: 'hidden', border: '2px solid var(--bg-dark-purple)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+               <span style={{ fontSize: 10, fontWeight: 950 }}>لفل {getLevel(userProfile?.xp ?? 0)}</span>
+               <div style={{ width: 60, height: 6, background: '#EEE', borderRadius: 4, overflow: 'hidden', border: '1.5px solid var(--bg-dark-purple)' }}>
                   <div style={{ width: `${getLevelProgress(userProfile?.xp ?? 0)}%`, height: '100%', background: 'var(--bg-green)' }} />
                </div>
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setRulesOpen(true)} className="btn btn-dark" style={{ width: 44, height: 44, padding: 0, borderRadius: '12px' }}>
-            <img src={`${import.meta.env.BASE_URL}icons/rules.png`} alt="" style={{ width: 22, height: 22 }} />
+          <button onClick={() => setRulesOpen(true)} className="btn btn-dark" style={{ width: 38, height: 38, padding: 0, borderRadius: '10px' }}>
+            <img src={`${import.meta.env.BASE_URL}icons/rules.png`} alt="" style={{ width: 18, height: 18 }} />
           </button>
-          <button onClick={() => setMenuOpen(true)} className="btn btn-yellow" style={{ width: 44, height: 44, fontSize: 24, fontWeight: 900, borderRadius: '12px' }}>≡</button>
+          <button onClick={() => setMenuOpen(true)} className="btn btn-yellow" style={{ width: 38, height: 38, fontSize: 20, fontWeight: 900, borderRadius: '10px' }}>≡</button>
         </div>
       </div>
 
       <div className="content-with-nav" style={{
         flex: 1, overflowY: 'auto',
         display: 'flex', flexDirection: 'column',
-        padding: '24px 24px', gap: '20px',
+        padding: '20px 20px 100px', gap: '16px',
         alignItems: 'center', position: 'relative', zIndex: 5
       }}>
         
-        {/* Perfectly Centered Hero Section */}
-        <div style={{ position: 'relative', width: 170, height: 200, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '10px 0' }}>
-           {/* Greeting Badge - Absolute with respect to logo container */}
-           <div className="card" style={{
-             position: 'absolute', top: -15, right: -45, zIndex: 10,
-             background: 'var(--bg-pink)', padding: '6px 12px',
-             transform: 'rotate(15deg)', fontSize: '0.9rem', fontWeight: 950,
-             borderRadius: '10px', color: '#FFF',
-             boxShadow: '4px 4px 0 var(--bg-dark-purple)',
-             border: '3px solid var(--bg-dark-purple)'
+        {/* Responsive Hero Section */}
+        <div style={{ 
+          position: 'relative', 
+          width: 'min(160px, 40vw)', 
+          aspectRatio: '170/200',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', 
+          margin: '10px 0' 
+        }}>
+           {/* Greeting Badge */}
+           <div className="card pop" style={{
+             position: 'absolute', top: -10, right: -30, zIndex: 10,
+             background: 'var(--bg-pink)', padding: '4px 10px',
+             transform: 'rotate(12deg)', fontSize: '0.8rem', fontWeight: 950,
+             borderRadius: '8px', color: '#FFF',
+             boxShadow: '3px 3px 0 var(--bg-dark-purple)',
+             border: '2.5px solid var(--bg-dark-purple)'
            }}>
              هلا {userProfile?.username || 'والله'}! 👋
            </div>
 
-           {/* Hero Logo Frame - More Tilt */}
+           {/* Hero Logo Frame */}
            <div className="card" style={{ 
-              padding: '14px', transform: 'rotate(-6deg)', 
-              width: 170, borderRadius: '16px', background: '#FFF',
-              border: '4px solid var(--bg-dark-purple)',
-              boxShadow: '6px 6px 0px var(--bg-dark-purple)'
+              padding: '12px', transform: 'rotate(-4deg)', 
+              width: '100%', borderRadius: '16px', background: '#FFF',
+              border: '3px solid var(--bg-dark-purple)',
+              boxShadow: '4px 4px 0px var(--bg-dark-purple)'
            }}>
              <img src={hero} alt="monkey" style={{ width: '100%', height: 'auto' }} />
            </div>
         </div>
 
-        <div style={{ textAlign: 'center' }}>
-           <h2 style={{ fontSize: 32, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 6px', lineHeight: 1.1 }}>
+        <div style={{ textAlign: 'center', padding: '0 10px' }}>
+           <h2 style={{ fontSize: 'clamp(24px, 7vw, 32px)', fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 4px', lineHeight: 1 }}>
              هل أنت مستعد؟
            </h2>
-           <p style={{ fontSize: 16, fontWeight: 900, color: 'var(--bg-dark-purple)', opacity: 0.8, margin: 0 }}>
+           <p style={{ fontSize: '14px', fontWeight: 900, color: 'var(--bg-dark-purple)', opacity: 0.7, margin: 0 }}>
              تحدى أصدقائك في أغرب لعبة تواصل!
            </p>
         </div>
 
         {/* Buttons Grid */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 420 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 400 }}>
           <button
             onClick={nav.toOnlineSetup}
             className="btn btn-pink"
-            style={{ width: '100%', padding: '22px', fontSize: '1.5rem', borderRadius: '20px', boxShadow: '6px 6px 0px var(--bg-dark-purple)' }}
+            style={{ width: '100%', padding: '18px', fontSize: '1.4rem', borderRadius: '18px', boxShadow: '5px 5px 0px var(--bg-dark-purple)' }}
           >
             ابدأ لعبة 🎮
           </button>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%' }}>
             <button
               onClick={nav.toBrowseRooms}
               className="btn btn-white"
-              style={{ padding: '18px', fontSize: '1.2rem', borderRadius: '16px', boxShadow: '4px 4px 0px var(--bg-dark-purple)' }}
+              style={{ padding: '15px', fontSize: '1.1rem', borderRadius: '14px', boxShadow: '3px 3px 0px var(--bg-dark-purple)' }}
             >
               انضم 🤝
             </button>
             <button
               onClick={() => navigate('/daily-rewards')}
               className="btn btn-blue"
-              style={{ padding: '18px', fontSize: '1.2rem', color: '#FFF', borderRadius: '16px', background: 'var(--bg-blue)', boxShadow: '4px 4px 0px var(--bg-dark-purple)' }}
+              style={{ padding: '15px', fontSize: '1.1rem', color: '#FFF', borderRadius: '14px', background: 'var(--bg-blue)', boxShadow: '3px 3px 0px var(--bg-dark-purple)' }}
             >
               مهام 🎁
             </button>
@@ -167,12 +174,12 @@ export default function HomeScreen() {
         </div>
 
         {/* Shortened Tip Box */}
-        <div className="card" style={{ 
-           marginTop: 10, padding: '12px 20px', background: '#FFF', 
-           borderRadius: '16px', fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)',
-           width: '100%', maxWidth: 400, textAlign: 'center',
-           border: '3px solid var(--bg-dark-purple)',
-           boxShadow: '4px 4px 0px var(--bg-dark-purple)'
+        <div className="card pop" style={{ 
+           marginTop: 4, padding: '10px 16px', background: '#FFF', 
+           borderRadius: '14px', fontSize: 12, fontWeight: 950, color: 'var(--bg-dark-purple)',
+           width: '100%', maxWidth: 380, textAlign: 'center',
+           border: '2.5px solid var(--bg-dark-purple)',
+           boxShadow: '3px 3px 0px var(--bg-dark-purple)'
         }}>
            💡 <span style={{ color: 'var(--bg-pink)' }}>نصيحة:</span> خلص المهام واكسب كوينز أكتر! 🪙
         </div>

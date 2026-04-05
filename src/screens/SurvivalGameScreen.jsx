@@ -139,160 +139,157 @@ export default function SurvivalGameScreen() {
 
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '20px', overflowY: 'auto', overflowX: 'hidden' }}>
+    <div className="brutal-bg" style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
-      <style>{`
-        .survival-header {
-           background: var(--bg-dark-purple);
-           color: #FFF;
-           border: 4px solid var(--bg-dark-purple);
-           box-shadow: 4px 4px 0 #FFF;
-           padding: 6px 16px;
-           font-weight: 900;
-           font-size: 14px;
-        }
-        .survival-timer {
-           font-size: 38px;
-           font-weight: 950;
-           color: var(--bg-dark-purple);
-           text-shadow: 3px 3px 0 #FFF, -3px -3px 0 #FFF, 3px -3px 0 #FFF, -3px 3px 0 #FFF;
-        }
-        .q-card {
-           background: #FFF;
-           border: 6px solid var(--bg-dark-purple);
-           box-shadow: 10px 10px 0 var(--bg-pink);
-           padding: 32px 20px;
-           margin-bottom: 30px;
-           text-align: center;
-        }
-        .ans-btn {
-           background: #FFF;
-           border: 4px solid var(--bg-dark-purple);
-           padding: 18px 12px;
-           font-weight: 900;
-           font-size: 17px;
-           text-align: right;
-           display: flex;
-           align-items: center;
-           gap: 12px;
-           transition: all 0.1s;
-        }
-        .ans-btn.selected {
-           background: var(--bg-pink);
-           color: #FFF;
-           transform: translate(4px, 4px);
-           box-shadow: none !important;
-        }
-        .ans-btn.correct {
-           background: var(--bg-green);
-           color: #FFF;
-        }
-        .ans-btn.wrong {
-           background: #FF4D4D;
-           color: #FFF;
-        }
-      `}</style>
+      {/* ── HEADER ── */}
+      <div className="top-nav-brutal" style={{ background: '#FFF', justifyContent: 'space-between', padding: '10px 16px', position: 'relative', zIndex: 10 }}>
+        <button onClick={() => nav.toHome()} className="btn btn-white" style={{ width: 40, height: 40, fontSize: 16, borderRadius: '10px' }}>✕</button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="card" style={{ background: 'var(--bg-yellow)', padding: '4px 12px', border: '3px solid var(--bg-dark-purple)', boxShadow: 'none' }}>
+             <span style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>{totalAlive} ناجي ⚔️</span>
+          </div>
+        </div>
 
-      {/* Screen Reader Header */}
-      <h1 className="sr-only">لعبة البقاء للأقوى - {currentQ.q}</h1>
-
-      {/* Top Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <div className="survival-header pop">
-              السؤال {survivalState.currentQuestionIndex + 1}
-          </div>
-          <div className={`survival-timer ${timer <= 5 ? 'pulse' : ''}`}>
-              {timer}
-          </div>
-          <div className="survival-header pop" style={{ background: 'var(--bg-green)' }}>
-              {totalAlive} ناجي
-          </div>
+        <div className="card" style={{ 
+          width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+          background: timer <= 5 ? 'var(--bg-pink)' : 'var(--bg-dark-purple)', 
+          color: timer <= 5 ? '#FFF' : '#FFE300', fontWeight: 950, 
+          borderRadius: '12px', border: '3px solid var(--bg-dark-purple)', 
+          boxShadow: timer <= 5 ? '4px 4px 0 var(--bg-dark-purple)' : 'none',
+          animation: timer <= 3 ? 'pulse 0.5s infinite' : 'none'
+        }}>
+          {timer}
+        </div>
       </div>
 
-      {/* Question */}
-      <div className="q-card slide-up">
-          <div style={{ fontSize: 13, fontWeight: 900, background: 'var(--bg-pink)', color: '#FFF', padding: '2px 10px', display: 'inline-block', marginBottom: 12, transform: 'rotate(-2deg)' }}>
-             جاوب صح أو انسحب! 💀
+      {/* ── CONTENT ── */}
+      <div style={{ flex: 1, padding: '16px 20px', display: 'flex', flexDirection: 'column', overflowY: 'auto', position: 'relative', zIndex: 5 }}>
+        
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ 
+            display: 'inline-block', background: 'var(--bg-dark-purple)', color: '#FFF', 
+            padding: '4px 14px', fontSize: 12, fontWeight: 950, borderRadius: '6px',
+            marginBottom: 10, transform: 'rotate(-1deg)'
+          }}>
+            السؤال {survivalState.currentQuestionIndex + 1}
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.4, margin: 0 }}>
-              {currentQ.q}
-          </h2>
-      </div>
+          
+          <div className="card slide-up" style={{ padding: '24px 20px', borderRadius: '20px', border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-pink)' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.4, margin: 0 }}>
+                {currentQ.q}
+            </h2>
+          </div>
+        </div>
 
-      {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
+        {/* Answers Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
           {currentQ.a.map((ans, i) => {
-              const isSelected = selectedAnswer === i || survivalState.answers[userProfile.uid]?.answer === i;
-              const isCorrect = status === 'reveal' && i === currentQ.correct;
-              const isWrong = status === 'reveal' && isSelected && i !== currentQ.correct;
-              
-              let classNames = 'ans-btn pop';
-              if (isSelected) classNames += ' selected';
-              if (isCorrect) classNames += ' correct';
-              if (isWrong) classNames += ' wrong';
+            const isSelected = selectedAnswer === i || survivalState.answers[userProfile.uid]?.answer === i;
+            const isCorrect = status === 'reveal' && i === currentQ.correct;
+            const isWrong = status === 'reveal' && isSelected && i !== currentQ.correct;
+            
+            let bgColor = '#FFF';
+            let textColor = 'var(--bg-dark-purple)';
+            let borderColor = 'var(--bg-dark-purple)';
+            let bShadow = isSelected ? 'none' : '4px 4px 0 var(--bg-dark-purple)';
 
-              return (
-                  <button
-                      key={i}
-                      disabled={!isAlive || status !== 'question' || selectedAnswer !== null}
-                      onClick={() => handleAnswer(i)}
-                      className={classNames}
-                      style={{ 
-                        boxShadow: isSelected ? 'none' : '5px 5px 0 var(--bg-dark-purple)',
-                        animationDelay: `${i * 80}ms`
-                      }}
-                  >
-                      <div style={{ 
-                        width: 30, height: 30, borderRadius: '50%', background: 'rgba(0,0,0,0.1)', 
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 
-                      }}>
-                        {labels[i]}
-                      </div>
-                      <span style={{ flex: 1 }}>{ans}</span>
-                  </button>
-              );
+            if (isSelected) {
+               bgColor = 'var(--bg-pink)';
+               textColor = '#FFF';
+            }
+            if (isCorrect) {
+               bgColor = 'var(--bg-green)';
+               textColor = '#FFF';
+               bShadow = '4px 4px 0 var(--bg-dark-purple)';
+            }
+            if (isWrong) {
+               bgColor = '#FF4D4D';
+               textColor = '#FFF';
+               bShadow = '4px 4px 0 var(--bg-dark-purple)';
+            }
+
+            return (
+              <button
+                key={i}
+                disabled={!isAlive || status !== 'question' || selectedAnswer !== null}
+                onClick={() => handleAnswer(i)}
+                className="pop"
+                style={{ 
+                  background: bgColor,
+                  color: textColor,
+                  border: `3px solid ${borderColor}`,
+                  padding: '16px 10px',
+                  borderRadius: '12px',
+                  fontWeight: 950,
+                  fontSize: 16,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: isAlive && status === 'question' ? 'pointer' : 'default',
+                  boxShadow: bShadow,
+                  transform: isSelected && !isCorrect && !isWrong ? 'translate(4px, 4px)' : 'none',
+                  transition: 'all 0.1s'
+                }}
+              >
+                <div style={{ 
+                  width: 28, height: 28, borderRadius: '50%', 
+                  background: isSelected || isCorrect || isWrong ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.08)', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13
+                }}>
+                  {labels[i]}
+                </div>
+                <span style={{ textAlign: 'center', fontSize: 14 }}>{ans}</span>
+              </button>
+            );
           })}
+        </div>
+
+        {!isAlive && status === 'question' && (
+          <div className="pop" style={{ 
+            textAlign: 'center', padding: '12px', background: 'var(--bg-dark-purple)', 
+            color: 'var(--bg-yellow)', fontWeight: 950, borderRadius: '12px', border: '3px solid var(--bg-pink)' 
+          }}>
+             لقد خرجت من المسابقة! 💀<br/><span style={{fontSize: 11, opacity: 0.8}}>انتظر انتهاء الجولة...</span>
+          </div>
+        )}
+
       </div>
 
-      {!isAlive && status === 'question' && (
-          <div style={{ textAlign: 'center', padding: 10, background: 'rgba(231,76,60,0.1)', color: 'var(--bg-pink)', fontWeight: 900, marginBottom: 10 }}>
-              لقد خرجت من المسابقة! انتظر انتهاء الجولة... 💀
-          </div>
-      )}
+      {/* ── FOOTER ACTIONS ── */}
+      <div style={{ background: '#FFF', borderTop: '5px solid var(--bg-dark-purple)', padding: '16px 20px env(safe-area-inset-bottom)', position: 'relative', zIndex: 10 }}>
+        
+        {/* Progress Info */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+           <span style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>تقدّم الإجابات:</span>
+           <span style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-pink)' }}>{answeredCount} / {totalAlive}</span>
+        </div>
+        <div style={{ width: '100%', height: 14, background: '#EEE', borderRadius: 20, overflow: 'hidden', border: '3px solid var(--bg-dark-purple)', marginBottom: 20 }}>
+           <div style={{ width: `${(answeredCount / (totalAlive || 1)) * 100}%`, height: '100%', background: 'var(--bg-green)', transition: 'width 0.4s ease' }} />
+        </div>
 
-      {/* Stats and Controls */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-          <div className="card" style={{ background: '#FFF', border: 'var(--brutal-border)', padding: 16, marginBottom: 16, borderRadius: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 900, marginBottom: 8, color: 'var(--bg-dark-purple)' }}>
-                  <span>تقدم جولة الإجابات</span>
-                  <span>{answeredCount} / {totalAlive}</span>
-              </div>
-              <div style={{ width: '100%', height: 16, background: 'var(--bg-dark-purple)', padding: 3, border: '2px solid var(--bg-dark-purple)' }}>
-                  <div style={{ width: `${(answeredCount / (totalAlive || 1)) * 100}%`, height: '100%', background: 'var(--bg-yellow)', transition: 'width 0.4s cubic-bezier(0.34,1.56,0.64,1)' }} />
-              </div>
+        {isHost && (
+          <div style={{ display: 'flex', gap: 12 }}>
+            {status === 'question' ? (
+              <button 
+                onClick={handleReveal}
+                className="btn btn-pink" 
+                style={{ flex: 1, padding: '16px', fontSize: 18, borderRadius: '16px', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}
+              >
+                  اكشف الإجابة 🔍
+              </button>
+            ) : (
+              <button 
+                onClick={handleNext}
+                className="btn btn-green" 
+                style={{ flex: 1, padding: '16px', fontSize: 18, borderRadius: '16px', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}
+              >
+                  {totalAlive <= 1 ? 'نهاية المسابقة 🏁' : 'السؤال التالي ➡️'}
+              </button>
+            )}
           </div>
-
-          {isHost && (
-              <div style={{ display: 'flex', gap: 12 }}>
-                  {status === 'question' ? (
-                      <button 
-                        onClick={handleReveal}
-                        className="btn btn-pink" 
-                        style={{ flex: 1, padding: '18px 24px', fontSize: 20, boxShadow: '6px 6px 0 var(--bg-dark-purple)' }}
-                      >
-                          اكشف الإجابة 🔍
-                      </button>
-                  ) : (
-                      <button 
-                        onClick={handleNext}
-                        className="btn btn-green" 
-                        style={{ flex: 1, padding: '18px 24px', fontSize: 20, boxShadow: '6px 6px 0 var(--bg-dark-purple)' }}
-                      >
-                          {totalAlive <= 1 ? 'نهاية المسابقة 🏁' : 'السؤال التالي ➡️'}
-                      </button>
-                  )}
-              </div>
-          )}
+        )}
       </div>
 
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
