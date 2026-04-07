@@ -11,7 +11,7 @@ const MODES = [
   { id: 'monkey', emoji: '🔊', label: 'كلكس!', active: true, desc: 'تحدي سريع' },
   { id: 'draw',   emoji: '🎨', label: 'ارسم',    active: true, desc: 'خمن وارسم' },
   { id: 'survival', emoji: '⚔️', label: 'بقاء', active: true, desc: 'بقاء وأقوى' },
-  { id: 'soon1',  emoji: '🔒', label: 'قريباً',         soon: true, desc: 'أنماط جديدة' },
+  { id: 'charades', emoji: '🎭', label: 'تمثيل', active: true, desc: 'تمثيل صامت' },
 ];
 
 export default function OnlineSetupScreen() {
@@ -122,7 +122,7 @@ export default function OnlineSetupScreen() {
         {/* Compact Settings Group */}
         <div className="card" style={{ padding: '14px', background: '#FFF', borderRadius: '16px', border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)', display: 'flex', flexDirection: 'column', gap: 14 }}>
           
-          {mode !== 'survival' && (
+          {mode !== 'survival' && mode !== 'charades' && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>الموضوع 📚</div>
               <button onClick={() => setCatOpen(!catOpen)} className="btn btn-white" style={{ width: '100%', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, fontWeight: 950, border: '2px solid' }}>
@@ -142,13 +142,13 @@ export default function OnlineSetupScreen() {
           <div>
             <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>اللاعبين</div>
             <div style={{ display: 'flex', gap: 6 }}>
-              {(mode === 'draw' ? [3, 4, 5, 8] : [2, 3, 4, 5]).map(n => (
+              {(mode === 'draw' ? [3, 4, 5, 8] : mode === 'charades' ? [4, 5, 6, 8] : [2, 3, 4, 5]).map(n => (
                 <button key={n} onClick={() => setMaxPlayers(n)} className={`btn ${maxPlayers === n ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: maxPlayers === n ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px', color: maxPlayers === n ? '#FFF' : 'inherit' }}>{n}</button>
               ))}
             </div>
           </div>
 
-          {(mode === 'monkey' || mode === 'survival') && (
+          {(mode === 'monkey' || mode === 'survival') && mode !== 'charades' && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>الوقت</div>
               <div style={{ display: 'flex', gap: 6 }}>
