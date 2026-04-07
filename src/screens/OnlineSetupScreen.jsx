@@ -28,6 +28,7 @@ export default function OnlineSetupScreen() {
   const [toast, setToast]             = useState('');
   const [modeOpen, setModeOpen]       = useState(false);
   const [isPublic, setIsPublic]       = useState(true);
+  const [charadesScoreTarget, setCharadesScoreTarget] = useState(20);
 
   const currentCategories = mode === 'draw' ? drawCategories : appCategories;
   const [category, setCategory]       = useState(currentCategories[0].id);
@@ -43,7 +44,12 @@ export default function OnlineSetupScreen() {
   const handleCreate = async () => {
     setLoading(true);
     try {
-      const code = await createRoom(userProfile, { mode, category, timeLimit, maxPlayers, scoreTarget, drawTime, entryFee, isPublic, wordChoices: 3 });
+      const settings = {
+        mode, category, timeLimit, maxPlayers,
+        scoreTarget: mode === 'charades' ? charadesScoreTarget : scoreTarget,
+        drawTime, entryFee, isPublic, wordChoices: 3,
+      };
+      const code = await createRoom(userProfile, settings);
       nav.toLobby(code);
     } catch (e) {
       setToast(e.message || 'حدث خطأ');
@@ -54,7 +60,7 @@ export default function OnlineSetupScreen() {
 
   return (
     <div className="brutal-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      
+
       <div className="bg-stickers">
         <div style={{ position: 'absolute', top: '10%', right: '10%', fontSize: 24, opacity: 0.15, transform: 'rotate(20deg)' }}>🎮</div>
         <div style={{ position: 'absolute', bottom: '15%', left: '10%', fontSize: 32, opacity: 0.15, transform: 'rotate(-15deg)' }}>🐵</div>
@@ -67,12 +73,11 @@ export default function OnlineSetupScreen() {
       </div>
 
       <div className="content-with-nav" style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 5 }}>
-        
-        {/* Compact Mode Selector */}
-        <div 
+
+        <div
           onClick={() => setModeOpen(!modeOpen)}
           className="card"
-          style={{ 
+          style={{
             padding: '12px 16px', background: '#FFF', borderRadius: '14px', border: '3px solid var(--bg-dark-purple)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             cursor: 'pointer', boxShadow: '4px 4px 0 var(--bg-dark-purple)'
@@ -111,7 +116,6 @@ export default function OnlineSetupScreen() {
           </div>
         )}
 
-        {/* Visibility */}
         <div className="card" style={{ padding: '12px', background: '#FFF', borderRadius: '16px', border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>
           <div style={{ display: 'flex', gap: 8 }}>
              <button onClick={() => setIsPublic(true)} className={`btn ${isPublic ? 'btn-blue' : 'btn-white'}`} style={{ flex: 1, padding: '10px', borderRadius: '10px', fontSize: 14, boxShadow: isPublic ? 'none' : '3px 3px 0 var(--bg-dark-purple)', color: isPublic ? '#FFF' : 'inherit' }}>عامة 🌍</button>
@@ -119,9 +123,8 @@ export default function OnlineSetupScreen() {
           </div>
         </div>
 
-        {/* Compact Settings Group */}
         <div className="card" style={{ padding: '14px', background: '#FFF', borderRadius: '16px', border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          
+
           {mode !== 'survival' && mode !== 'charades' && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>الموضوع 📚</div>
@@ -148,12 +151,23 @@ export default function OnlineSetupScreen() {
             </div>
           </div>
 
-          {(mode === 'monkey' || mode === 'survival') && mode !== 'charades' && (
+          {(mode === 'monkey' || mode === 'survival') && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>الوقت</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[10, 15, 20, 0].map(t => (
                   <button key={t} onClick={() => setTimeLimit(t)} className={`btn ${timeLimit === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 13, boxShadow: timeLimit === t ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px' }}>{t === 0 ? '∞' : `${t}s`}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {mode === 'charades' && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>هدف النقاط 🏆</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[10, 20, 30, 50].map(n => (
+                  <button key={n} onClick={() => setCharadesScoreTarget(n)} className={`btn ${charadesScoreTarget === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: charadesScoreTarget === n ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px' }}>{n}</button>
                 ))}
               </div>
             </div>
@@ -181,7 +195,6 @@ export default function OnlineSetupScreen() {
           )}
         </div>
 
-        {/* Compact Button */}
         <button
           onClick={handleCreate}
           disabled={loading}

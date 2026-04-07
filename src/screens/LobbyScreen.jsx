@@ -244,7 +244,7 @@ export default function LobbyScreen() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <h1 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 4px', textTransform: 'uppercase' }}>
-                  {room.mode === 'draw' ? 'خمن و ارسم' : room.mode === 'survival' ? 'البقاء للأقوى' : room.mode === 'charades' ? 'تمثيل!' : 'كلكس!'}
+                  {room.mode === 'draw' ? 'خمن و ارسم 🎨' : room.mode === 'survival' ? 'البقاء للأقوى ⚔️' : room.mode === 'charades' ? 'بدون كلام 🎭' : 'كلكس 🔊'}
                 </h1>
                 <span style={{
                   fontSize: 11, background: 'var(--bg-pink)', color: '#FFF',
@@ -286,27 +286,32 @@ export default function LobbyScreen() {
               <h3 style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 10px', textTransform: 'uppercase' }}>أسلوب اللعب 🎮</h3>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: room.mode !== 'survival' ? 16 : 0 }}>
                 {[
-                  { id: 'monkey', emoji: '🔊', label: 'قرد' },
+                  { id: 'monkey', emoji: '🔊', label: 'كلكس' },
                   { id: 'draw', emoji: '🎨', label: 'رسم' },
                   { id: 'survival', emoji: '⚔️', label: 'بقاء' },
-                  { id: 'charades', emoji: '🎭', label: 'تمثيل' }
+                  { id: 'charades', emoji: '🎭', label: 'كلام' }
                 ].map(m => {
                   const active = room.mode === m.id;
                   return (
                     <button
                       key={m.id}
-                      onClick={() => updateRoomSettings(roomCode, { mode: m.id, category: (m.id === 'draw' ? drawCategories : appCategories)[0].id })}
+                      onClick={() => {
+                        const defaultCat = (m.id === 'draw' ? drawCategories : appCategories)[0].id;
+                        updateRoomSettings(roomCode, { mode: m.id, category: defaultCat });
+                      }}
                       style={{
-                        flex: 1, padding: '8px 4px', fontSize: 12, fontWeight: 950,
-                        background: active ? 'var(--bg-dark-purple)' : '#FFF',
-                        color: active ? '#FFF' : 'var(--bg-dark-purple)',
-                        border: '3px solid var(--bg-dark-purple)',
-                        boxShadow: active ? '3px 3px 0 var(--bg-pink)' : '2px 2px 0 rgba(0,0,0,0.1)',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                        borderRadius: 6, cursor: 'pointer', transition: 'all 0.1s'
+                        flex: 1, padding: '12px 4px', fontSize: 13, fontWeight: 950,
+                        background: active ? 'var(--bg-yellow)' : '#FFF',
+                        color: 'var(--bg-dark-purple)',
+                        border: '4px solid var(--bg-dark-purple)',
+                        boxShadow: active ? '4px 4px 0 var(--bg-dark-purple)' : '2px 2px 0 rgba(0,0,0,0.1)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        borderRadius: 12, cursor: 'pointer', transition: 'all 0.1s',
+                        transform: active ? 'scale(1.05) translateY(-2px)' : 'none',
+                        zIndex: active ? 2 : 1
                       }}
                     >
-                      <span style={{ fontSize: 20 }}>{m.emoji}</span>
+                      <span style={{ fontSize: 24 }}>{m.emoji}</span>
                       {m.label}
                     </button>
                   );

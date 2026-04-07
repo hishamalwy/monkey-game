@@ -45,13 +45,15 @@ export default function BrowseRoomsScreen() {
   };
 
   const getModeLabel = (mode) => {
-    if (mode === 'draw') return '🎨 رسم';
-    if (mode === 'survival') return '⚔️ بقاء';
-    return '🔊 قرد';
+    if (mode === 'draw') return '🎨 خمن و ارسم';
+    if (mode === 'survival') return '⚔️ البقاء';
+    if (mode === 'charades') return '🎭 بدون كلام';
+    return '🔊 كلكس';
   };
 
   const getCatName = (room) => {
-    if (room.mode === 'survival') return 'مسابقة البقاء';
+    if (room.mode === 'survival') return 'ثقافة عامة';
+    if (room.mode === 'charades') return 'أفلام ومسلسلات';
     const cats = room.mode === 'draw' ? drawCategories : appCategories;
     return cats.find(c => c.id === room.category)?.name || room.category;
   };
@@ -229,12 +231,12 @@ export default function BrowseRoomsScreen() {
                       </span>
                     </div>
                     <h3 style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '4px 0' }}>
-                      غرفة {room.hostName || 'لاعب مجهول'}
+                      {getModeLabel(room.mode)} - {getCatName(room)}
                     </h3>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--bg-dark-purple)', opacity: 0.7 }}>
+                      كود الغرفة: {room.code} | {room.hostName || 'لاعب مجهول'}
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-pink)' }}>
-                        📦 {getCatName(room)}
-                      </span>
                       <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-dark-purple)', opacity: 0.6 }}>
                         👥 {playersCount}/{maxPlayers}
                       </span>
