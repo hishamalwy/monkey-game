@@ -122,14 +122,33 @@ export default function DrawGameScreen() {
     const canvas = canvasRef.current;
     if (!canvas || ds?.roundStatus !== 'drawing') return;
     const container = canvas.parentElement;
-    const size = container ? Math.min(container.offsetWidth, container.offsetHeight) : 300;
-    canvas.width = size || 300;
-    canvas.height = size || 300;
+    if (!container) return;
+    const size = Math.min(container.offsetWidth, container.offsetHeight);
+    if (size <= 0) return;
+    const prevWidth = canvas.width;
+    const prevHeight = canvas.height;
+    let savedImage = null;
+    if (prevWidth > 0 && prevHeight > 0) {
+      try {
+        savedImage = canvas.getContext('2d').getImageData(0, 0, prevWidth, prevHeight);
+      } catch (e) { /* empty */ }
+    }
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = ds?.bgFill || '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    lastStrokesLen.current = 0;
-  }, [ds?.roundStatus, ds?.bgFill]);
+    ctx.fillRect(0, 0, size, size);
+    if (ds?.strokes && ds.strokes.length > 0) {
+      ds.strokes.forEach(s => drawStrokeOnCtx(ctx, s, size, size));
+    } else if (savedImage) {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = prevWidth;
+      tempCanvas.height = prevHeight;
+      tempCanvas.getContext('2d').putImageData(savedImage, 0, 0);
+      ctx.drawImage(tempCanvas, 0, 0, size, size);
+    }
+    lastStrokesLen.current = ds?.strokes?.length || 0;
+  }, [ds?.roundStatus, ds?.bgFill, vh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -390,9 +409,22 @@ export default function DrawGameScreen() {
         )}
       </div>
 
-      {/* ── CANVAS AREA ── */}
-      <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px 16px', position: 'relative', zIndex: 5, overflow: 'hidden' }}>
-        <div className="card" style={{ position: 'relative', aspectRatio: '1/1', width: 'min(85vw, 360px)', overflow: 'hidden', padding: 0, borderRadius: '20px', background: '#FFF', border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
+      {/* CANVAS AREA */}
+      <div id="draw-canvas-area" style={{ 
+        flex: isKeyboardOpen ? '0 0 auto' : '1 1 auto', 
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+        padding: isKeyboardOpen ? '4px 16px' : '0 16px 16px', 
+        position: 'relative', zIndex: 5, overflow: 'hidden',
+        maxHeight: isKeyboardOpen ? '40dvh' : 'none',
+      }}>
+        <div className="card" style={{ 
+          position: 'relative', 
+          width: isKeyboardOpen ? 'min(60vw, 240px)' : 'min(85vw, 360px)',
+          height: isKeyboardOpen ? 'min(60vw, 240px)' : 'min(85vw, 360px)',
+          overflow: 'hidden', padding: 0, borderRadius: '20px', background: '#FFF', 
+          border: '4px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)',
+          transition: 'all 0.2s ease',
+        }}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', touchAction: 'none' }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} />
           {myAlreadyGuessed && !isDrawer && (
             <div className="slide-up" style={{ position: 'absolute', inset: 0, background: 'rgba(0, 224, 109, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

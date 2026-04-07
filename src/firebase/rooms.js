@@ -178,6 +178,7 @@ export async function resetRoomToLobby(code) {
     gameState: deleteField(),
     drawState: deleteField(),
     survivalState: deleteField(),
+    charadesState: deleteField(),
     lastResult: deleteField(),
     currentWord: '', // Ensure old data is cleared
   };

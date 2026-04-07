@@ -16,6 +16,7 @@ export default function SurvivalGameScreen() {
   const [toast, setToast] = useState('');
   const [timer, setTimer] = useState(15);
   const timerIntervalRef = useRef(null);
+  const revealCalledRef = useRef(false);
 
   useEffect(() => {
     const unsub = listenToRoom(roomCode, (data) => {
@@ -29,9 +30,12 @@ export default function SurvivalGameScreen() {
   }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (room?.survivalState?.status === 'question' && room?.survivalState?.roundStartTime) {
-      const startTime = room.survivalState.roundStartTime.toMillis ? room.survivalState.roundStartTime.toMillis() : Date.now();
-      const limit = (room.survivalState.timeLimit || 15) * 1000;
+    const ss = room?.survivalState;
+    if (ss?.status === 'question' && ss?.roundStartTime) {
+      revealCalledRef.current = false;
+      const startTime = ss.roundStartTime.toMillis ? ss.roundStartTime.toMillis() : null;
+      if (startTime === null) return;
+      const limit = (ss.timeLimit || 15) * 1000;
 
       const updateTimer = () => {
         const elapsed = Date.now() - startTime;
@@ -67,11 +71,16 @@ export default function SurvivalGameScreen() {
   const timerPct = (timer / timeLimit) * 100;
 
   useEffect(() => {
-    if (isHost && status === 'question') {
-      if (answeredCount >= totalAlive && totalAlive > 0) handleReveal();
-      else if (timer === 0 && survivalState?.roundStartTime) handleReveal();
+    if (!isHost || status !== 'question' || !survivalState?.roundStartTime) return;
+    if (revealCalledRef.current) return;
+    if (answeredCount >= totalAlive && totalAlive > 0) {
+      revealCalledRef.current = true;
+      handleReveal();
+    } else if (timer === 0) {
+      revealCalledRef.current = true;
+      handleReveal();
     }
-  }, [isHost, status, answeredCount, totalAlive, timer, survivalState?.roundStartTime]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isHost, status, answeredCount, totalAlive, timer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!room || !survivalState) {
     return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
@@ -123,8 +132,6 @@ export default function SurvivalGameScreen() {
     }
   };
 
-  // ── Sub-components ──────────────────────────────────────────────────────────
-
   const Heart = ({ filled }) => (
     <svg width="18" height="18" viewBox="0 0 20 20" fill={filled ? '#FF1F8E' : 'rgba(28,16,64,0.15)'} stroke={filled ? '#C0006E' : 'rgba(28,16,64,0.25)'} strokeWidth="1">
       <path d="M10 17s-7-5.25-7-9.5A4.5 4.5 0 0 1 10 4.16 4.5 4.5 0 0 1 17 7.5C17 11.75 10 17 10 17z" />
@@ -140,7 +147,7 @@ export default function SurvivalGameScreen() {
       className="brutal-bg"
       style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
     >
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div style={{
         background: '#FFF',
         borderBottom: '4px solid var(--bg-dark-purple)',
@@ -151,14 +158,12 @@ export default function SurvivalGameScreen() {
         flexShrink: 0,
         zIndex: 10,
       }}>
-        {/* Close */}
         <button
           onClick={() => nav.toHome()}
           className="btn btn-white"
           style={{ width: 38, height: 38, fontSize: 15, borderRadius: '10px', padding: 0, flexShrink: 0 }}
         >✕</button>
 
-        {/* Round badge */}
         <div style={{
           background: 'var(--bg-dark-purple)', color: 'var(--bg-yellow)',
           padding: '5px 14px', borderRadius: '100px', fontWeight: 950, fontSize: 13,
@@ -167,7 +172,6 @@ export default function SurvivalGameScreen() {
           ⚔️ {totalAlive} ناجٍ  •  س{survivalState.currentQuestionIndex + 1}
         </div>
 
-        {/* Timer */}
         <div style={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>
           <svg width="42" height="42" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
             <circle cx="21" cy="21" r="17" fill="none" stroke="#EEE" strokeWidth="4" />
@@ -192,7 +196,7 @@ export default function SurvivalGameScreen() {
         </div>
       </div>
 
-      {/* ── PLAYER STRIP ── */}
+      {/* PLAYER STRIP */}
       <div style={{
         background: 'rgba(255,255,255,0.7)',
         borderBottom: '4px solid var(--bg-dark-purple)',
@@ -234,7 +238,6 @@ export default function SurvivalGameScreen() {
                   }}>💀</div>
                 )}
               </div>
-              {/* Hearts row */}
               <div style={{ display: 'flex', gap: 1 }}>
                 <Heart filled={p.lives >= 1} />
                 <Heart filled={p.lives >= 2} />
@@ -245,7 +248,7 @@ export default function SurvivalGameScreen() {
         })}
       </div>
 
-      {/* ── BOARD AREA ── */}
+      {/* BOARD AREA */}
       <div style={{
         flex: '1 1 auto',
         display: 'flex',
@@ -355,7 +358,7 @@ export default function SurvivalGameScreen() {
           </div>
         )}
 
-        {/* "Answer received" banner for non-host */}
+        {/* Answer received banner for non-host */}
         {!isHost && hasAnswered && status === 'question' && (
           <div style={{
             background: 'var(--bg-green)', color: 'var(--bg-dark-purple)',
@@ -368,7 +371,7 @@ export default function SurvivalGameScreen() {
         )}
       </div>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <div style={{
         background: '#FFF', borderTop: '4px solid var(--bg-dark-purple)',
         padding: '12px 16px env(safe-area-inset-bottom)',

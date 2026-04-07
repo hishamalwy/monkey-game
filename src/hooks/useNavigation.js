@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 export function useNavigation() {
   const navigate = useNavigate();
   const { roomCode } = useParams();
-
   return {
     toHome: () => navigate('/home', { replace: true }),
     toAuth: () => navigate('/auth', { replace: true }),
@@ -18,7 +17,9 @@ export function useNavigation() {
     toDrawGame: (code) => navigate(`/draw/${code || roomCode}`),
     toDrawGameOver: (code) => navigate(`/draw-over/${code || roomCode}`),
     toSurvivalGame: (code) => navigate(`/survival/${code || roomCode}`),
-    toSurvivalGameOver: (code) => navigate(`/survival-over/${code || roomCode}`),
+    toSurvivalGameOver: (code) => navigate(`/survival-over/${code || roomCode}`, { replace: true }),
+    toCharadesGame: (code) => navigate(`/charades/${code || roomCode}`),
+    toCharadesGameOver: (code) => navigate(`/charades-over/${code || roomCode}`, { replace: true }),
     toStore: () => navigate('/store'),
     toProfile: () => navigate('/profile'),
   };

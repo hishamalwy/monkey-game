@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings, kickPlayer } from '../firebase/rooms';
 import { startDrawGame } from '../firebase/drawRooms';
 import { startSurvivalGame } from '../firebase/survivalRooms';
+import { startCharadesGame } from '../firebase/charadesRooms';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -126,6 +127,7 @@ export default function LobbyScreen() {
       if (data.status === 'playing') {
         if (data.mode === 'draw') nav.toDrawGame();
         else if (data.mode === 'survival') nav.toSurvivalGame();
+        else if (data.mode === 'charades') nav.toCharadesGame();
         else nav.toGame();
       }
     });
@@ -162,6 +164,7 @@ export default function LobbyScreen() {
     try {
       if (room.mode === 'draw') await startDrawGame(roomCode);
       else if (room.mode === 'survival') await startSurvivalGame(roomCode);
+      else if (room.mode === 'charades') await startCharadesGame(roomCode);
       else await startGame(roomCode);
     }
     catch (e) { setToast(e.message); setStarting(false); }
@@ -237,11 +240,11 @@ export default function LobbyScreen() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '3px 3px 0 var(--bg-dark-purple)'
               }}>
-                {room.mode === 'draw' ? '🎨' : room.mode === 'survival' ? '⚔️' : '🔊'}
+                {room.mode === 'draw' ? '🎨' : room.mode === 'survival' ? '⚔️' : room.mode === 'charades' ? '🎭' : '🔊'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <h1 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 4px', textTransform: 'uppercase' }}>
-                  {room.mode === 'draw' ? 'خمن و ارسم' : room.mode === 'survival' ? 'البقاء للأقوى' : 'كلكس!'}
+                  {room.mode === 'draw' ? 'خمن و ارسم' : room.mode === 'survival' ? 'البقاء للأقوى' : room.mode === 'charades' ? 'تمثيل!' : 'كلكس!'}
                 </h1>
                 <span style={{
                   fontSize: 11, background: 'var(--bg-pink)', color: '#FFF',
@@ -249,6 +252,7 @@ export default function LobbyScreen() {
                   boxShadow: '2px 2px 0 var(--bg-dark-purple)'
                 }}>
                   {room.mode === 'survival' ? 'تحدي المعلومات السريع' :
+                    room.mode === 'charades' ? 'تمثيل صامت جماعي' :
                     ((room.mode === 'draw' ? drawCategories : appCategories).find(c => c.id === room.category)?.name || room.category)
                   }
                 </span>
@@ -284,7 +288,8 @@ export default function LobbyScreen() {
                 {[
                   { id: 'monkey', emoji: '🔊', label: 'قرد' },
                   { id: 'draw', emoji: '🎨', label: 'رسم' },
-                  { id: 'survival', emoji: '⚔️', label: 'بقاء' }
+                  { id: 'survival', emoji: '⚔️', label: 'بقاء' },
+                  { id: 'charades', emoji: '🎭', label: 'تمثيل' }
                 ].map(m => {
                   const active = room.mode === m.id;
                   return (
@@ -308,7 +313,7 @@ export default function LobbyScreen() {
                 })}
               </div>
 
-              {room.mode !== 'survival' && (
+              {room.mode !== 'survival' && room.mode !== 'charades' && (
                 <div>
                   <h3 style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '0 0 8px', textTransform: 'uppercase' }}>نوع الأسئلة 📦</h3>
                   <div style={{

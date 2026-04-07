@@ -4,7 +4,6 @@ import { useAuth } from './context/AuthContext';
 import SplashScreen from './screens/SplashScreen';
 import AuthScreen from './screens/AuthScreen';
 import LoadingSpinner from './components/ui/LoadingSpinner';
-import ConnectionStatus from './components/shared/ConnectionStatus';
 
 const HomeScreen = lazy(() => import('./screens/HomeScreen'));
 const OnlineSetupScreen = lazy(() => import('./screens/OnlineSetupScreen'));
@@ -17,6 +16,8 @@ const DrawGameScreen = lazy(() => import('./screens/DrawGameScreen'));
 const DrawGameOverScreen = lazy(() => import('./screens/DrawGameOverScreen'));
 const SurvivalGameScreen = lazy(() => import('./screens/SurvivalGameScreen'));
 const SurvivalGameOverScreen = lazy(() => import('./screens/SurvivalGameOverScreen'));
+const CharadesGameScreen = lazy(() => import('./screens/CharadesGameScreen'));
+const CharadesGameOverScreen = lazy(() => import('./screens/CharadesGameOverScreen'));
 const LeaderboardScreen = lazy(() => import('./screens/LeaderboardScreen'));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
 const StoreScreen = lazy(() => import('./screens/StoreScreen'));
@@ -68,6 +69,8 @@ export default function App() {
           <Route path="/draw-over/:roomCode" element={<AuthGate><DrawGameOverScreen /></AuthGate>} />
           <Route path="/survival/:roomCode" element={<AuthGate><SurvivalGameScreen /></AuthGate>} />
           <Route path="/survival-over/:roomCode" element={<AuthGate><SurvivalGameOverScreen /></AuthGate>} />
+          <Route path="/charades/:roomCode" element={<AuthGate><CharadesGameScreen /></AuthGate>} />
+          <Route path="/charades-over/:roomCode" element={<AuthGate><CharadesGameOverScreen /></AuthGate>} />
           <Route path="/leaderboard" element={<AuthGate><LeaderboardScreen /></AuthGate>} />
           <Route path="/settings" element={<AuthGate><SettingsScreen /></AuthGate>} />
           <Route path="/store" element={<AuthGate><StoreScreen /></AuthGate>} />

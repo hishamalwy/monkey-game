@@ -109,7 +109,7 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
   const players = room.playerOrder || [];
   const playerCount = players.length;
   const rank = (ds.guessersDone || []).length; // 0-indexed rank of current correct guesser
-  const points = Math.max(1, 15 - rank);
+  const points = Math.max(5, 15 - rank * 3); // 15, 12, 9, 6, 5...
 
   const newMessage = {
     uid,
@@ -136,7 +136,7 @@ export async function submitDrawGuess(roomCode, uid, username, guess, drawTime =
     const othersCount = Math.max(1, activePlayers.length - 1); // everyone except drawer
     const nowDone = (ds.guessersDone || []).length + 1;
     if (nowDone >= othersCount) {
-      const drawerPoints = nowDone; 
+      const drawerPoints = 10 + (nowDone * 5); 
       messagesToAdd.push({
         uid: 'system', username: 'المنادي',
         text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now() + 1,
@@ -217,7 +217,7 @@ export async function endDrawRound(roomCode) {
   if (!ds || ds.roundStatus !== 'drawing') return; 
 
   const correctCount = ds.guessersDone?.length || 0;
-  const drawerPoints = correctCount; // +1 point for each person who guessed
+  const drawerPoints = correctCount > 0 ? (10 + correctCount * 5) : 0; // 10 base + 5 per person
 
   const newScores = { ...(ds.scores || {}) };
   newScores[ds.drawerUid] = (newScores[ds.drawerUid] || 0) + drawerPoints;
