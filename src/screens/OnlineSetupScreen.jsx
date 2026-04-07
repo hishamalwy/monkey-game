@@ -29,6 +29,7 @@ export default function OnlineSetupScreen() {
   const [modeOpen, setModeOpen]       = useState(false);
   const [isPublic, setIsPublic]       = useState(true);
   const [charadesScoreTarget, setCharadesScoreTarget] = useState(20);
+  const [charadesTime, setCharadesTime] = useState(60);
 
   const currentCategories = mode === 'draw' ? drawCategories : appCategories;
   const [category, setCategory]       = useState(currentCategories[0].id);
@@ -48,6 +49,7 @@ export default function OnlineSetupScreen() {
         mode, category, timeLimit, maxPlayers,
         scoreTarget: mode === 'charades' ? charadesScoreTarget : scoreTarget,
         drawTime, entryFee, isPublic, wordChoices: 3,
+        charadesTime: mode === 'charades' ? charadesTime : undefined,
       };
       const code = await createRoom(userProfile, settings);
       nav.toLobby(code);
@@ -168,6 +170,17 @@ export default function OnlineSetupScreen() {
               <div style={{ display: 'flex', gap: 6 }}>
                 {[10, 20, 30, 50].map(n => (
                   <button key={n} onClick={() => setCharadesScoreTarget(n)} className={`btn ${charadesScoreTarget === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: charadesScoreTarget === n ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px' }}>{n}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {mode === 'charades' && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>وقت التمثيل ⏱️</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[45, 60, 75, 90].map(t => (
+                  <button key={t} onClick={() => setCharadesTime(t)} className={`btn ${charadesTime === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: charadesTime === t ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px' }}>{t}ث</button>
                 ))}
               </div>
             </div>

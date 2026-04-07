@@ -49,6 +49,7 @@ export async function createRoom(userProfile, settings = {}) {
     timeLimit: settings.timeLimit || 15,
     scoreTarget: settings.scoreTarget || 40,
     drawTime: settings.drawTime || 80,
+    charadesTime: settings.charadesTime || 60,
     wordChoices: settings.wordChoices || 3,
     entryFee: settings.entryFee || 0,
     createdAt: serverTimestamp(),

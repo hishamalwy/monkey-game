@@ -13,7 +13,13 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Toast from '../components/ui/Toast';
 import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 
-const CHARADES_TIME = 75;
+function getOpposingTeam(team) {
+  return team === 'A' ? 'B' : 'A';
+}
+
+const TEAM_LABELS = { A: 'الأحمر', B: 'الأزرق' };
+const TEAM_COLORS = { A: 'var(--bg-pink)', B: '#2979FF' };
+const TYPE_LABELS = { movie: '🎬 فيلم', series: '📺 مسلسل', play: '🎭 مسرحية' };
 
 export default function CharadesGameScreen() {
   const roomCode = useRoomCode();
@@ -41,11 +47,16 @@ export default function CharadesGameScreen() {
   const allPlayers = room?.playerOrder || [];
   const teamA = cs?.teams?.A || [];
   const teamB = cs?.teams?.B || [];
-  const myTeam = teamA.includes(myUid) ? 'A' : 'B';
-  const currentTeamPlayers = cs?.currentTeam === 'A' ? teamA : teamB;
-  const isOnCurrentTeam = currentTeamPlayers?.includes(myUid);
+  const myTeam = teamA.includes(myUid) ? 'A' : teamB.includes(myUid) ? 'B' : null;
+  const choosingTeam = cs?.choosingTeam || 'A';
+  const guessingTeam = choosingTeam === 'A' ? 'B' : 'A';
+  const choosingTeamPlayers = choosingTeam === 'A' ? teamA : teamB;
+  const guessingTeamPlayers = guessingTeam === 'A' ? teamA : teamB;
+  const isOnChoosingTeam = choosingTeamPlayers?.includes(myUid);
+  const isOnGuessingTeam = guessingTeamPlayers?.includes(myUid);
   const phase = cs?.phase;
   const scoreTarget = cs?.scoreTarget || 20;
+  const charadesTime = cs?.charadesTime || 60;
 
   useEffect(() => {
     if (!cs?.timeEndsAt) return;
@@ -64,7 +75,7 @@ export default function CharadesGameScreen() {
   useEffect(() => {
     if (!isHost || !cs) return;
     if (phase === 'titleVote') {
-      const members = cs.teams[cs.currentTeam] || [];
+      const members = choosingTeamPlayers || [];
       const votes = cs.titleVotes || {};
       if (members.length > 0 && members.every(uid => votes[uid] !== undefined)) {
         const timer = setTimeout(() => {
@@ -74,7 +85,7 @@ export default function CharadesGameScreen() {
       }
     }
     if (phase === 'selectActor') {
-      const members = cs.teams[cs.currentTeam] || [];
+      const members = choosingTeamPlayers || [];
       const votes = cs.actorVotes || {};
       if (members.length > 0 && members.every(uid => votes[uid] !== undefined)) {
         const timer = setTimeout(() => {
@@ -83,7 +94,7 @@ export default function CharadesGameScreen() {
         return () => clearTimeout(timer);
       }
     }
-  }, [cs?.titleVotes, cs?.actorVotes, phase, isHost, roomCode]);
+  }, [cs?.titleVotes, cs?.actorVotes, phase, isHost, roomCode, choosingTeamPlayers]);
 
   if (!room || !cs) {
     return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LoadingSpinner /></div>;
@@ -108,7 +119,7 @@ export default function CharadesGameScreen() {
   };
 
   const handleGuess = async () => {
-    if (!guessInput.trim() || !isOnCurrentTeam) return;
+    if (!guessInput.trim() || !isOnGuessingTeam) return;
     try {
       await charadesSubmitGuess(roomCode, myUid, guessInput.trim());
       setGuessInput('');
@@ -136,18 +147,18 @@ export default function CharadesGameScreen() {
 
   const isActor = cs?.currentActorUid === myUid;
   const actorPlayer = cs?.currentActorUid ? room?.players?.[cs.currentActorUid] : null;
-  const timePct = (timeLeft / CHARADES_TIME) * 100;
-  const halfTime = CHARADES_TIME / 2;
+  const timePct = charadesTime > 0 ? (timeLeft / charadesTime) * 100 : 0;
+  const halfTime = charadesTime / 2;
 
   const titleVoteCounts = (cs?.titleOptions || []).map((_, i) => {
     return Object.values(cs.titleVotes || {}).filter(v => v === i).length;
   });
 
-  const actorVoteCounts = (currentTeamPlayers || []).map(uid => {
+  const actorVoteCounts = (guessingTeamPlayers || []).map(uid => {
     return Object.values(cs.actorVotes || {}).filter(v => v === uid).length;
   });
 
-  const actedSet = new Set(cs?.actedPlayers?.[cs?.currentTeam] || []);
+  const actedSet = new Set(cs?.actedPlayers?.[guessingTeam] || []);
 
   const scoreA = cs.scores?.A || 0;
   const scoreB = cs.scores?.B || 0;
@@ -166,7 +177,7 @@ export default function CharadesGameScreen() {
           padding: '5px 14px', borderRadius: '100px', fontWeight: 950, fontSize: 13,
           border: '3px solid var(--bg-dark-purple)', boxShadow: '3px 3px 0 var(--bg-pink)',
         }}>
-          {phase === 'chooseTeam' ? '🎭 اختر فريقك' : `🎭 جولة ${cs.roundNumber}  •  فريق ${cs.currentTeam === 'A' ? 'الأحمر' : 'الأزرق'}`}
+          {phase === 'chooseTeam' ? '🎭 اختر فريقك' : `🎭 جولة ${cs.roundNumber}`}
         </div>
         <div style={{ width: 38, flexShrink: 0 }} />
       </div>
@@ -200,6 +211,17 @@ export default function CharadesGameScreen() {
         </div>
       )}
 
+      {phase !== 'chooseTeam' && phase !== 'roundResult' && phase !== 'gameOver' && (
+        <div style={{
+          background: TEAM_COLORS[choosingTeam], padding: '6px 16px',
+          textAlign: 'center', flexShrink: 0,
+        }}>
+          <span style={{ fontWeight: 950, fontSize: 12, color: '#FFF' }}>
+            فريق {TEAM_LABELS[choosingTeam]} يختار • فريق {TEAM_LABELS[guessingTeam]} يمثّل ويخمّن
+          </span>
+        </div>
+      )}
+
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16, gap: 16, overflow: 'auto' }}>
 
         {/* ===== CHOOSE TEAM ===== */}
@@ -220,7 +242,7 @@ export default function CharadesGameScreen() {
                 transform: myTeam === 'A' ? 'translate(4px,4px)' : 'none',
                 cursor: 'pointer', textAlign: 'center',
               }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🅰️</div>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🔴</div>
                 <div style={{ fontWeight: 950, fontSize: 16, color: myTeam === 'A' ? '#FFF' : 'var(--bg-pink)' }}>فريق الأحمر</div>
                 <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
                   {teamA.map(uid => {
@@ -242,7 +264,7 @@ export default function CharadesGameScreen() {
                 transform: myTeam === 'B' ? 'translate(4px,4px)' : 'none',
                 cursor: 'pointer', textAlign: 'center',
               }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🎭</div>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🔵</div>
                 <div style={{ fontWeight: 950, fontSize: 16, color: myTeam === 'B' ? '#FFF' : '#2979FF' }}>فريق الأزرق</div>
                 <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
                   {teamB.map(uid => {
@@ -271,7 +293,7 @@ export default function CharadesGameScreen() {
         {/* ===== TITLE VOTE ===== */}
         {phase === 'titleVote' && (
           <div style={{ width: '100%', maxWidth: 420 }}>
-            {isOnCurrentTeam ? (
+            {isOnChoosingTeam ? (
               <div>
                 <h2 style={{ textAlign: 'center', fontWeight: 950, fontSize: 17, color: 'var(--bg-dark-purple)', marginBottom: 16 }}>
                   صوّتوا: أيهما الأصعب في التمثيل؟ 🤔
@@ -295,8 +317,8 @@ export default function CharadesGameScreen() {
                         <div style={{ fontSize: 28 }}>{opt.emoji}</div>
                         <div style={{ flex: 1, textAlign: 'right' }}>
                           <div style={{ fontWeight: 950, fontSize: 16, color: 'var(--bg-dark-purple)' }}>{opt.title}</div>
-                          <div style={{ fontSize: 11, fontWeight: 950, color: opt.type === 'movie' ? 'var(--bg-pink)' : '#2979FF' }}>
-                            {opt.type === 'movie' ? '🎬 فيلم' : '🎭 مسرحية'}
+                          <div style={{ fontSize: 11, fontWeight: 950, color: opt.type === 'movie' ? 'var(--bg-pink)' : opt.type === 'series' ? '#2979FF' : 'var(--bg-green)' }}>
+                            {TYPE_LABELS[opt.type] || opt.type}
                           </div>
                         </div>
                         {count > 0 && (
@@ -323,8 +345,11 @@ export default function CharadesGameScreen() {
               }}>
                 <div style={{ fontSize: 40, marginBottom: 8 }}>⏳</div>
                 <h3 style={{ fontWeight: 950, color: 'var(--bg-dark-purple)', fontSize: 16 }}>
-                  فريق {cs.currentTeam === 'A' ? 'الأحمر' : 'الأزرق'} يختاروا...
+                  فريق {TEAM_LABELS[choosingTeam]} يختاروا العنوان...
                 </h3>
+                <p style={{ fontSize: 12, color: '#888', fontWeight: 950, marginTop: 8 }}>
+                  فريقكم هيخمّن بعد كده! 💪
+                </p>
               </div>
             )}
           </div>
@@ -333,7 +358,7 @@ export default function CharadesGameScreen() {
         {/* ===== SELECT ACTOR ===== */}
         {phase === 'selectActor' && (
           <div style={{ width: '100%', maxWidth: 420 }}>
-            {isOnCurrentTeam ? (
+            {isOnChoosingTeam ? (
               <div>
                 <div style={{
                   background: 'var(--bg-dark-purple)', borderRadius: '14px', padding: '14px 16px',
@@ -342,17 +367,20 @@ export default function CharadesGameScreen() {
                   <div style={{ fontSize: 12, fontWeight: 950, color: 'var(--bg-yellow)', marginBottom: 4 }}>العنوان المختار</div>
                   <div style={{ fontSize: 22, fontWeight: 950, color: '#FFF' }}>{cs.currentTitle}</div>
                   <div style={{ fontSize: 11, fontWeight: 950, color: 'var(--bg-yellow)' }}>
-                    {cs.currentTitleType === 'movie' ? '🎬 فيلم' : '🎭 مسرحية'}
+                    {TYPE_LABELS[cs.currentTitleType] || cs.currentTitleType}
                   </div>
                 </div>
-                <h2 style={{ textAlign: 'center', fontWeight: 950, fontSize: 16, color: 'var(--bg-dark-purple)', marginBottom: 14 }}>
-                  اختاروا مين يمثّل! 🎭
+                <h2 style={{ textAlign: 'center', fontWeight: 950, fontSize: 16, color: 'var(--bg-dark-purple)', marginBottom: 4 }}>
+                  اختاروا مين يمثّل من فريق {TEAM_LABELS[guessingTeam]}! 🎭
                 </h2>
+                <p style={{ textAlign: 'center', fontSize: 11, color: '#888', marginBottom: 14 }}>
+                  الممثل من الفريق المنافس هي acting والفريقه يخمّن
+                </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {currentTeamPlayers.map(uid => {
+                  {guessingTeamPlayers.map(uid => {
                     const p = room?.players?.[uid];
                     const voted = cs.actorVotes?.[myUid] === uid;
-                    const count = actorVoteCounts[currentTeamPlayers.indexOf(uid)] || 0;
+                    const count = actorVoteCounts[guessingTeamPlayers.indexOf(uid)] || 0;
                     const alreadyActed = actedSet.has(uid);
                     return (
                       <button key={uid} onClick={() => handleVoteActor(uid)} disabled={alreadyActed} style={{
@@ -384,17 +412,20 @@ export default function CharadesGameScreen() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : isOnGuessingTeam ? (
               <div style={{
                 background: '#FFF', borderRadius: '18px', border: '4px solid var(--bg-dark-purple)',
-                padding: 24, textAlign: 'center', boxShadow: '6px 6px 0 var(--bg-pink)',
+                padding: 24, textAlign: 'center', boxShadow: '6px 6px 0 #2979FF',
               }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>⏳</div>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>🎭</div>
                 <h3 style={{ fontWeight: 950, color: 'var(--bg-dark-purple)', fontSize: 16 }}>
-                  فريق {cs.currentTeam === 'A' ? 'الأحمر' : 'الأزرق'} يختاروا الممثل...
+                  فريق {TEAM_LABELS[choosingTeam]} يختاروا مين يمثّل منكم...
                 </h3>
+                <p style={{ fontSize: 12, color: '#888', fontWeight: 950, marginTop: 8 }}>
+                  واحد من فريقكم هيتمثّل والباقي يخمّنوا! 🤫
+                </p>
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -408,13 +439,13 @@ export default function CharadesGameScreen() {
                 textAlign: 'center',
               }}>
                 <div style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-yellow)', marginBottom: 8 }}>
-                  دورك أنك تمثّل! 🎭
+                  دورك أنك تمثّل! 🎭 ممنوع الكلام!
                 </div>
                 <div style={{ fontSize: 28, fontWeight: 950, color: '#FFF', marginBottom: 12, lineHeight: 1.3 }}>
                   {cs.currentTitle}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-yellow)', marginBottom: 4 }}>
-                  ({cs.currentTitleType === 'movie' ? '🎬 فيلم' : '🎭 مسرحية'})
+                  ({TYPE_LABELS[cs.currentTitleType] || cs.currentTitleType})
                 </div>
                 {cs.currentChallenge && (
                   <div style={{
@@ -427,7 +458,7 @@ export default function CharadesGameScreen() {
                   {timeLeft}ث
                 </div>
               </div>
-            ) : isOnCurrentTeam ? (
+            ) : isOnGuessingTeam ? (
               <div>
                 <div style={{
                   background: '#FFF', borderRadius: '18px', padding: 20,
@@ -435,7 +466,7 @@ export default function CharadesGameScreen() {
                   textAlign: 'center', marginBottom: 16,
                 }}>
                   <div style={{ fontWeight: 950, fontSize: 14, color: 'var(--bg-dark-purple)' }}>
-                    {actorPlayer?.username} يمثّل الآن! 🎭
+                    {actorPlayer?.username} يمثّل الآن! 🎭 خمّنوا!
                   </div>
                   {cs.currentChallenge && (
                     <div style={{
@@ -490,10 +521,10 @@ export default function CharadesGameScreen() {
                 }}>
                   <div style={{ fontSize: 40, marginBottom: 8 }}>👀</div>
                   <h3 style={{ fontWeight: 950, color: 'var(--bg-dark-purple)', fontSize: 16, marginBottom: 8 }}>
-                    {actorPlayer?.username} يمثّل لفريق {cs.currentTeam === 'A' ? 'الأحمر' : 'الأزرق'}!
+                    {actorPlayer?.username} يمثّل لفريق {TEAM_LABELS[guessingTeam]}!
                   </h3>
                   <p style={{ fontSize: 13, color: '#888', fontWeight: 950 }}>
-                    تابعوا التمثيل! 🍿
+                    أنت اخترت العنوان — تابعوا التمثيل! 🍿
                   </p>
                 </div>
                 <div style={{ marginTop: 8 }}>
@@ -554,12 +585,21 @@ export default function CharadesGameScreen() {
                 </div>
               )}
               {cs.phaseData?.correct && (
-                <div style={{
-                  marginTop: 8, background: 'var(--bg-yellow)', color: 'var(--bg-dark-purple)',
-                  padding: '10px 20px', borderRadius: '12px', display: 'inline-block',
-                  fontWeight: 950, fontSize: 18, border: '3px solid var(--bg-dark-purple)',
-                }}>
-                  +{cs.phaseData.points} نقطة {cs.phaseData?.beforeHalf ? '⚡' : ''}
+                <div style={{ marginTop: 8 }}>
+                  <div style={{
+                    background: TEAM_COLORS[guessingTeam], color: '#FFF',
+                    padding: '6px 14px', borderRadius: '8px', fontWeight: 950, fontSize: 12,
+                    display: 'inline-block', marginBottom: 8,
+                  }}>
+                    فريق {TEAM_LABELS[guessingTeam]}
+                  </div>
+                  <div style={{
+                    background: 'var(--bg-yellow)', color: 'var(--bg-dark-purple)',
+                    padding: '10px 20px', borderRadius: '12px', display: 'inline-block',
+                    fontWeight: 950, fontSize: 18, border: '3px solid var(--bg-dark-purple)',
+                  }}>
+                    +{cs.phaseData.points} نقطة {cs.phaseData?.beforeHalf ? '⚡' : ''}
+                  </div>
                 </div>
               )}
             </div>

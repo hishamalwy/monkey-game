@@ -2,8 +2,7 @@ import {
   doc, getDoc, updateDoc,
 } from 'firebase/firestore';
 import { db } from './config';
-
-const CHARADES_TIME = 75;
+import { pickCharadesOptions, charadesChallenges } from '../data/charadesData';
 
 function normalizeArabic(s) {
   return s
@@ -16,21 +15,27 @@ function normalizeArabic(s) {
     .toLowerCase();
 }
 
+function getOpposingTeam(team) {
+  return team === 'A' ? 'B' : 'A';
+}
+
 export async function startCharadesGame(roomCode) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
   const room = snap.data();
   const scoreTarget = room.scoreTarget || 20;
+  const charadesTime = room.charadesTime || 60;
+
   await updateDoc(doc(db, 'rooms', roomCode), {
     status: 'playing',
     charadesState: {
       phase: 'chooseTeam',
-      currentTeam: 'A',
+      choosingTeam: 'A',
       teams: { A: [], B: [] },
-      actOrders: { A: [], B: [] },
       actedPlayers: { A: [], B: [] },
       roundNumber: 1,
       scores: { A: 0, B: 0 },
       scoreTarget,
+      charadesTime,
       titleOptions: null,
       titleVotes: {},
       actorVotes: {},
@@ -67,23 +72,27 @@ export async function charadesConfirmTeams(roomCode) {
   const cs = snap.data()?.charadesState;
   if (!cs) return;
 
-  const { charadesMovies, charadesPlays } = await import('../data/charadesData');
-  const allTitles = [
-    ...charadesMovies.map(m => ({ title: m.title, emoji: m.emoji, type: 'movie' })),
-    ...charadesPlays.map(p => ({ title: p.title, emoji: p.emoji, type: 'play' })),
-  ];
-  const shuffled = [...allTitles].sort(() => Math.random() - 0.5);
-  const options = shuffled.slice(0, 3);
+  const room = snap.data();
+  const allPlayers = room.playerOrder || [];
+  let teams = {
+    A: [...(cs.teams.A || [])],
+    B: [...(cs.teams.B || [])],
+  };
+
+  const unassigned = allPlayers.filter(uid => !teams.A.includes(uid) && !teams.B.includes(uid));
+  for (const uid of unassigned) {
+    if (teams.A.length <= teams.B.length) teams.A.push(uid);
+    else teams.B.push(uid);
+  }
+
+  const options = pickCharadesOptions();
 
   await updateDoc(doc(db, 'rooms', roomCode), {
     'charadesState.phase': 'titleVote',
+    'charadesState.teams': teams,
     'charadesState.titleOptions': options,
     'charadesState.titleVotes': {},
     'charadesState.actorVotes': {},
-    'charadesState.actOrders': {
-      A: [...(cs.teams.A || [])],
-      B: [...(cs.teams.B || [])],
-    },
   });
 }
 
@@ -91,6 +100,9 @@ export async function charadesVoteTitle(roomCode, uid, optionIndex) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
   const cs = snap.data()?.charadesState;
   if (!cs || cs.phase !== 'titleVote') return;
+
+  const choosingTeamMembers = cs.teams[cs.choosingTeam] || [];
+  if (!choosingTeamMembers.includes(uid)) return;
 
   const votes = { ...(cs.titleVotes || {}) };
   votes[uid] = optionIndex;
@@ -135,6 +147,13 @@ export async function charadesVoteActor(roomCode, uid, actorUid) {
   const cs = snap.data()?.charadesState;
   if (!cs || cs.phase !== 'selectActor') return;
 
+  const choosingTeamMembers = cs.teams[cs.choosingTeam] || [];
+  if (!choosingTeamMembers.includes(uid)) return;
+
+  const guessingTeam = getOpposingTeam(cs.choosingTeam);
+  const guessingTeamMembers = cs.teams[guessingTeam] || [];
+  if (!guessingTeamMembers.includes(actorUid)) return;
+
   const votes = { ...(cs.actorVotes || {}) };
   votes[uid] = actorUid;
 
@@ -148,6 +167,9 @@ export async function charadesResolveActor(roomCode) {
   const cs = snap.data()?.charadesState;
   if (!cs || cs.phase !== 'selectActor') return;
 
+  const guessingTeam = getOpposingTeam(cs.choosingTeam);
+  const guessingTeamMembers = cs.teams[guessingTeam] || [];
+
   const votes = cs.actorVotes || {};
   const counts = {};
   Object.values(votes).forEach(uid => {
@@ -155,33 +177,34 @@ export async function charadesResolveActor(roomCode) {
   });
 
   let maxVotes = 0;
-  let winnerUid = (cs.teams[cs.currentTeam] || [])[0];
+  let winnerUid = guessingTeamMembers[0];
   Object.entries(counts).forEach(([uid, count]) => {
-    if (count > maxVotes) {
+    if (count > maxVotes && guessingTeamMembers.includes(uid)) {
       maxVotes = count;
       winnerUid = uid;
     }
   });
 
-  const { charadesChallenges } = await import('../data/charadesData');
   const challenge = charadesChallenges[Math.floor(Math.random() * charadesChallenges.length)];
 
   const acted = { ...(cs.actedPlayers || { A: [], B: [] }) };
-  const currentActed = [...(acted[cs.currentTeam] || [])];
+  const currentActed = [...(acted[guessingTeam] || [])];
   if (!currentActed.includes(winnerUid)) {
     currentActed.push(winnerUid);
   }
-  if (currentActed.length >= (cs.teams[cs.currentTeam] || []).length) {
-    acted[cs.currentTeam] = [];
+  if (currentActed.length >= guessingTeamMembers.length) {
+    acted[guessingTeam] = [];
   } else {
-    acted[cs.currentTeam] = currentActed;
+    acted[guessingTeam] = currentActed;
   }
+
+  const charadesTime = cs.charadesTime || 60;
 
   await updateDoc(doc(db, 'rooms', roomCode), {
     'charadesState.phase': 'acting',
     'charadesState.currentActorUid': winnerUid,
     'charadesState.currentChallenge': challenge.text,
-    'charadesState.timeEndsAt': Date.now() + CHARADES_TIME * 1000,
+    'charadesState.timeEndsAt': Date.now() + charadesTime * 1000,
     'charadesState.guessedCorrectly': false,
     'charadesState.actorVotes': {},
     'charadesState.actedPlayers': acted,
@@ -193,18 +216,21 @@ export async function charadesSubmitGuess(roomCode, uid, guess) {
   const cs = snap.data()?.charadesState;
   if (!cs || cs.phase !== 'acting') return { correct: false };
 
-  const team = cs.currentTeam;
-  const isOnCurrentTeam = cs.teams[team]?.includes(uid);
-  if (!isOnCurrentTeam) return { correct: false };
+  const guessingTeam = getOpposingTeam(cs.choosingTeam);
+  const guessingTeamMembers = cs.teams[guessingTeam] || [];
+  if (!guessingTeamMembers.includes(uid)) return { correct: false };
+
+  if (uid === cs.currentActorUid) return { correct: false };
 
   const titleNorm = normalizeArabic(cs.currentTitle || '');
   const guessNorm = normalizeArabic(guess);
   const correct = titleNorm === guessNorm;
 
+  const charadesTime = cs.charadesTime || 60;
   const timeLeft = Math.max(0, Math.round((cs.timeEndsAt - Date.now()) / 1000));
-  const halfTime = CHARADES_TIME / 2;
+  const halfTime = charadesTime / 2;
   const points = correct ? (timeLeft >= halfTime ? 3 : 1) : 0;
-  const newScore = correct ? (cs.scores[team] || 0) + points : (cs.scores[team] || 0);
+  const newScore = correct ? (cs.scores[guessingTeam] || 0) + points : (cs.scores[guessingTeam] || 0);
   const wonGame = correct && newScore >= (cs.scoreTarget || 20);
 
   const patch = {
@@ -213,13 +239,13 @@ export async function charadesSubmitGuess(roomCode, uid, guess) {
     'charadesState.phaseData': { guesser: uid, timeLeft, points, correct, beforeHalf: timeLeft >= halfTime },
   };
   if (correct) {
-    patch[`charadesState.scores.${team}`] = newScore;
+    patch[`charadesState.scores.${guessingTeam}`] = newScore;
     patch['charadesState.roundsHistory'] = [
       ...(cs.roundsHistory || []),
       {
-        team, actor: cs.currentActorUid, title: cs.currentTitle,
-        challenge: cs.currentChallenge, guessedCorrectly: true,
-        guesser: uid, points,
+        choosingTeam: cs.choosingTeam, guessingTeam, actor: cs.currentActorUid,
+        title: cs.currentTitle, challenge: cs.currentChallenge,
+        guessedCorrectly: true, guesser: uid, points,
       },
     ];
   }
@@ -235,24 +261,25 @@ export async function charadesHostConfirmCorrect(roomCode) {
   const cs = snap.data()?.charadesState;
   if (!cs || cs.phase !== 'acting') return;
 
-  const team = cs.currentTeam;
+  const guessingTeam = getOpposingTeam(cs.choosingTeam);
+  const charadesTime = cs.charadesTime || 60;
   const timeLeft = Math.max(0, Math.round((cs.timeEndsAt - Date.now()) / 1000));
-  const halfTime = CHARADES_TIME / 2;
+  const halfTime = charadesTime / 2;
   const points = timeLeft >= halfTime ? 3 : 1;
-  const newScore = (cs.scores[team] || 0) + points;
+  const newScore = (cs.scores[guessingTeam] || 0) + points;
   const wonGame = newScore >= (cs.scoreTarget || 20);
 
   const patch = {
     'charadesState.guessedCorrectly': true,
     'charadesState.phase': wonGame ? 'gameOver' : 'roundResult',
     'charadesState.phaseData': { correct: true, timeLeft, points, beforeHalf: timeLeft >= halfTime },
-    [`charadesState.scores.${team}`]: newScore,
+    [`charadesState.scores.${guessingTeam}`]: newScore,
     'charadesState.roundsHistory': [
       ...(cs.roundsHistory || []),
       {
-        team, actor: cs.currentActorUid, title: cs.currentTitle,
-        challenge: cs.currentChallenge, guessedCorrectly: true,
-        guesser: 'host', points,
+        choosingTeam: cs.choosingTeam, guessingTeam, actor: cs.currentActorUid,
+        title: cs.currentTitle, challenge: cs.currentChallenge,
+        guessedCorrectly: true, guesser: 'host', points,
       },
     ],
   };
@@ -273,12 +300,13 @@ export async function charadesEndRound(roomCode) {
   };
 
   if (!cs.guessedCorrectly) {
+    const guessingTeam = getOpposingTeam(cs.choosingTeam);
     patch['charadesState.roundsHistory'] = [
       ...(cs.roundsHistory || []),
       {
-        team: cs.currentTeam, actor: cs.currentActorUid, title: cs.currentTitle,
-        challenge: cs.currentChallenge, guessedCorrectly: false,
-        guesser: null, points: 0,
+        choosingTeam: cs.choosingTeam, guessingTeam, actor: cs.currentActorUid,
+        title: cs.currentTitle, challenge: cs.currentChallenge,
+        guessedCorrectly: false, guesser: null, points: 0,
       },
     ];
   }
@@ -292,7 +320,7 @@ export async function charadesNextRound(roomCode) {
   if (!cs) return;
 
   const scoreTarget = cs.scoreTarget || 20;
-  if ((cs.scores?.A || 0) >= scoreTarget || (cs.scores?.B || 0) >= scoreTarget || cs.roundNumber >= 10) {
+  if ((cs.scores?.A || 0) >= scoreTarget || (cs.scores?.B || 0) >= scoreTarget || cs.roundNumber >= 20) {
     await updateDoc(doc(db, 'rooms', roomCode), {
       status: 'charades_over',
       'charadesState.phase': 'gameOver',
@@ -300,19 +328,12 @@ export async function charadesNextRound(roomCode) {
     return;
   }
 
-  const nextTeam = cs.currentTeam === 'A' ? 'B' : 'A';
-
-  const { charadesMovies, charadesPlays } = await import('../data/charadesData');
-  const allTitles = [
-    ...charadesMovies.map(m => ({ title: m.title, emoji: m.emoji, type: 'movie' })),
-    ...charadesPlays.map(p => ({ title: p.title, emoji: p.emoji, type: 'play' })),
-  ];
-  const shuffled = [...allTitles].sort(() => Math.random() - 0.5);
-  const options = shuffled.slice(0, 3);
+  const nextChoosingTeam = getOpposingTeam(cs.choosingTeam);
+  const options = pickCharadesOptions();
 
   await updateDoc(doc(db, 'rooms', roomCode), {
     'charadesState.phase': 'titleVote',
-    'charadesState.currentTeam': nextTeam,
+    'charadesState.choosingTeam': nextChoosingTeam,
     'charadesState.roundNumber': cs.roundNumber + 1,
     'charadesState.titleOptions': options,
     'charadesState.titleVotes': {},
