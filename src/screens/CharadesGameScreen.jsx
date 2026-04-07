@@ -5,7 +5,8 @@ import {
   startCharadesGame, charadesJoinTeam, charadesConfirmTeams,
   charadesVoteTitle, charadesResolveTitle,
   charadesVoteActor, charadesResolveActor,
-  charadesSubmitGuess, charadesEndRound, charadesNextRound,
+  charadesSubmitGuess, charadesHostConfirmCorrect,
+  charadesEndRound, charadesNextRound,
 } from '../firebase/charadesRooms';
 import UserAvatar from '../components/ui/UserAvatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -117,7 +118,7 @@ export default function CharadesGameScreen() {
   const handleCorrectGuess = async () => {
     if (!isHost) return;
     try {
-      await charadesSubmitGuess(roomCode, myUid, cs.currentTitle);
+      await charadesHostConfirmCorrect(roomCode);
     } catch (e) { setToast(e.message); }
   };
 
@@ -332,18 +333,18 @@ export default function CharadesGameScreen() {
         {/* ===== SELECT ACTOR ===== */}
         {phase === 'selectActor' && (
           <div style={{ width: '100%', maxWidth: 420 }}>
-            <div style={{
-              background: 'var(--bg-dark-purple)', borderRadius: '14px', padding: '14px 16px',
-              border: '3px solid var(--bg-pink)', textAlign: 'center', marginBottom: 16,
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 950, color: 'var(--bg-yellow)', marginBottom: 4 }}>العنوان المختار</div>
-              <div style={{ fontSize: 22, fontWeight: 950, color: '#FFF' }}>{cs.currentTitle}</div>
-              <div style={{ fontSize: 11, fontWeight: 950, color: 'var(--bg-yellow)' }}>
-                {cs.currentTitleType === 'movie' ? '🎬 فيلم' : '🎭 مسرحية'}
-              </div>
-            </div>
             {isOnCurrentTeam ? (
               <div>
+                <div style={{
+                  background: 'var(--bg-dark-purple)', borderRadius: '14px', padding: '14px 16px',
+                  border: '3px solid var(--bg-pink)', textAlign: 'center', marginBottom: 16,
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 950, color: 'var(--bg-yellow)', marginBottom: 4 }}>العنوان المختار</div>
+                  <div style={{ fontSize: 22, fontWeight: 950, color: '#FFF' }}>{cs.currentTitle}</div>
+                  <div style={{ fontSize: 11, fontWeight: 950, color: 'var(--bg-yellow)' }}>
+                    {cs.currentTitleType === 'movie' ? '🎬 فيلم' : '🎭 مسرحية'}
+                  </div>
+                </div>
                 <h2 style={{ textAlign: 'center', fontWeight: 950, fontSize: 16, color: 'var(--bg-dark-purple)', marginBottom: 14 }}>
                   اختاروا مين يمثّل! 🎭
                 </h2>
@@ -426,7 +427,7 @@ export default function CharadesGameScreen() {
                   {timeLeft}ث
                 </div>
               </div>
-            ) : (
+            ) : isOnCurrentTeam ? (
               <div>
                 <div style={{
                   background: '#FFF', borderRadius: '18px', padding: 20,
@@ -458,32 +459,63 @@ export default function CharadesGameScreen() {
                   <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
                     {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
                   </div>
-                  {isOnCurrentTeam && !isActor ? (
-                    <div>
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                        <input
-                          value={guessInput}
-                          onChange={e => setGuessInput(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && handleGuess()}
-                          placeholder="اكتب تخمينك..."
-                          className="input-field"
-                          style={{ flex: 1, borderRadius: '12px', padding: '12px 16px' }}
-                        />
-                        <button onClick={handleGuess} className="btn btn-yellow"
-                          style={{ padding: '0 20px', borderRadius: '12px' }}>خمّن</button>
-                      </div>
-                      {isHost && (
-                        <button onClick={handleCorrectGuess} className="btn btn-green"
-                          style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 14 }}>
-                          ✅ الإجابة صحيحة!
-                        </button>
-                      )}
+                  <div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <input
+                        value={guessInput}
+                        onChange={e => setGuessInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleGuess()}
+                        placeholder="اكتب تخمينك..."
+                        className="input-field"
+                        style={{ flex: 1, borderRadius: '12px', padding: '12px 16px' }}
+                      />
+                      <button onClick={handleGuess} className="btn btn-yellow"
+                        style={{ padding: '0 20px', borderRadius: '12px' }}>خمّن</button>
                     </div>
-                  ) : !isOnCurrentTeam ? (
-                    <div style={{ textAlign: 'center', fontWeight: 950, color: 'var(--bg-dark-purple)', opacity: 0.6 }}>
-                      أنت في الفريق المنافس - تابع! 👀
-                    </div>
-                  ) : null}
+                    {isHost && (
+                      <button onClick={handleCorrectGuess} className="btn btn-green"
+                        style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 14 }}>
+                        ✅ الإجابة صحيحة!
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{
+                  background: '#FFF', borderRadius: '18px', padding: 24,
+                  border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-pink)',
+                  textAlign: 'center', marginBottom: 16,
+                }}>
+                  <div style={{ fontSize: 40, marginBottom: 8 }}>👀</div>
+                  <h3 style={{ fontWeight: 950, color: 'var(--bg-dark-purple)', fontSize: 16, marginBottom: 8 }}>
+                    {actorPlayer?.username} يمثّل لفريق {cs.currentTeam === 'A' ? 'الأحمر' : 'الأزرق'}!
+                  </h3>
+                  <p style={{ fontSize: 13, color: '#888', fontWeight: 950 }}>
+                    تابعوا التمثيل! 🍿
+                  </p>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <div style={{
+                    width: '100%', height: 10, background: '#EEE', borderRadius: 20,
+                    overflow: 'hidden', border: '2px solid var(--bg-dark-purple)', marginBottom: 12,
+                  }}>
+                    <div style={{
+                      width: `${timePct}%`, height: '100%',
+                      background: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)',
+                      transition: 'width 1s linear',
+                    }} />
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
+                    {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
+                  </div>
+                  {isHost && (
+                    <button onClick={handleCorrectGuess} className="btn btn-green"
+                      style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 14 }}>
+                      ✅ تأكيد الإجابة الصحيحة
+                    </button>
+                  )}
                 </div>
               </div>
             )}

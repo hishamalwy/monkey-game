@@ -5,6 +5,17 @@ import { db } from './config';
 
 const CHARADES_TIME = 75;
 
+function normalizeArabic(s) {
+  return s
+    .trim()
+    .replace(/[\u0610-\u061A\u064B-\u065F]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/أ|إ|آ/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .toLowerCase();
+}
+
 export async function startCharadesGame(roomCode) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
   const room = snap.data();
@@ -186,17 +197,8 @@ export async function charadesSubmitGuess(roomCode, uid, guess) {
   const isOnCurrentTeam = cs.teams[team]?.includes(uid);
   if (!isOnCurrentTeam) return { correct: false };
 
-  const normalize = (s) => s
-    .trim()
-    .replace(/[\u0610-\u061A\u064B-\u065F]/g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/أ|إ|آ/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
-    .toLowerCase();
-
-  const titleNorm = normalize(cs.currentTitle || '');
-  const guessNorm = normalize(guess);
+  const titleNorm = normalizeArabic(cs.currentTitle || '');
+  const guessNorm = normalizeArabic(guess);
   const correct = titleNorm === guessNorm;
 
   const timeLeft = Math.max(0, Math.round((cs.timeEndsAt - Date.now()) / 1000));
@@ -226,6 +228,38 @@ export async function charadesSubmitGuess(roomCode, uid, guess) {
   }
   await updateDoc(doc(db, 'rooms', roomCode), patch);
   return { correct, points };
+}
+
+export async function charadesHostConfirmCorrect(roomCode) {
+  const snap = await getDoc(doc(db, 'rooms', roomCode));
+  const cs = snap.data()?.charadesState;
+  if (!cs || cs.phase !== 'acting') return;
+
+  const team = cs.currentTeam;
+  const timeLeft = Math.max(0, Math.round((cs.timeEndsAt - Date.now()) / 1000));
+  const halfTime = CHARADES_TIME / 2;
+  const points = timeLeft >= halfTime ? 3 : 1;
+  const newScore = (cs.scores[team] || 0) + points;
+  const wonGame = newScore >= (cs.scoreTarget || 20);
+
+  const patch = {
+    'charadesState.guessedCorrectly': true,
+    'charadesState.phase': wonGame ? 'gameOver' : 'roundResult',
+    'charadesState.phaseData': { correct: true, timeLeft, points, beforeHalf: timeLeft >= halfTime },
+    [`charadesState.scores.${team}`]: newScore,
+    'charadesState.roundsHistory': [
+      ...(cs.roundsHistory || []),
+      {
+        team, actor: cs.currentActorUid, title: cs.currentTitle,
+        challenge: cs.currentChallenge, guessedCorrectly: true,
+        guesser: 'host', points,
+      },
+    ],
+  };
+  if (wonGame) {
+    patch['status'] = 'charades_over';
+  }
+  await updateDoc(doc(db, 'rooms', roomCode), patch);
 }
 
 export async function charadesEndRound(roomCode) {
