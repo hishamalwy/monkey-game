@@ -13,39 +13,40 @@ export default function DailyBonusModal({ streak, bonus, onClaim }) {
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'var(--bg-yellow)',
       display: 'flex', flexDirection: 'column',
-      animation: 'slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
+      animation: 'slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
+      overflowY: 'auto'
     }}>
-      <div style={{ padding: '40px 24px', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ padding: '24px 20px', textAlign: 'center', minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         
-        <div style={{ position: 'relative', marginBottom: 30 }}>
-            <div className="wizard-card" style={{ fontSize: 120, filter: 'drop-shadow(6px 6px 0 var(--bg-dark-purple))' }}>
+        <div style={{ position: 'relative', marginBottom: 20 }}>
+            <div className="wizard-card" style={{ fontSize: 'clamp(60px, 20vw, 100px)', filter: 'drop-shadow(4px 4px 0 var(--bg-dark-purple))' }}>
               {getStreakEmoji(streak)}
             </div>
             <div className="card-rainbow" style={{
-              position: 'absolute', top: -10, right: -20, background: 'var(--bg-pink)', color: '#FFF',
-              padding: '6px 16px', transform: 'rotate(12deg)', fontWeight: 950, fontSize: 18, borderRadius: '12px'
+              position: 'absolute', top: -5, right: -15, background: 'var(--bg-pink)', color: '#FFF',
+              padding: '4px 12px', transform: 'rotate(12deg)', fontWeight: 950, fontSize: 14, borderRadius: '10px'
             }}>
               هدية! 🎁
             </div>
         </div>
 
-        <h2 className="title-glitch" style={{ fontSize: 40, marginBottom: 8 }}>مكافأة يومية!</h2>
-        <p style={{ fontSize: 20, fontWeight: 900, color: 'var(--bg-dark-purple)', marginBottom: 32 }}>
-          يوم رقم <span style={{ color: 'var(--bg-pink)', fontSize: 28 }}>{streak}</span> على التوالي
+        <h2 className="title-glitch" style={{ fontSize: 'clamp(24px, 8vw, 32px)', marginBottom: 4 }}>مكافأة يومية!</h2>
+        <p style={{ fontSize: 16, fontWeight: 900, color: 'var(--bg-dark-purple)', marginBottom: 20 }}>
+          يوم رقم <span style={{ color: 'var(--bg-pink)', fontSize: 22 }}>{streak}</span> على التوالي
         </p>
 
         <div style={{
-           display: 'flex', gap: 8, marginBottom: 40, flexWrap: 'wrap', justifyContent: 'center'
+           display: 'flex', gap: 6, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center'
         }}>
           {STREAK_DAYS.map(d => (
             <div key={d} className="card" style={{
-              width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderWidth: 3,
+              width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderWidth: 2,
               background: d <= streak ? 'var(--bg-green)' : '#FFF',
               color: d <= streak ? '#FFF' : 'var(--bg-dark-purple)',
-              fontWeight: 950, fontSize: 16,
-              borderRadius: '10px',
-              transform: d === streak ? 'scale(1.2) rotate(-5deg)' : 'none',
+              fontWeight: 950, fontSize: 14,
+              borderRadius: '8px',
+              transform: d === streak ? 'scale(1.15) rotate(-5deg)' : 'none',
               boxShadow: d === streak ? 'var(--brutal-shadow)' : 'none'
             }}>
               {d <= streak ? '✓' : d}
@@ -55,18 +56,18 @@ export default function DailyBonusModal({ streak, bonus, onClaim }) {
 
         <div className="wizard-card card" style={{
           background: '#FFF', border: 'var(--brutal-border)',
-          padding: '24px 40px', marginBottom: 40, fontWeight: 950, fontSize: 32,
-          color: 'var(--bg-dark-purple)', borderRadius: '20px',
+          padding: '16px 24px', marginBottom: 24, fontWeight: 950, fontSize: 24,
+          color: 'var(--bg-dark-purple)', borderRadius: '16px',
           boxShadow: 'var(--brutal-shadow)',
-          display: 'flex', alignItems: 'center', gap: 12
+          display: 'flex', alignItems: 'center', gap: 10
         }}>
-          +{bonus} <img src={streak === 7 ? treasureChestIcon : singleCoinIcon} style={{ width: 54, height: 54 }} />
+          +{bonus} <img src={streak === 7 ? treasureChestIcon : singleCoinIcon} style={{ width: 44, height: 44 }} />
         </div>
 
         <button 
           onClick={onClaim} 
           className="btn btn-pink" 
-          style={{ width: '100%', maxWidth: 300, padding: '20px', fontSize: 22, borderRadius: '20px' }}
+          style={{ width: '100%', maxWidth: 280, padding: '16px', fontSize: 20, borderRadius: '16px' }}
         >
           استلمها الآن! 🐵
         </button>

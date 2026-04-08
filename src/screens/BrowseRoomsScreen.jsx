@@ -126,28 +126,28 @@ export default function BrowseRoomsScreen() {
       </div>
 
       {/* Hero: Code Entry */}
-      <div style={{ padding: '24px 20px 10px' }}>
+      <div style={{ padding: '16px 20px 8px' }}>
          <div style={{ 
-           background: 'var(--bg-yellow)', border: '5px solid var(--bg-dark-purple)', 
-           boxShadow: '6px 6px 0 var(--bg-dark-purple)', padding: '24px', 
-           borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', 
+           background: 'var(--bg-yellow)', border: '4px solid var(--bg-dark-purple)', 
+           boxShadow: '4px 4px 0 var(--bg-dark-purple)', padding: '16px', 
+           borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', 
            position: 'relative', overflow: 'hidden' 
          }}>
-           <div style={{ position: 'absolute', top: -10, right: -10, fontSize: 80, opacity: 0.1, transform: 'rotate(20deg)', pointerEvents: 'none' }}>🐒</div>
+           <div style={{ position: 'absolute', top: -10, right: -10, fontSize: 60, opacity: 0.1, transform: 'rotate(20deg)', pointerEvents: 'none' }}>🐒</div>
            
-           <h1 style={{ fontSize: 20, fontWeight: 950, color: 'var(--bg-dark-purple)', marginBottom: 20, textAlign: 'center', marginTop: 0, zIndex: 2 }}>
+           <h1 style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', marginBottom: 16, textAlign: 'center', marginTop: 0, zIndex: 2 }}>
               لديك رمز دعوة؟ ادخله هنا! 🎫
            </h1>
            
-           <div style={{ position: 'relative', display: 'flex', flexDirection: 'row', direction: 'ltr', justifyContent: 'center', gap: 12, zIndex: 2 }}>
+           <div style={{ position: 'relative', display: 'flex', flexDirection: 'row', direction: 'ltr', justifyContent: 'center', gap: 10, zIndex: 2 }}>
               {[0, 1, 2, 3].map(i => (
                 <div key={i} className="pop" style={{
-                  width: 56, height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 32, fontWeight: 950, background: '#FFF', color: 'var(--bg-dark-purple)',
-                  border: `4px solid ${joinCode.length === i ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
-                  boxShadow: joinCode.length === i ? '5px 5px 0 var(--bg-pink)' : '4px 4px 0 rgba(0,0,0,0.1)',
-                  borderRadius: 12, transition: 'all 0.1s',
-                  transform: joinCode.length === i ? 'scale(1.05) translateY(-4px)' : 'none'
+                  width: 44, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, fontWeight: 950, background: '#FFF', color: 'var(--bg-dark-purple)',
+                  border: `3px solid ${joinCode.length === i ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
+                  boxShadow: joinCode.length === i ? '3px 3px 0 var(--bg-pink)' : '3px 3px 0 rgba(0,0,0,0.1)',
+                  borderRadius: 10, transition: 'all 0.1s',
+                  transform: joinCode.length === i ? 'scale(1.05) translateY(-3px)' : 'none'
                 }}>
                   {joinCode[i] || ''}
                 </div>
@@ -165,17 +165,17 @@ export default function BrowseRoomsScreen() {
               />
            </div>
            {joining && joinCode.length === 4 && (
-             <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center', zIndex: 2 }}>
-               <LoadingSpinner size={24} color="var(--bg-dark-purple)" />
+             <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', zIndex: 2 }}>
+               <LoadingSpinner size={20} color="var(--bg-dark-purple)" />
              </div>
            )}
          </div>
       </div>
 
       {/* Body: Public Rooms */}
-      <div style={{ flex: 1, padding: '16px 20px 24px', overflowY: 'auto', position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-           <h2 style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0, opacity: 0.8 }}>
+      <div style={{ flex: 1, padding: '12px 20px 20px', overflowY: 'auto', position: 'relative', zIndex: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+           <h2 style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0, opacity: 0.8 }}>
               استكشف الغرف المتاحة 👇
            </h2>
         </div>
@@ -207,39 +207,34 @@ export default function BrowseRoomsScreen() {
               const isFull = playersCount >= maxPlayers;
 
               return (
-                  <div 
+                <div 
                   key={room.code} 
                   className="pop" 
                   style={{ 
-                    padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, background: '#FFF',
-                    border: '4px solid var(--bg-dark-purple)', boxShadow: '5px 5px 0 var(--bg-dark-purple)',
-                    borderRadius: 16, animationDelay: `${idx * 100}ms`
+                    padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, background: '#FFF',
+                    border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)',
+                    borderRadius: 12, animationDelay: `${idx * 100}ms`
                   }}
                 >
                   <div style={{ 
-                    width: 54, height: 54, background: room.mode === 'survival' ? 'var(--bg-pink)' : 'var(--bg-yellow)', 
-                    border: '3px solid var(--bg-dark-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 28, flexShrink: 0, borderRadius: 12, boxShadow: '2px 2px 0 var(--bg-dark-purple)'
+                    width: 44, height: 44, background: room.mode === 'survival' ? 'var(--bg-pink)' : 'var(--bg-yellow)', 
+                    border: '2px solid var(--bg-dark-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 22, flexShrink: 0, borderRadius: 10, boxShadow: '2px 2px 0 var(--bg-dark-purple)'
                   }}>
-                    {room.mode === 'survival' ? '⚔️' : room.mode === 'draw' ? '🎨' : '🔊'}
+                    {room.mode === 'survival' ? '⚔️' : room.mode === 'draw' ? '🎨' : room.mode === 'charades' ? '🎭' : '🔊'}
                   </div>
 
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, background: 'var(--bg-dark-purple)', color: '#FFF', padding: '2px 10px', borderRadius: 12, fontWeight: 950 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <span style={{ fontSize: 9, background: 'var(--bg-dark-purple)', color: '#FFF', padding: '1px 8px', borderRadius: 10, fontWeight: 950 }}>
                          {getModeLabel(room.mode)}
                       </span>
                     </div>
-                    <h3 style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '4px 0' }}>
-                      {getModeLabel(room.mode)} - {getCatName(room)}
+                    <h3 style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {getCatName(room)}
                     </h3>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--bg-dark-purple)', opacity: 0.7 }}>
-                      كود الغرفة: {room.code} | {room.hostName || 'لاعب مجهول'}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-dark-purple)', opacity: 0.6 }}>
-                        👥 {playersCount}/{maxPlayers}
-                      </span>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--bg-dark-purple)', opacity: 0.6 }}>
+                      #{room.code} • {playersCount}/{maxPlayers} لاعب
                     </div>
                   </div>
 
@@ -248,15 +243,15 @@ export default function BrowseRoomsScreen() {
                     onClick={() => handleJoin(room.code)}
                     className="pop"
                     style={{ 
-                      padding: '12px 20px', fontSize: 16, fontWeight: 950, minWidth: 80,
+                      padding: '8px 16px', fontSize: 14, fontWeight: 950, minWidth: 70,
                       background: isFull ? '#FAFAFA' : 'var(--bg-yellow)',
                       color: isFull ? '#9CA3AF' : 'var(--bg-dark-purple)',
-                      border: isFull ? '3px dashed #D1D5DB' : '3px solid var(--bg-dark-purple)',
-                      boxShadow: isFull ? 'none' : '4px 4px 0 var(--bg-dark-purple)',
-                      borderRadius: 12, cursor: isFull ? 'not-allowed' : 'pointer'
+                      border: isFull ? '2px dashed #D1D5DB' : '2px solid var(--bg-dark-purple)',
+                      boxShadow: isFull ? 'none' : '3px 3px 0 var(--bg-dark-purple)',
+                      borderRadius: 10, cursor: isFull ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    {joining === room.code ? <LoadingSpinner size={16} /> : isFull ? 'ممتلئة' : 'انضمام'}
+                    {joining === room.code ? <LoadingSpinner size={14} /> : isFull ? 'ممتلئة' : 'انضمام'}
                   </button>
                 </div>
               );

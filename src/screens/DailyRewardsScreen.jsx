@@ -79,29 +79,29 @@ export default function DailyRewardsScreen() {
       </div>
 
       <div className="content-with-nav" style={{ 
-        flex: 1, overflowY: 'auto', padding: '24px 16px env(safe-area-inset-bottom)', 
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, 
-        position: 'relative', zIndex: 5 
+        flex: 1, overflowY: 'auto', padding: '16px 16px calc(24px + env(safe-area-inset-bottom))', 
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, 
+        position: 'relative', zIndex: 5, width: '100%'
       }}>
         
         {/* Streak Dashboard */}
         <div className="card slide-up" style={{ 
-          width: '100%', maxWidth: 410, padding: '24px 16px', background: '#FFF', 
-          borderRadius: '28px', border: '5.5px solid var(--bg-dark-purple)', 
-          boxShadow: '10px 10px 0 var(--bg-pink)', position: 'relative'
+          width: '100%', maxWidth: 410, padding: '16px 14px', background: '#FFF', 
+          borderRadius: '24px', border: '5px solid var(--bg-dark-purple)', 
+          boxShadow: '8px 8px 0 var(--bg-pink)', position: 'relative'
         }}>
           {/* Subtle bg monkey removed for clarity if it was occluding text */}
           
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, padding: '0 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '0 4px' }}>
             <div style={{ flex: 1, textAlign: 'right', direction: 'rtl' }}>
-              <h2 style={{ fontSize: 'clamp(22px, 6vw, 28px)', fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.1 }}>ستريك {streak} أيام</h2>
-              <p style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-pink)', margin: '4px 0 0' }}>استمر كل يوم للجائزة الكبرى! 🔥</p>
+              <h2 style={{ fontSize: 'clamp(20px, 5.5vw, 24px)', fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0, lineHeight: 1.1 }}>ستريك {streak} أيام</h2>
+              <p style={{ fontSize: 11, fontWeight: 900, color: 'var(--bg-pink)', margin: '2px 0 0' }}>استمر للجائزة الكبرى! 🔥</p>
             </div>
-            <div style={{ fontSize: 'clamp(40px, 10vw, 54px)', marginRight: 12 }}>{getStreakEmoji(streak)}</div>
+            <div style={{ fontSize: 'clamp(36px, 9vw, 48px)', marginRight: 12 }}>{getStreakEmoji(streak)}</div>
           </div>
           
           <div style={{ 
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px 8px', marginBottom: 26,
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px 6px', marginBottom: 20,
             direction: 'rtl' 
           }}>
             {[1, 2, 3, 4, 5, 6, 7].map((d) => {
@@ -174,10 +174,10 @@ export default function DailyRewardsScreen() {
           </div>
 
           <div className="card slide-up" style={{ 
-            padding: '24px', minHeight: 220, display: 'flex', flexDirection: 'column', 
-            justifyContent: 'center', position: 'relative', borderRadius: '28px', 
+            padding: '16px', minHeight: 180, display: 'flex', flexDirection: 'column', 
+            justifyContent: 'center', position: 'relative', borderRadius: '24px', 
             background: '#FFF', border: '5px solid var(--bg-dark-purple)', 
-            boxShadow: '8px 8px 0 var(--bg-blue)' 
+            boxShadow: '6px 6px 0 var(--bg-blue)' 
           }}>
             {(() => {
               const ch = challenges[activeChallengeIndex];
@@ -188,31 +188,31 @@ export default function DailyRewardsScreen() {
               const pct = Math.min(100, (progress / ch.target) * 100);
               return (
                 <div key={ch.id} style={{ animation: 'fadeIn 0.3s ease' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24, direction: 'rtl' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, direction: 'rtl' }}>
                     <div style={{ 
-                      fontSize: 40, width: 75, height: 75, background: 'var(--bg-blue)', 
-                      borderRadius: '18px', display: 'flex', alignItems: 'center', 
-                      justifyContent: 'center', border: '4px solid var(--bg-dark-purple)', 
-                      boxShadow: '4px 4px 0 var(--bg-dark-purple)' 
+                      fontSize: 32, width: 60, height: 60, background: 'var(--bg-blue)', 
+                      borderRadius: '16px', display: 'flex', alignItems: 'center', 
+                      justifyContent: 'center', border: '3px solid var(--bg-dark-purple)', 
+                      boxShadow: '3px 3px 0 var(--bg-dark-purple)' 
                     }}>{ch.emoji}</div>
                     <div style={{ flex: 1, textAlign: 'right' }}>
-                      <div style={{ fontSize: 20, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.2 }}>{ch.label}</div>
+                      <div style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', lineHeight: 1.2 }}>{ch.label}</div>
                       <div style={{ 
-                        fontSize: 14, fontWeight: 950, color: 'var(--bg-pink)', 
-                        marginTop: 6, display: 'flex', alignItems: 'center', 
-                        justifyContent: 'flex-end', gap: 6 
+                        fontSize: 13, fontWeight: 950, color: 'var(--bg-pink)', 
+                        marginTop: 4, display: 'flex', alignItems: 'center', 
+                        justifyContent: 'flex-end', gap: 4 
                       }}>
-                        الجائزة: {ch.reward} <img src={singleCoinIcon} style={{ width: 18, height: 18 }} />
+                        الجائزة: {ch.reward} <img src={singleCoinIcon} style={{ width: 16, height: 16 }} />
                       </div>
                     </div>
                   </div>
                   
-                  <div style={{ marginBottom: 25 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, direction: 'rtl', fontWeight: 950, fontSize: 13 }}>
+                  <div style={{ marginBottom: 15 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, direction: 'rtl', fontWeight: 950, fontSize: 12 }}>
                         <span>الإنجاز:</span>
                         <span>{progress} / {ch.target}</span>
                     </div>
-                    <div style={{ width: '100%', height: 20, background: '#F0F0F0', border: '3.5px solid var(--bg-dark-purple)', borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: 16, background: '#F0F0F0', border: '3px solid var(--bg-dark-purple)', borderRadius: 10, overflow: 'hidden' }}>
                       <div style={{ 
                         height: '100%', width: `${pct}%`, 
                         background: complete ? 'var(--bg-green)' : 'var(--bg-pink)', 
@@ -224,29 +224,29 @@ export default function DailyRewardsScreen() {
 
                   <div>
                     {claimed ? (
-                      <div className="btn btn-white" style={{ width: '100%', padding: 16, opacity: 0.7, borderRadius: '16px', background: '#EEE' }}>تم الاستلام ✅</div>
+                      <div className="btn btn-white" style={{ width: '100%', padding: 12, opacity: 0.7, borderRadius: '12px', background: '#EEE', fontSize: 14 }}>تم الاستلام ✅</div>
                     ) : complete ? (
-                      <button onClick={() => handleClaimChallenge(ch)} className="btn btn-green pop" style={{ width: '100%', padding: 16, borderRadius: '16px', fontSize: 18, boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>استلم المكافأة! 🔥</button>
+                      <button onClick={() => handleClaimChallenge(ch)} className="btn btn-green pop" style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 16, boxShadow: '3px 3px 0 var(--bg-dark-purple)' }}>استلم المكافأة! 🔥</button>
                     ) : (
-                      <button disabled className="btn btn-white" style={{ width: '100%', padding: 16, opacity: 0.5, borderRadius: '16px', fontSize: 16 }}>العب وجرب حظك! 🐒</button>
+                      <button disabled className="btn btn-white" style={{ width: '100%', padding: 12, opacity: 0.5, borderRadius: '12px', fontSize: 14 }}>العب وجرب حظك! 🐒</button>
                     )}
                   </div>
                 </div>
               );
             })()}
             {/* Nav Controls Inside Card */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button 
                 onClick={() => setActiveChallengeIndex(i => (i - 1 + challenges.length) % challenges.length)} 
                 className="btn btn-yellow" 
-                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: 18 }}
+                style={{ flex: 1, padding: '8px', borderRadius: '10px', fontSize: 16 }}
               >
                 السابق
               </button>
               <button 
                 onClick={() => setActiveChallengeIndex(i => (i + 1) % challenges.length)} 
                 className="btn btn-yellow" 
-                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: 18 }}
+                style={{ flex: 1, padding: '8px', borderRadius: '10px', fontSize: 16 }}
               >
                 التالي
               </button>
