@@ -148,9 +148,16 @@ export default function CharadesGameScreen() {
   };
 
   const handleCorrectGuess = async () => {
-    if (!isChoosingTeamLeader && !isHost) return;
+    if (!isTeamLeader && !isHost) return;
     try {
       await charadesHostConfirmCorrect(roomCode);
+    } catch (e) { setToast(e.message); }
+  };
+
+  const handleWithdraw = async () => {
+    if (!isActor) return;
+    try {
+      await charadesEndRound(roomCode);
     } catch (e) { setToast(e.message); }
   };
 
@@ -310,7 +317,7 @@ export default function CharadesGameScreen() {
                     );
                   })}
                 </div>
-                {myTeam === 'A' && teamLeaders.A !== myUid && (
+                {myTeam === 'A' && teamLeaders.A !== myUid && !teamA.includes(room.hostUid) && (
                   <button onClick={(e) => { e.stopPropagation(); charadesSetTeamLeader(roomCode, 'A', myUid); }} style={{ marginTop: 8, fontSize: 10, background: 'rgba(255,255,255,0.2)', border: '1px solid #FFF', color: '#FFF', borderRadius: 5, padding: '2px 6px' }}>أنا القائد 👑</button>
                 )}
               </button>
@@ -339,7 +346,7 @@ export default function CharadesGameScreen() {
                     );
                   })}
                 </div>
-                {myTeam === 'B' && teamLeaders.B !== myUid && (
+                {myTeam === 'B' && teamLeaders.B !== myUid && !teamB.includes(room.hostUid) && (
                   <button onClick={(e) => { e.stopPropagation(); charadesSetTeamLeader(roomCode, 'B', myUid); }} style={{ marginTop: 8, fontSize: 10, background: 'rgba(255,255,255,0.2)', border: '1px solid #FFF', color: '#FFF', borderRadius: 5, padding: '2px 6px' }}>أنا القائد 👑</button>
                 )}
               </button>
@@ -560,6 +567,17 @@ export default function CharadesGameScreen() {
                 <div style={{ marginTop: 14, fontSize: 32, fontWeight: 950, color: timeLeft <= 15 ? 'var(--bg-pink)' : 'var(--bg-yellow)' }}>
                   {timeLeft}ث
                 </div>
+                <button 
+                  onClick={handleWithdraw}
+                  className="pop"
+                  style={{ 
+                    marginTop: 20, background: 'rgba(255,255,255,0.1)', border: '2px solid rgba(255,255,255,0.4)', 
+                    color: '#FFF', padding: '8px 20px', borderRadius: '10px', fontSize: 13, fontWeight: 950,
+                    cursor: 'pointer'
+                  }}
+                >
+                  🏳️ انسحاب (تخطي)
+                </button>
               </div>
             ) : !cs.actorReady ? (
                <div style={{
@@ -607,9 +625,11 @@ export default function CharadesGameScreen() {
                   <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
                     {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
                   </div>
-                  {isHost && (
+                  { (isHost || isTeamLeader) && (
                     <div style={{ background: 'var(--bg-yellow)', padding: 12, borderRadius: 14, border: '3px solid var(--bg-dark-purple)', textAlign: 'center' }}>
-                       <p style={{ fontSize: 11, fontWeight: 950, marginBottom: 8 }}>أنت الهوست: دوس صح لو خمنوا الكلمة</p>
+                       <p style={{ fontSize: 11, fontWeight: 950, marginBottom: 8 }}>
+                         {isHost ? 'أنت الهوست' : 'أنت قائد الفريق'}: دوس صح لو خمنوا الكلمة
+                       </p>
                        <button onClick={handleCorrectGuess} className="btn btn-green"
                           style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 16, fontWeight: 950 }}>
                           ✅ صح! (+{timeLeft > halfTime ? 2 : 1} نقطة{timeLeft > halfTime ? ' ⚡' : ''})
@@ -647,7 +667,7 @@ export default function CharadesGameScreen() {
                   <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
                     {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
                   </div>
-                  {isHost && (
+                  { (isHost || isTeamLeader) && (
                     <button onClick={handleCorrectGuess} className="btn btn-green"
                       style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 14 }}>
                       ✅ تأكيد الإجابة الصحيحة (+{timeLeft > halfTime ? 2 : 1} نقطة{timeLeft > halfTime ? ' ⚡' : ''})
@@ -687,7 +707,7 @@ export default function CharadesGameScreen() {
                   boxShadow: '2px 2px 0 var(--bg-dark-purple)',
                   display: 'inline-block', marginBottom: 8, marginTop: 8,
                 }}>
-                  ⚡ جاوبوا قبل نص الوقت! +3 نقاط
+                  ⚡ جاوبوا قبل نص الوقت! +2 نقطة
                 </div>
               )}
               {cs.phaseData?.correct && (

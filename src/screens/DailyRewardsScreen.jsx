@@ -79,16 +79,16 @@ export default function DailyRewardsScreen() {
       </div>
 
       <div className="content-with-nav" style={{ 
-        flex: 1, overflowY: 'auto', padding: '16px 16px calc(24px + env(safe-area-inset-bottom))', 
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, 
+        flex: 1, overflowY: 'auto', padding: '12px 20px calc(24px + env(safe-area-inset-bottom))', 
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, 
         position: 'relative', zIndex: 5, width: '100%'
       }}>
         
         {/* Streak Dashboard */}
         <div className="card slide-up" style={{ 
-          width: '100%', maxWidth: 410, padding: '16px 14px', background: '#FFF', 
-          borderRadius: '24px', border: '5px solid var(--bg-dark-purple)', 
-          boxShadow: '8px 8px 0 var(--bg-pink)', position: 'relative'
+          width: '100%', maxWidth: 360, padding: '12px 12px', background: '#FFF', 
+          borderRadius: '20px', border: '4px solid var(--bg-dark-purple)', 
+          boxShadow: '6px 6px 0 var(--bg-pink)', position: 'relative'
         }}>
           {/* Subtle bg monkey removed for clarity if it was occluding text */}
           
@@ -101,7 +101,7 @@ export default function DailyRewardsScreen() {
           </div>
           
           <div style={{ 
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px 6px', marginBottom: 20,
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px 4px', marginBottom: 16,
             direction: 'rtl' 
           }}>
             {[1, 2, 3, 4, 5, 6, 7].map((d) => {
@@ -113,26 +113,25 @@ export default function DailyRewardsScreen() {
 
               return (
                 <div key={d} className="card pop" style={{ 
-                  padding: '12px 4px', borderRadius: '18px', 
+                  padding: '8px 2px', borderRadius: '12px', 
                   background: isPast ? 'var(--bg-green)' : isCurrent ? 'var(--bg-yellow)' : '#F5F5FF', 
                   color: 'var(--bg-dark-purple)', 
-                  border: isCurrent ? '4.5px solid var(--bg-dark-purple)' : '3.5px solid var(--bg-dark-purple)', 
-                  boxShadow: isCurrent ? '0px 0px 12px rgba(255,227,0,0.4)' : 'none', 
-                  transform: isCurrent ? 'scale(1.08) rotate(-2deg)' : 'none',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  border: isCurrent ? '3px solid var(--bg-dark-purple)' : '2.5px solid var(--bg-dark-purple)', 
+                  transform: isCurrent ? 'scale(1.05) rotate(-2deg)' : 'none',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                   position: 'relative'
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 950, opacity: 0.8 }}>ي {d}</div>
-                  <img src={icon} style={{ width: d === 7 ? 38 : 28, height: d === 7 ? 38 : 28, objectFit: 'contain' }} />
-                  <div style={{ fontSize: 10, fontWeight: 950, color: isCurrent || isPast ? 'var(--bg-dark-purple)' : '#999', display: 'flex', alignItems: 'center', gap: 2 }}>
-                    {d * 50} <img src={singleCoinIcon} style={{ width: 12, height: 12 }} />
+                  <div style={{ fontSize: 9, fontWeight: 950, opacity: 0.8 }}>ي {d}</div>
+                  <img src={icon} style={{ width: d === 7 ? 28 : 20, height: d === 7 ? 28 : 20, objectFit: 'contain' }} />
+                  <div style={{ fontSize: 9, fontWeight: 950, color: isCurrent || isPast ? 'var(--bg-dark-purple)' : '#999', display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {d * 50}
                   </div>
                   {isPast && (
                     <div style={{ 
-                      position: 'absolute', top: -6, right: -6, background: 'var(--bg-dark-purple)', 
-                      color: '#FFF', width: 20, height: 20, borderRadius: '50%', 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11,
-                      border: '2px solid #FFF', zIndex: 10
+                      position: 'absolute', top: -4, right: -4, background: 'var(--bg-dark-purple)', 
+                      color: '#FFF', width: 14, height: 14, borderRadius: '50%', 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8,
+                      border: '1.5px solid #FFF', zIndex: 10
                     }}>✓</div>
                   )}
                 </div>
@@ -145,15 +144,15 @@ export default function DailyRewardsScreen() {
               onClick={handleClaim} 
               disabled={claiming} 
               className="btn btn-yellow pop" 
-              style={{ width: '100%', padding: '20px', fontSize: 20, borderRadius: '18px', boxShadow: '5px 5px 0 var(--bg-dark-purple)' }}
+              style={{ width: '100%', padding: '14px', fontSize: 16, borderRadius: '14px', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}
             >
-              {claiming ? 'جاري الاستلام...' : 'استلم هديتك الآن! 🎁'}
+              {claiming ? 'جاري الاستلام...' : 'استلم هديتك! 🎁'}
             </button>
           ) : (
             <div style={{ 
-              padding: 20, background: 'var(--bg-green)', color: '#FFF', 
-              borderRadius: '18px', fontWeight: 950, border: '4px solid var(--bg-dark-purple)', 
-              fontSize: 18, textAlign: 'center', boxShadow: '4px 4px 0 var(--bg-dark-purple)' 
+              padding: 14, background: 'var(--bg-green)', color: '#FFF', 
+              borderRadius: '14px', fontWeight: 950, border: '3px solid var(--bg-dark-purple)', 
+              fontSize: 14, textAlign: 'center', boxShadow: '3px 3px 0 var(--bg-dark-purple)' 
             }}>
                تم استلام هدية اليوم! ✅
             </div>
@@ -174,10 +173,10 @@ export default function DailyRewardsScreen() {
           </div>
 
           <div className="card slide-up" style={{ 
-            padding: '16px', minHeight: 180, display: 'flex', flexDirection: 'column', 
-            justifyContent: 'center', position: 'relative', borderRadius: '24px', 
-            background: '#FFF', border: '5px solid var(--bg-dark-purple)', 
-            boxShadow: '6px 6px 0 var(--bg-blue)' 
+            padding: '12px', minHeight: 160, display: 'flex', flexDirection: 'column', 
+            justifyContent: 'center', position: 'relative', borderRadius: '20px', 
+            background: '#FFF', border: '4px solid var(--bg-dark-purple)', 
+            boxShadow: '5px 5px 0 var(--bg-blue)' 
           }}>
             {(() => {
               const ch = challenges[activeChallengeIndex];
@@ -256,14 +255,14 @@ export default function DailyRewardsScreen() {
 
         {/* Tip Box */}
         <div className="card" style={{ 
-          padding: '16px 20px', width: '100%', maxWidth: 400, borderRadius: '24px', 
+          padding: '12px 16px', width: '100%', maxWidth: 360, borderRadius: '18px', 
           background: 'var(--bg-green)', color: 'var(--bg-dark-purple)', 
-          border: '4px solid var(--bg-dark-purple)', boxShadow: '5px 5px 0 var(--bg-yellow)',
-          display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20
+          border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-yellow)',
+          display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14
         }}>
-           <div style={{ fontSize: 32 }}>💡</div>
-           <p style={{ margin: 0, fontSize: 14, fontWeight: 950, textAlign: 'right', direction: 'rtl', lineHeight: 1.4 }}>
-             اليوم السابع فيه **صندوق الكنز** جايزة كبرى! اوعى تفوت الستريك بتاعك 🔥
+           <div style={{ fontSize: 24 }}>💡</div>
+           <p style={{ margin: 0, fontSize: 12, fontWeight: 950, textAlign: 'right', direction: 'rtl', lineHeight: 1.3 }}>
+             اليوم السابع فيه **صندوق كنز**! اوعى تفوت الستريك 🔥
            </p>
         </div>
 

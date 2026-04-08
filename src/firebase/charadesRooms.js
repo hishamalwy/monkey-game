@@ -78,6 +78,7 @@ export async function charadesConfirmTeams(roomCode) {
 
   const room = snap.data();
   const allPlayers = room.playerOrder || [];
+  const hostUid = room.hostUid;
   let teams = {
     A: [...(cs.teams.A || [])],
     B: [...(cs.teams.B || [])],
@@ -90,6 +91,12 @@ export async function charadesConfirmTeams(roomCode) {
   }
 
   let teamLeaders = { ...(cs.teamLeaders || { A: null, B: null }) };
+  
+  // Host is always leader of their team
+  if (teams.A.includes(hostUid)) teamLeaders.A = hostUid;
+  else if (teams.B.includes(hostUid)) teamLeaders.B = hostUid;
+
+  // Ensure other team has a leader too
   if (!teamLeaders.A && teams.A.length > 0) teamLeaders.A = teams.A[0];
   if (!teamLeaders.B && teams.B.length > 0) teamLeaders.B = teams.B[0];
 
