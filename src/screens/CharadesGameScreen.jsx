@@ -155,7 +155,7 @@ export default function CharadesGameScreen() {
   };
 
   const handleAdjustScore = async (team, delta) => {
-    if (!isTeamLeader && !isHost) return;
+    if (!isHost) return;
     try {
       await charadesLeaderAdjustScore(roomCode, team, delta);
     } catch (e) { setToast(e.message); }
@@ -225,11 +225,11 @@ export default function CharadesGameScreen() {
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontWeight: 950, fontSize: 11, color: 'var(--bg-pink)' }}>فريق الأحمر</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {(isTeamLeader || isHost) && (
+              {isHost && (
                 <button onClick={() => handleAdjustScore('A', -1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>-</button>
               )}
               <div style={{ fontWeight: 950, fontSize: 20, color: 'var(--bg-dark-purple)' }}>{scoreA}</div>
-              {(isTeamLeader || isHost) && (
+              {isHost && (
                 <button onClick={() => handleAdjustScore('A', 1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>+</button>
               )}
             </div>
@@ -247,11 +247,11 @@ export default function CharadesGameScreen() {
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontWeight: 950, fontSize: 11, color: '#2979FF' }}>فريق الأزرق</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {(isTeamLeader || isHost) && (
+              {isHost && (
                 <button onClick={() => handleAdjustScore('B', -1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>-</button>
               )}
               <div style={{ fontWeight: 950, fontSize: 20, color: 'var(--bg-dark-purple)' }}>{scoreB}</div>
-              {(isTeamLeader || isHost) && (
+              {isHost && (
                 <button onClick={() => handleAdjustScore('B', 1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>+</button>
               )}
             </div>
@@ -607,12 +607,12 @@ export default function CharadesGameScreen() {
                   <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
                     {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
                   </div>
-                  {(isChoosingTeamLeader || isHost) && (
+                  {isHost && (
                     <div style={{ background: 'var(--bg-yellow)', padding: 12, borderRadius: 14, border: '3px solid var(--bg-dark-purple)', textAlign: 'center' }}>
-                       <p style={{ fontSize: 11, fontWeight: 950, marginBottom: 8 }}>أنت القائد: دوس صح لو خمنوا الكلمة</p>
+                       <p style={{ fontSize: 11, fontWeight: 950, marginBottom: 8 }}>أنت الهوست: دوس صح لو خمنوا الكلمة</p>
                        <button onClick={handleCorrectGuess} className="btn btn-green"
                           style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 16, fontWeight: 950 }}>
-                          ✅ صح! (إضافة نقطة)
+                          ✅ صح! (+{timeLeft > halfTime ? 2 : 1} نقطة{timeLeft > halfTime ? ' ⚡' : ''})
                        </button>
                     </div>
                   )}
@@ -647,10 +647,10 @@ export default function CharadesGameScreen() {
                   <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
                     {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
                   </div>
-                  {(isChoosingTeamLeader || isHost) && (
+                  {isHost && (
                     <button onClick={handleCorrectGuess} className="btn btn-green"
                       style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 14 }}>
-                      ✅ تأكيد الإجابة الصحيحة
+                      ✅ تأكيد الإجابة الصحيحة (+{timeLeft > halfTime ? 2 : 1} نقطة{timeLeft > halfTime ? ' ⚡' : ''})
                     </button>
                   )}
                 </div>

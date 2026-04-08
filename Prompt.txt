@@ -1,0 +1,84 @@
+You are the developer of Kalax – a multi-modal Arabic social mobile game using real-time (Socket.io or WebSocket).
+
+I need a comprehensive review and complete code overhaul, plus the addition of a new mode.
+
+1. Current issues that need immediate fixes:
+
+A. Survival/Last Man Standing game:
+
+Sometimes the timer starts and ends automatically as soon as a question is opened, without any player selecting a question or starting the round.
+
+Review all questions and categorize them into 3 difficulty levels: Easy – Medium – Hard.
+
+Change the game logic so that:
+
+The first 10 questions are easy only.
+
+Then the 10 medium questions.
+
+Then the hard questions.
+
+Within each level, the order should be randomized.
+
+B. Drawing game (Gartic.io mode):
+
+When the keyboard is opened (on mobile), the canvas shrinks and becomes distorted.
+
+The "Show number of characters" (Hint) button is not working at all.
+
+C. General Review of the Entire Game:
+
+Perform a full Code Review and Logic Audit for all existing mods.
+
+Discover any logic issues, real-time bugs, state management errors, or any unaddressed edge cases.
+
+Fix everything you find and provide a list of your adjustments.
+
+2. Add a new fourth mod: "Charades" (Charades/Mime)
+Detailed Mod Description:
+
+Played in two teams (Team A and Team B).
+
+Each round:
+
+The current team (e.g., Team A) chooses between a movie or a play.
+
+The team votes: Which is more difficult to act?
+
+The option with the most votes will be acted out.
+
+The team chooses one player to act out (a player who has already acted cannot act again until all team members have done so).
+
+The chosen player will only see the title of the movie or play (the opposing team will not see it).
+
+The timer starts (e.g., 60–90 seconds). The player acts out silently, and the team tries to guess.
+
+After the time runs out or the guess is correct, it's the other team's turn.
+
+Additional features required:
+
+Random challenges (Random Modifiers) appear for the acting player, such as:
+Acting with your eyes closed
+Acting while standing on one leg
+Acting while sitting
+Acting using only one hand
+Acting with a strange voice (cartoon voice, robot voice, etc.)
+Etc. (Add 8–10 diverse challenges).
+
+Each challenge appears randomly with the name of the character to be acted out.
+
+A clear scoring system (e.g., correct guess before half the time = higher points).
+
+3. Final instructions for you:
+
+Write your response very neatly (use clear subheadings).
+
+First: A list of the problems you found and fixed.
+
+Second: The modified code/new functions for each fix (with comments).
+
+Third: A complete implementation of the new "talkless" mod (screens + logic + real-time events).
+
+Finally: Any additional recommendations for improving stability and performance.
+
+Start now to carry out all the required tasks in order.

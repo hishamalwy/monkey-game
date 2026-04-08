@@ -267,32 +267,33 @@ export async function charadesActorReady(roomCode) {
 
 export async function charadesHostConfirmCorrect(roomCode) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  const room = snap.data();
+  const cs = room?.charadesState;
   if (!cs || cs.phase !== 'acting') return;
 
   const guessingTeam = getOpposingTeam(cs.choosingTeam);
   const charadesTime = cs.charadesTime || 60;
+  const halfTime = charadesTime / 2;
   const timeLeft = cs.timeEndsAt ? Math.max(0, Math.round((cs.timeEndsAt - Date.now()) / 1000)) : charadesTime;
-  const points = 1; // Simplification: always 1 point as per requested UI? 
-  // User said: "عندما يخمن الفريق المنافس بشكل صحيح (شفوياً)، يضغط القائد على زرار "صح" ليحسب النقاط للفريق المنافس."
-  // Usually it's 1 point per correct guess in this simplified mode. 
-  // The old code had 3 points for half time. I'll keep it 1 point for now or check if they want the old scoring.
-  // Actually, I'll follow the user's "Correct" button as 1 point.
-  
+
+  // نقطتين لو جاوبوا قبل نص الوقت، نقطة واحدة لو بعد نص الوقت
+  const beforeHalf = timeLeft > halfTime;
+  const points = beforeHalf ? 2 : 1;
+
   const newScore = (cs.scores[guessingTeam] || 0) + points;
   const wonGame = newScore >= (cs.scoreTarget || 20);
 
   const patch = {
     'charadesState.guessedCorrectly': true,
     'charadesState.phase': wonGame ? 'gameOver' : 'roundResult',
-    'charadesState.phaseData': { correct: true, timeLeft, points, beforeHalf: false },
+    'charadesState.phaseData': { correct: true, timeLeft, points, beforeHalf },
     [`charadesState.scores.${guessingTeam}`]: newScore,
     'charadesState.roundsHistory': [
       ...(cs.roundsHistory || []),
       {
         choosingTeam: cs.choosingTeam, guessingTeam, actor: cs.currentActorUid,
         title: cs.currentTitle, challenge: cs.currentChallenge,
-        guessedCorrectly: true, guesser: 'leader', points,
+        guessedCorrectly: true, guesser: 'host', points, beforeHalf,
       },
     ],
   };
