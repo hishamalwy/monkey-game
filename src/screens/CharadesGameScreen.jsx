@@ -5,7 +5,8 @@ import {
   startCharadesGame, charadesJoinTeam, charadesConfirmTeams,
   charadesVoteTitle, charadesResolveTitle,
   charadesVoteActor, charadesResolveActor,
-  charadesSubmitGuess, charadesHostConfirmCorrect,
+  charadesHostConfirmCorrect, charadesActorReady,
+  charadesLeaderAdjustScore, charadesSetTeamLeader,
   charadesEndRound, charadesNextRound,
 } from '../firebase/charadesRooms';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -26,9 +27,10 @@ export default function CharadesGameScreen() {
   const nav = useNavigation();
   const { userProfile } = useAuth();
   const [room, setRoom] = useState(null);
-  const [guessInput, setGuessInput] = useState('');
   const [toast, setToast] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
+  const [voteTimeLeft, setVoteTimeLeft] = useState(0);
+  const [prepTimeLeft, setPrepTimeLeft] = useState(0);
 
   useEffect(() => {
     const unsub = listenToRoom(roomCode, (data) => {
@@ -58,6 +60,11 @@ export default function CharadesGameScreen() {
   const scoreTarget = cs?.scoreTarget || 20;
   const charadesTime = cs?.charadesTime || 60;
 
+  const teamLeaders = cs?.teamLeaders || {};
+  const isTeamLeader = teamLeaders[myTeam] === myUid;
+  const choosingTeamLeader = teamLeaders[choosingTeam];
+  const isChoosingTeamLeader = choosingTeamLeader === myUid;
+
   useEffect(() => {
     if (!cs?.timeEndsAt) return;
     const iv = setInterval(() => {
@@ -72,6 +79,28 @@ export default function CharadesGameScreen() {
     return () => clearInterval(iv);
   }, [cs?.timeEndsAt, isHost, roomCode]);
 
+  // Combined Resolution Timer for Vote and Prep
+  useEffect(() => {
+    const iv = setInterval(() => {
+      if (cs?.voteTimerEndsAt) {
+        const left = Math.max(0, Math.round((cs.voteTimerEndsAt - Date.now()) / 1000));
+        setVoteTimeLeft(left);
+        if (left <= 0 && isHost) {
+          if (phase === 'titleVote') charadesResolveTitle(roomCode).catch(() => {});
+          if (phase === 'selectActor') charadesResolveActor(roomCode).catch(() => {});
+        }
+      }
+      if (cs?.prepTimerEndsAt) {
+        const left = Math.max(0, Math.round((cs.prepTimerEndsAt - Date.now()) / 1000));
+        setPrepTimeLeft(left);
+        if (left <= 0 && isHost) {
+          charadesActorReady(roomCode).catch(() => {});
+        }
+      }
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [cs?.voteTimerEndsAt, cs?.prepTimerEndsAt, isHost, phase, roomCode]);
+
   useEffect(() => {
     if (!isHost || !cs) return;
     if (phase === 'titleVote') {
@@ -80,7 +109,7 @@ export default function CharadesGameScreen() {
       if (members.length > 0 && members.every(uid => votes[uid] !== undefined)) {
         const timer = setTimeout(() => {
           charadesResolveTitle(roomCode).catch(() => {});
-        }, 2000);
+        }, 1500);
         return () => clearTimeout(timer);
       }
     }
@@ -90,7 +119,7 @@ export default function CharadesGameScreen() {
       if (members.length > 0 && members.every(uid => votes[uid] !== undefined)) {
         const timer = setTimeout(() => {
           charadesResolveActor(roomCode).catch(() => {});
-        }, 2000);
+        }, 1500);
         return () => clearTimeout(timer);
       }
     }
@@ -118,18 +147,24 @@ export default function CharadesGameScreen() {
     charadesVoteActor(roomCode, myUid, actorUid).catch(e => setToast(e.message));
   };
 
-  const handleGuess = async () => {
-    if (!guessInput.trim() || !isOnGuessingTeam) return;
+  const handleCorrectGuess = async () => {
+    if (!isChoosingTeamLeader && !isHost) return;
     try {
-      await charadesSubmitGuess(roomCode, myUid, guessInput.trim());
-      setGuessInput('');
+      await charadesHostConfirmCorrect(roomCode);
     } catch (e) { setToast(e.message); }
   };
 
-  const handleCorrectGuess = async () => {
-    if (!isHost) return;
+  const handleAdjustScore = async (team, delta) => {
+    if (!isTeamLeader && !isHost) return;
     try {
-      await charadesHostConfirmCorrect(roomCode);
+      await charadesLeaderAdjustScore(roomCode, team, delta);
+    } catch (e) { setToast(e.message); }
+  };
+
+  const handleActorReady = async () => {
+    if (!isActor) return;
+    try {
+      await charadesActorReady(roomCode);
     } catch (e) { setToast(e.message); }
   };
 
@@ -189,7 +224,15 @@ export default function CharadesGameScreen() {
         }}>
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontWeight: 950, fontSize: 11, color: 'var(--bg-pink)' }}>فريق الأحمر</div>
-            <div style={{ fontWeight: 950, fontSize: 20, color: 'var(--bg-dark-purple)' }}>{scoreA}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {(isTeamLeader || isHost) && (
+                <button onClick={() => handleAdjustScore('A', -1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>-</button>
+              )}
+              <div style={{ fontWeight: 950, fontSize: 20, color: 'var(--bg-dark-purple)' }}>{scoreA}</div>
+              {(isTeamLeader || isHost) && (
+                <button onClick={() => handleAdjustScore('A', 1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>+</button>
+              )}
+            </div>
             <div style={{ height: 4, background: '#EEE', borderRadius: 4, marginTop: 4, border: '1px solid var(--bg-dark-purple)' }}>
               <div style={{ height: '100%', width: `${Math.min(100, (scoreA / scoreTarget) * 100)}%`, background: 'var(--bg-pink)', borderRadius: 4, transition: 'width 0.5s' }} />
             </div>
@@ -203,7 +246,15 @@ export default function CharadesGameScreen() {
           </div>
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontWeight: 950, fontSize: 11, color: '#2979FF' }}>فريق الأزرق</div>
-            <div style={{ fontWeight: 950, fontSize: 20, color: 'var(--bg-dark-purple)' }}>{scoreB}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {(isTeamLeader || isHost) && (
+                <button onClick={() => handleAdjustScore('B', -1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>-</button>
+              )}
+              <div style={{ fontWeight: 950, fontSize: 20, color: 'var(--bg-dark-purple)' }}>{scoreB}</div>
+              {(isTeamLeader || isHost) && (
+                <button onClick={() => handleAdjustScore('B', 1)} style={{ background: '#EEE', border: '2px solid var(--bg-dark-purple)', borderRadius: '6px', padding: '0 6px', fontWeight: 950 }}>+</button>
+              )}
+            </div>
             <div style={{ height: 4, background: '#EEE', borderRadius: 4, marginTop: 4, border: '1px solid var(--bg-dark-purple)' }}>
               <div style={{ height: '100%', width: `${Math.min(100, (scoreB / scoreTarget) * 100)}%`, background: '#2979FF', borderRadius: 4, transition: 'width 0.5s' }} />
             </div>
@@ -240,21 +291,28 @@ export default function CharadesGameScreen() {
                 border: '4px solid var(--bg-pink)',
                 boxShadow: myTeam === 'A' ? 'none' : '4px 4px 0 var(--bg-pink)',
                 transform: myTeam === 'A' ? 'translate(4px,4px)' : 'none',
-                cursor: 'pointer', textAlign: 'center',
+                cursor: 'pointer', textAlign: 'center', position: 'relative',
               }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🔴</div>
                 <div style={{ fontWeight: 950, fontSize: 16, color: myTeam === 'A' ? '#FFF' : 'var(--bg-pink)' }}>فريق الأحمر</div>
                 <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
                   {teamA.map(uid => {
                     const p = room?.players?.[uid];
+                    const isL = teamLeaders.A === uid;
                     return (
                       <div key={uid} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <UserAvatar avatarId={p?.avatarId ?? 1} size={30} />
+                        <div style={{ position: 'relative' }}>
+                          <UserAvatar avatarId={p?.avatarId ?? 1} size={30} />
+                          {isL && <div style={{ position: 'absolute', top: -5, right: -5, background: 'gold', borderRadius: 50, width: 14, height: 14, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #000' }}>👑</div>}
+                        </div>
                         <span style={{ fontSize: 9, fontWeight: 950, color: myTeam === 'A' ? '#FFF' : 'var(--bg-pink)' }}>{p?.username?.slice(0, 6)}</span>
                       </div>
                     );
                   })}
                 </div>
+                {myTeam === 'A' && teamLeaders.A !== myUid && (
+                  <button onClick={(e) => { e.stopPropagation(); charadesSetTeamLeader(roomCode, 'A', myUid); }} style={{ marginTop: 8, fontSize: 10, background: 'rgba(255,255,255,0.2)', border: '1px solid #FFF', color: '#FFF', borderRadius: 5, padding: '2px 6px' }}>أنا القائد 👑</button>
+                )}
               </button>
               <button onClick={() => handleJoinTeam('B')} style={{
                 flex: 1, padding: 20, borderRadius: '18px',
@@ -262,23 +320,32 @@ export default function CharadesGameScreen() {
                 border: '4px solid #2979FF',
                 boxShadow: myTeam === 'B' ? 'none' : '4px 4px 0 #2979FF',
                 transform: myTeam === 'B' ? 'translate(4px,4px)' : 'none',
-                cursor: 'pointer', textAlign: 'center',
+                cursor: 'pointer', textAlign: 'center', position: 'relative',
               }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🔵</div>
                 <div style={{ fontWeight: 950, fontSize: 16, color: myTeam === 'B' ? '#FFF' : '#2979FF' }}>فريق الأزرق</div>
                 <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
                   {teamB.map(uid => {
                     const p = room?.players?.[uid];
+                    const isL = teamLeaders.B === uid;
                     return (
                       <div key={uid} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <UserAvatar avatarId={p?.avatarId ?? 1} size={30} />
+                        <div style={{ position: 'relative' }}>
+                          <UserAvatar avatarId={p?.avatarId ?? 1} size={30} />
+                          {isL && <div style={{ position: 'absolute', top: -5, right: -5, background: 'gold', borderRadius: 50, width: 14, height: 14, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #000' }}>👑</div>}
+                        </div>
                         <span style={{ fontSize: 9, fontWeight: 950, color: myTeam === 'B' ? '#FFF' : '#2979FF' }}>{p?.username?.slice(0, 6)}</span>
                       </div>
                     );
                   })}
                 </div>
+                {myTeam === 'B' && teamLeaders.B !== myUid && (
+                  <button onClick={(e) => { e.stopPropagation(); charadesSetTeamLeader(roomCode, 'B', myUid); }} style={{ marginTop: 8, fontSize: 10, background: 'rgba(255,255,255,0.2)', border: '1px solid #FFF', color: '#FFF', borderRadius: 5, padding: '2px 6px' }}>أنا القائد 👑</button>
+                )}
               </button>
+
             </div>
+            <p style={{ textAlign: 'center', fontSize: 11, color: '#999', marginTop: 10 }}>قائد الفريق هو أول من ينضم للفريق (أو صاحب الروم)</p>
             {!teamAMin2 && <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--bg-pink)', fontWeight: 950 }}>⚠️ فريق الأحمر محتاج 2 على الأقل</p>}
             {!teamBMin2 && <p style={{ textAlign: 'center', fontSize: 12, color: '#2979FF', fontWeight: 950 }}>⚠️ فريق الأزرق محتاج 2 على الأقل</p>}
             {isHost && canStart && (
@@ -295,9 +362,16 @@ export default function CharadesGameScreen() {
           <div style={{ width: '100%', maxWidth: 420 }}>
             {isOnChoosingTeam ? (
               <div>
-                <h2 style={{ textAlign: 'center', fontWeight: 950, fontSize: 17, color: 'var(--bg-dark-purple)', marginBottom: 16 }}>
+                <h2 style={{ textAlign: 'center', fontWeight: 950, fontSize: 17, color: 'var(--bg-dark-purple)', marginBottom: 4 }}>
                   صوّتوا: أيهما الأصعب في التمثيل؟ 🤔
                 </h2>
+                {cs.voteTimerEndsAt && (
+                  <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <span style={{ background: 'var(--bg-pink)', color: '#FFF', padding: '4px 12px', borderRadius: '10px', fontSize: 14, fontWeight: 950 }}>
+                      ⏱️ ينتهي التصويت خلال {voteTimeLeft}ث
+                    </span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {(cs.titleOptions || []).map((opt, i) => {
                     const voted = cs.titleVotes?.[myUid] === i;
@@ -373,6 +447,13 @@ export default function CharadesGameScreen() {
                 <h2 style={{ textAlign: 'center', fontWeight: 950, fontSize: 16, color: 'var(--bg-dark-purple)', marginBottom: 4 }}>
                   اختاروا مين يمثّل من فريق {TEAM_LABELS[guessingTeam]}! 🎭
                 </h2>
+                {cs.voteTimerEndsAt && (
+                  <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <span style={{ background: 'var(--bg-pink)', color: '#FFF', padding: '4px 12px', borderRadius: '10px', fontSize: 14, fontWeight: 950 }}>
+                      ⏱️ ينتهي الاختيار خلال {voteTimeLeft}ث
+                    </span>
+                  </div>
+                )}
                 <p style={{ textAlign: 'center', fontSize: 11, color: '#888', marginBottom: 14 }}>
                   الممثل من الفريق المنافس هي acting والفريقه يخمّن
                 </p>
@@ -432,7 +513,29 @@ export default function CharadesGameScreen() {
         {/* ===== ACTING ===== */}
         {phase === 'acting' && (
           <div style={{ width: '100%', maxWidth: 400 }}>
-            {isActor ? (
+            {isActor && !cs.actorReady ? (
+              <div style={{
+                background: 'var(--bg-dark-purple)', borderRadius: '18px', padding: 24,
+                border: '4px solid #FFF', boxShadow: '6px 6px 0 var(--bg-pink)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-yellow)', marginBottom: 8 }}>
+                  استعد للتمثيل! 🧘‍♂️ معك 20 ثانية للتفكير
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 950, color: '#FFF', marginBottom: 12 }}>
+                  {cs.currentTitle}
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 950, color: 'var(--bg-yellow)', marginBottom: 20 }}>
+                  ({TYPE_LABELS[cs.currentTitleType] || cs.currentTitleType})
+                </div>
+                <div style={{ fontSize: 40, fontWeight: 950, color: 'var(--bg-pink)', marginBottom: 20 }}>
+                  {prepTimeLeft}
+                </div>
+                <button onClick={handleActorReady} className="btn btn-yellow" style={{ width: '100%', padding: 14, fontSize: 18, fontWeight: 950 }}>
+                  جاهز للبدء فورا! 🚀
+                </button>
+              </div>
+            ) : isActor ? (
               <div style={{
                 background: 'var(--bg-dark-purple)', borderRadius: '18px', padding: 24,
                 border: '4px solid var(--bg-pink)', boxShadow: '6px 6px 0 var(--bg-pink)',
@@ -458,6 +561,20 @@ export default function CharadesGameScreen() {
                   {timeLeft}ث
                 </div>
               </div>
+            ) : !cs.actorReady ? (
+               <div style={{
+                background: '#FFF', borderRadius: '18px', padding: 24,
+                border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-pink)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>⏳</div>
+                <h3 style={{ fontWeight: 950, color: 'var(--bg-dark-purple)', fontSize: 16 }}>
+                  {actorPlayer?.username} بيستعد للتمثيل...
+                </h3>
+                <p style={{ fontSize: 12, color: '#888', fontWeight: 950, marginTop: 8 }}>
+                  خمّنوا شفوياً والقائد هيحسبلكم النقطة! 🤫
+                </p>
+              </div>
             ) : isOnGuessingTeam ? (
               <div>
                 <div style={{
@@ -466,7 +583,7 @@ export default function CharadesGameScreen() {
                   textAlign: 'center', marginBottom: 16,
                 }}>
                   <div style={{ fontWeight: 950, fontSize: 14, color: 'var(--bg-dark-purple)' }}>
-                    {actorPlayer?.username} يمثّل الآن! 🎭 خمّنوا!
+                    {actorPlayer?.username} يمثّل الآن! 🎭 خمّنوا شفوياً!
                   </div>
                   {cs.currentChallenge && (
                     <div style={{
@@ -490,26 +607,15 @@ export default function CharadesGameScreen() {
                   <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
                     {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
                   </div>
-                  <div>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                      <input
-                        value={guessInput}
-                        onChange={e => setGuessInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleGuess()}
-                        placeholder="اكتب تخمينك..."
-                        className="input-field"
-                        style={{ flex: 1, borderRadius: '12px', padding: '12px 16px' }}
-                      />
-                      <button onClick={handleGuess} className="btn btn-yellow"
-                        style={{ padding: '0 20px', borderRadius: '12px' }}>خمّن</button>
+                  {(isChoosingTeamLeader || isHost) && (
+                    <div style={{ background: 'var(--bg-yellow)', padding: 12, borderRadius: 14, border: '3px solid var(--bg-dark-purple)', textAlign: 'center' }}>
+                       <p style={{ fontSize: 11, fontWeight: 950, marginBottom: 8 }}>أنت القائد: دوس صح لو خمنوا الكلمة</p>
+                       <button onClick={handleCorrectGuess} className="btn btn-green"
+                          style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 16, fontWeight: 950 }}>
+                          ✅ صح! (إضافة نقطة)
+                       </button>
                     </div>
-                    {isHost && (
-                      <button onClick={handleCorrectGuess} className="btn btn-green"
-                        style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 14 }}>
-                        ✅ الإجابة صحيحة!
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -524,7 +630,7 @@ export default function CharadesGameScreen() {
                     {actorPlayer?.username} يمثّل لفريق {TEAM_LABELS[guessingTeam]}!
                   </h3>
                   <p style={{ fontSize: 13, color: '#888', fontWeight: 950 }}>
-                    أنت اخترت العنوان — تابعوا التمثيل! 🍿
+                    خمّنوا شفوياً.. القائد {room.players[choosingTeamLeader]?.username} هو اللي هيحكم!
                   </p>
                 </div>
                 <div style={{ marginTop: 8 }}>
@@ -541,7 +647,7 @@ export default function CharadesGameScreen() {
                   <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 950, color: timeLeft <= halfTime ? 'var(--bg-pink)' : 'var(--bg-green)', marginBottom: 12 }}>
                     {timeLeft}ث متبقية {timeLeft <= halfTime ? '⚠️' : ''}
                   </div>
-                  {isHost && (
+                  {(isChoosingTeamLeader || isHost) && (
                     <button onClick={handleCorrectGuess} className="btn btn-green"
                       style={{ width: '100%', padding: 12, borderRadius: '12px', fontSize: 14 }}>
                       ✅ تأكيد الإجابة الصحيحة

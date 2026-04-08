@@ -217,26 +217,45 @@ export const charadesPlays = [
 ];
 
 export const charadesChallenges = [
-  { text: 'أغمض عينيك! 😷', description: 'أدِّ التمثيل وعيناك مغمضتين طوال الجولة' },
-  { text: 'قف على رجل واحدة! 🦩', description: 'أدِّ التمثيل وأنت واقف على رجل واحدة' },
-  { text: 'اجلس على الكرسي! 🪑', description: 'أدِّ التمثيل وأنت جالس طوال الجولة' },
-  { text: 'استخدم يد واحدة فقط! 🤚', description: 'يمكنك استخدام يد واحدة فقط للتعبير' },
-  { text: 'بصوت كرتوني! 🤖', description: 'تحدث بصوت كرتوني أو روبوت' },
-  { text: 'بالحركة البطيئة! 🐌', description: 'تحرّك ببطء شاد جداً' },
-  { text: 'من دون كلمات! 🤐', description: 'لا تنطق بأي كلمة (قاعدة أساسية)' },
-  { text: 'وجهًا للجدار! 🧱', description: 'قف مواجهة الجدار طوال التمثيل' },
-  { text: 'يدّك في جيبك! 👖', description: 'ضع يدّيك في جيبك طوال التمثيل' },
-  { text: 'المشي على البطن! 🤰', description: 'اسحبي على بطنك وأنت تمشي على الأرض' },
-  { text: 'فم مفتوح! 😮', description: 'أبق فمك مفتوح طوال التمثيل (بدون صوت)' },
+  { text: 'مغمض العينين 🙈', description: 'أدِّ التمثيل وعيناك مغمضتين' },
+  { text: 'واقف على رجل واحدة 🦩', description: 'أدِّ التمثيل وأنت واقف على رجل واحدة' },
+  { text: 'جالس فقط 🪑', description: 'أدِّ التمثيل وأنت جالس طوال الجولة' },
+  { text: 'بيد واحدة فقط 🤚', description: 'استخدم يد واحدة فقط' },
+  { text: 'بصوت غريب 🤖', description: 'تحدث بصوت روبوت أو طفل (مسموح بالصوت فقط)' },
+  { text: 'بدون استخدام اليدين 🙅', description: 'لا تستخدم يديك إطلاقاً' },
+  { text: 'بالحركة البطيئة 🐌', description: 'تحرّك ببطء شديد' },
+  { text: 'وجهًا للجدار 🧱', description: 'قف مواجهة الجدار' },
+  { text: 'بدون تحريك الأرجل 🚫', description: 'أدِّ التمثيل بدون تحريك قدميك من مكانهما' },
+  { text: 'يدّيك خلف ظهرك 👐', description: 'ضع يديك خلف ظهرك طوال الوقت' },
 ];
 
-export function pickCharadesOptions() {
-  const movie = charadesMovies[Math.floor(Math.random() * charadesMovies.length)];
-  const series = charadesSeries[Math.floor(Math.random() * charadesSeries.length)];
-  const play = charadesPlays[Math.floor(Math.random() * charadesPlays.length)];
+export function pickCharadesOptions(excludedTitles = []) {
+  const excludedSet = new Set(excludedTitles);
+
+  const availableMovies = charadesMovies.filter(m => !excludedSet.has(m.title));
+  const availableSeries = charadesSeries.filter(s => !excludedSet.has(s.title));
+  const availablePlays = charadesPlays.filter(p => !excludedSet.has(p.title));
+
+  const pickRandom = (arr, backupArr) => {
+    if (arr.length > 0) return arr[Math.floor(Math.random() * arr.length)];
+    // If all are excluded, we might pick from original but this shouldn't happen with large sets
+    return backupArr[Math.floor(Math.random() * backupArr.length)];
+  };
+
+  const movie = pickRandom(availableMovies, charadesMovies);
+  const series = pickRandom(availableSeries, charadesSeries);
+  const play = pickRandom(availablePlays, charadesPlays);
+
   return [
     { ...movie, type: 'movie' },
     { ...series, type: 'series' },
     { ...play, type: 'play' },
   ];
 }
+
+export function maybeGetChallenge() {
+  // 45% probability of showing a challenge
+  if (Math.random() > 0.45) return null;
+  return charadesChallenges[Math.floor(Math.random() * charadesChallenges.length)];
+}
+
