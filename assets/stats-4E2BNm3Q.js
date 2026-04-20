@@ -1,0 +1,1 @@
+import{a as e}from"./AuthContext-Bwd4cUpH.js";import{C as t,Q as n,at as r,b as i,p as a,w as o,x as s}from"./index.esm-DpeKDU_9.js";async function c(t,i){await a(n(e,`users`,t,`matches`),{...i,playedAt:r()})}async function l(r,a=20){return(await i(o(n(e,`users`,r,`matches`),t(`playedAt`,`desc`),s(a)))).docs.map(e=>({id:e.id,...e.data()}))}export{c as n,l as t};

@@ -1,0 +1,1 @@
+import{tt as e,y as t}from"./index.esm-DpeKDU_9.js";export{e as doc,t as getDoc};
