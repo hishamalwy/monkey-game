@@ -4,8 +4,10 @@ import { getLeaderboard } from '../firebase/leaderboard';
 import UserAvatar from '../components/ui/UserAvatar';
 import BottomNav from '../components/BottomNav';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import EmptyState from '../components/shared/EmptyState';
 import { useNavigation } from '../hooks/useNavigation';
 import { getLevel, getLevelEmoji } from '../utils/xp';
+import PlayerCard from '../components/shared/PlayerCard';
 
 export default function LeaderboardScreen() {
   const nav = useNavigation();
@@ -13,6 +15,7 @@ export default function LeaderboardScreen() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('monkey');
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -38,15 +41,15 @@ export default function LeaderboardScreen() {
       {/* Mode Tabs */}
       <div style={{ padding: '16px 20px', background: '#FFF', borderBottom: '4px solid #000', position: 'relative', zIndex: 10 }}>
         <div style={{ display: 'flex', gap: 12 }}>
-          {['monkey', 'draw'].map(m => (
+          {['monkey', 'draw', 'survival', 'charades'].map(m => (
             <button key={m} onClick={() => setMode(m)} className={`btn ${mode === m ? 'btn-yellow' : 'btn-white'}`} style={{
-              flex: 1, padding: '14px', fontSize: 13, fontWeight: 900, borderRadius: 0,
+              flex: 1, padding: '14px', fontSize: 11, fontWeight: 900, borderRadius: 0,
               border: '3.5px solid #000',
               boxShadow: mode === m ? 'none' : '4px 4px 0 #000',
               transform: mode === m ? 'translate(4px, 4px)' : 'none',
               transition: 'none'
             }}>
-              {m === 'monkey' ? '🔊 كلكس' : '🎨 الرسم'}
+              {m === 'monkey' ? '🔊 كلكس' : m === 'draw' ? '🎨 رسم' : m === 'survival' ? '⚔️ بقاء' : '🎭 تمثيل'}
             </button>
           ))}
         </div>
@@ -60,12 +63,12 @@ export default function LeaderboardScreen() {
             {list.map((u, i) => {
               const isMe = u.uid === userProfile?.uid;
               return (
-                <div key={u.uid} className="card" style={{
+                <div key={u.uid} className="card" onClick={() => setSelectedPlayer(u.uid)} style={{
                   display: 'flex', alignItems: 'center', gap: 14, padding: '16px', borderRadius: 0,
                   background: isMe ? 'var(--neo-yellow)' : '#FFF',
                   borderColor: '#000',
                   boxShadow: isMe ? '4px 4px 0 var(--neo-pink)' : '8px 8px 0 #000',
-                  border: '4px solid #000'
+                  border: '4px solid #000', cursor: 'pointer',
                 }}>
                   <div style={{ minWidth: 40, textAlign: 'center', fontWeight: 900, fontSize: i < 3 ? 24 : 16, color: '#000' }}>
                     {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
@@ -80,16 +83,20 @@ export default function LeaderboardScreen() {
                     </div>
                   </div>
                   <div className="card" style={{ padding: '6px 12px', background: '#000', color: 'var(--neo-yellow)', borderRadius: 0, minWidth: 50, textAlign: 'center', boxShadow: 'none', border: 'none' }}>
-                    <div style={{ fontSize: 20, fontWeight: 900 }}>{mode === 'draw' ? (u.wins_draw || 0) : (u.wins || 0)}</div>
+                    <div style={{ fontSize: 20, fontWeight: 900 }}>{mode === 'draw' ? (u.wins_draw || 0) : mode === 'survival' ? (u.wins_survival || 0) : mode === 'charades' ? (u.wins_charades || 0) : (u.wins || 0)}</div>
                     <div style={{ fontSize: 9, fontWeight: 900, opacity: 0.8 }}>فوز</div>
                   </div>
                 </div>
               );
             })}
             {list.length === 0 && (
-              <div className="card" style={{ textAlign: 'center', padding: 40, background: '#FFF', border: '4px solid #000', borderRadius: 0, boxShadow: '8px 8px 0 #000' }}>
-                لا توجد بيانات بعد 🐒
-              </div>
+              <EmptyState
+                icon="🏆"
+                title="لا توجد بيانات بعد"
+                description="العب مباريات لتظهر أسماء المتصدرين!"
+                action={nav.toOnlineSetup}
+                actionLabel="ابدأ لعبة 🎮"
+              />
             )}
           </div>
         )}
@@ -100,6 +107,7 @@ export default function LeaderboardScreen() {
         else if (key === 'settings') nav.toSettings();
         else if (key === 'store') nav.toStore();
       }} />
+      {selectedPlayer && <PlayerCard uid={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
     </div>
   );
 }

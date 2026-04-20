@@ -1,0 +1,26 @@
+export default function EmptyState({ icon, title, description, action, actionLabel }) {
+  return (
+    <div className="empty-state" style={{
+      background: '#FFF', border: '5px solid #000', borderRadius: 0,
+      boxShadow: '8px 8px 0 var(--neo-pink)', width: '100%',
+    }}>
+      <div style={{ fontSize: 64, lineHeight: 1 }}>{icon}</div>
+      <div style={{ fontSize: 18, fontWeight: 900, color: '#000' }}>{title}</div>
+      {description && (
+        <div style={{ fontSize: 13, fontWeight: 900, color: '#444', maxWidth: 260, textAlign: 'center' }}>{description}</div>
+      )}
+      {action && actionLabel && (
+        <button
+          onClick={action}
+          className="btn btn-pink"
+          style={{
+            marginTop: 8, padding: '14px 24px', fontSize: 14, fontWeight: 900,
+            borderRadius: 0, border: '4px solid #000', boxShadow: '4px 4px 0 #000',
+          }}
+        >
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}

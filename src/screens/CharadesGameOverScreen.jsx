@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAudio } from '../context/AudioContext';
-import { listenToRoom, leaveRoom, resetRoomToLobby } from '../firebase/rooms';
+import { listenToRoom, leaveRoom, resetRoomToLobby, createRoom } from '../firebase/rooms';
 import { recordWin, recordLoss } from '../firebase/leaderboard';
 import { awardCoins } from '../firebase/store';
 import { recordMatch } from '../firebase/stats';
 import { incrementDailyStat } from '../firebase/retention';
 import { recordRecentPlayers } from '../firebase/recentPlayers';
+import { trackModePlayed } from '../firebase/achievements';
 import { COIN_REWARDS } from '../utils/store';
 import { XP_REWARDS } from '../utils/xp';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -23,6 +24,7 @@ export default function CharadesGameOverScreen() {
   const [coinsAwarded, setCoinsAwarded] = useState(false);
   const soundPlayedRef = useRef(false);
   const [toast, setToast] = useState('');
+  const [rematching, setRematching] = useState(false);
 
   useEffect(() => {
     const unsub = listenToRoom(roomCode, (data) => {
@@ -65,6 +67,7 @@ export default function CharadesGameOverScreen() {
     incrementDailyStat(userProfile.uid, 'xp', isWinner ? XP_REWARDS.WIN : XP_REWARDS.LOSS).catch(() => {});
     recordMatch(userProfile.uid, { mode: 'charades', won: isWinner, rounds: charadesState.roundNumber || 0 }).catch(() => {});
     recordRecentPlayers(userProfile.uid, room.playerOrder || []).catch(() => {});
+    trackModePlayed(userProfile.uid, 'charades').catch(() => {});
   }
 
   const handleReturnHome = async () => {
@@ -75,6 +78,25 @@ export default function CharadesGameOverScreen() {
 
   const handleResetToLobby = async () => {
     if (isHost) { playClick(); await resetRoomToLobby(roomCode, userProfile?.uid); }
+  };
+
+  const handleQuickRematch = async () => {
+    if (rematching) return;
+    playClick();
+    setRematching(true);
+    try {
+      await leaveRoom(roomCode, userProfile?.uid);
+      const settings = {
+        mode: 'charades', maxPlayers: room?.maxPlayers || 6,
+        charadesScoreTarget: room?.charadesScoreTarget || 20,
+        charadesTime: room?.charadesTime || 60, isPublic: true,
+      };
+      const code = await createRoom(userProfile, settings);
+      nav.toLobby(code);
+    } catch (e) {
+      setToast(e.message || 'فشل إنشاء غرفة جديدة');
+      setRematching(false);
+    }
   };
 
   const shareResult = async () => {
@@ -211,6 +233,9 @@ export default function CharadesGameOverScreen() {
         )}
         <button onClick={handleReturnHome} className="btn btn-white" style={{ padding: '14px', fontSize: 15, border: '3.5px solid #000', borderRadius: 0, fontWeight: 900 }}>
           العودة للرئيسية 🏠
+        </button>
+        <button onClick={handleQuickRematch} disabled={rematching} className="btn btn-green" style={{ padding: '14px', fontSize: 15, border: '3.5px solid #000', borderRadius: 0, fontWeight: 900, boxShadow: '4px 4px 0 #000', opacity: rematching ? 0.6 : 1 }}>
+          {rematching ? <LoadingSpinner size={20} color="#000" /> : 'لعبة جديدة سريعة ⚡'}
         </button>
         <button onClick={shareResult} className="btn" style={{ padding: '14px', fontSize: 15, borderRadius: 0, background: 'var(--neo-cyan)', border: '3px solid #000', fontWeight: 900, boxShadow: '4px 4px 0 #000' }}>
           شارك النتيجة ↗️

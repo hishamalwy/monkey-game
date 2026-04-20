@@ -9,7 +9,7 @@ const TABS = [
 
 export default function BottomNav({ active, onNavigate }) {
   return (
-    <nav className="bottom-nav-container">
+    <nav className="bottom-nav-container" role="navigation" aria-label="التنقل الرئيسي">
       {TABS.map(tab => {
         const isActive = tab.key === active;
         return (

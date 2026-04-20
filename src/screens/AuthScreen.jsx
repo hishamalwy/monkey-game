@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { containsProfanity } from '../utils/profanity';
 import AvatarPicker from '../components/ui/AvatarPicker';
 import hero from '../assets/hero.webp';
 
@@ -16,6 +17,7 @@ export default function AuthScreen() {
     setError('');
     if (!username.trim() || !password) { setError('يرجى تعبئة جميع الحقول'); return; }
     if (password.length < 6) { setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+    if (tab === 'register' && containsProfanity(username.trim())) { setError('اسم المستخدم يحتوي على كلمات غير لائقة'); return; }
 
     setLoading(true);
     try {

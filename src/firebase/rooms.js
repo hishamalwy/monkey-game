@@ -6,6 +6,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import { normalizeArabic } from '../utils/textUtils';
+import { checkRateLimit } from '../utils/rateLimit';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
 
@@ -25,6 +26,9 @@ async function generateUniqueCode() {
 }
 
 export async function createRoom(userProfile, settings = {}) {
+  if (!checkRateLimit(`create_${userProfile.uid}`, 3, 30000)) {
+    throw new Error('عمليات كثيرة، انتظر قليلاً');
+  }
   try {
     const q = query(collection(db, 'rooms'), where('hostUid', '==', userProfile.uid), limit(10));
     const snap = await getDocs(q);
@@ -76,6 +80,9 @@ export async function createRoom(userProfile, settings = {}) {
 }
 
 export async function joinRoom(code, userProfile) {
+  if (!checkRateLimit(`join_${userProfile.uid}`, 5, 15000)) {
+    throw new Error('عمليات كثيرة، انتظر قليلاً');
+  }
   const roomRef = doc(db, 'rooms', code);
 
   await runTransaction(db, async (txn) => {
@@ -180,6 +187,9 @@ export async function leaveRoom(code, uid) {
 }
 
 export async function kickPlayer(code, hostUid, targetUid) {
+  if (!checkRateLimit(`kick_${hostUid}`, 5, 10000)) {
+    throw new Error('عمليات كثيرة، انتظر قليلاً');
+  }
   const roomRef = doc(db, 'rooms', code);
   const snap = await getDoc(roomRef);
   if (!snap.exists()) throw new Error('الغرفة غير موجودة');

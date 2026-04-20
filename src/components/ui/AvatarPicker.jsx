@@ -16,11 +16,11 @@ export default function AvatarPicker({ selected, onChange, purchases = [], onLoc
               onClick={() => isOwned ? onChange(item.avatarId) : onLockedClick?.()}
               style={{
                 width: 76, height: 76, 
-                borderRadius: '12px',
+                borderRadius: 0,
                 overflow: 'hidden',
-                background: isActive ? 'var(--bg-pink)' : '#FFF',
-                border: isActive ? '4px solid var(--bg-dark-purple)' : '3px solid var(--bg-dark-purple)',
-                boxShadow: isActive ? 'var(--brutal-shadow)' : '4px 4px 0 var(--bg-dark-purple)',
+                background: isActive ? 'var(--neo-pink)' : '#FFF',
+                border: isActive ? '4px solid #000' : '3px solid #000',
+                boxShadow: isActive ? 'var(--brutal-shadow)' : '4px 4px 0 #000',
                 cursor: 'pointer', padding: 0, 
                 position: 'relative',
                 transition: 'all 0.1s ease',
@@ -42,7 +42,7 @@ export default function AvatarPicker({ selected, onChange, purchases = [], onLoc
                 </div>
               )}
             </button>
-            <div style={{ fontSize: 11, fontWeight: 900, marginTop: 6, color: 'var(--bg-dark-purple)' }}>
+            <div style={{ fontSize: 11, fontWeight: 900, marginTop: 6, color: '#000' }}>
               {isOwned ? (isActive ? 'مختار' : 'مملوك') : `${item.price} 🪙`}
             </div>
           </div>

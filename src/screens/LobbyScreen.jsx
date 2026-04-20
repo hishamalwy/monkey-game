@@ -5,16 +5,18 @@ import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings, kickP
 import { startDrawGame } from '../firebase/drawRooms';
 import { startSurvivalGame } from '../firebase/survivalRooms';
 import { startCharadesGame } from '../firebase/charadesRooms';
+import { blockUser } from '../firebase/blocklist';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
 import UserAvatar from '../components/ui/UserAvatar';
+import ReportModal from '../components/shared/ReportModal';
 import Toast from '../components/ui/Toast';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 
 const SLOT_PLACEHOLDERS = ['🦉', '🦊', '🐢', '🐸', '🦋', '🐬', '🦚'];
 
-function PlayerRow({ player, isHost, isMe, canKick, onKick }) {
+function PlayerRow({ player, isHost, isMe, canKick, onKick, onReport, onBlock }) {
   const ready = player.isReady;
   return (
     <div style={{
@@ -53,6 +55,18 @@ function PlayerRow({ player, isHost, isMe, canKick, onKick }) {
             }}
           >
             طرد 👟
+          </button>
+        )}
+        {!isMe && (
+          <button
+            onClick={() => onReport(player)}
+            style={{
+              background: '#FFF', border: '2px solid #000',
+              color: '#000', padding: '4px 8px', fontSize: 10, fontWeight: 900,
+              borderRadius: 0, cursor: 'pointer',
+            }}
+          >
+            ⚠️
           </button>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -116,6 +130,7 @@ export default function LobbyScreen() {
   const [toast, setToast] = useState('');
   const [starting, setStarting] = useState(false);
   const prevPlayerCountRef = useRef(0);
+  const [reportTarget, setReportTarget] = useState(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -190,6 +205,15 @@ export default function LobbyScreen() {
         setToast('تم طرد اللاعب');
       } catch (e) { setToast(e.message); }
     }
+  };
+  const handleReport = (player) => {
+    setReportTarget(player);
+  };
+  const handleBlock = async (targetUid) => {
+    try {
+      await blockUser(userProfile.uid, targetUid);
+      setToast('تم حظر اللاعب');
+    } catch { setToast('حدث خطأ'); }
   };
 
   const shareRoom = async () => {
@@ -371,7 +395,7 @@ export default function LobbyScreen() {
 
       {/* Exit Confirm */}
       {showExitConfirm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div role="dialog" aria-label="تأكيد المغادرة" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div className="card slide-up" style={{ padding: 32, width: '100%', maxWidth: 360, textAlign: 'center', borderRadius: 0, border: '6px solid #000', background: '#FFF', boxShadow: '12px 12px 0 var(--neo-pink)' }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>🚪</div>
             <h3 style={{ fontSize: 24, fontWeight: 900, color: '#000', margin: '0 0 12px' }}>هل تريد المغادرة؟</h3>
@@ -404,6 +428,8 @@ export default function LobbyScreen() {
             isMe={p.uid === userProfile?.uid}
             canKick={isHost}
             onKick={handleKick}
+            onReport={handleReport}
+            onBlock={handleBlock}
           />
         ))}
         {Array.from({ length: emptyCount }, (_, i) => (
@@ -458,6 +484,14 @@ export default function LobbyScreen() {
       </div>
 
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
+      {reportTarget && (
+        <ReportModal
+          targetUid={reportTarget.uid}
+          targetUsername={reportTarget.username}
+          roomCode={roomCode}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </div>
   );
 }

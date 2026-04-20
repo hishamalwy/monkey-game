@@ -8,6 +8,7 @@ import { doc, updateDoc, collection, query, where, getCountFromServer, runTransa
 import { db } from '../firebase/config';
 import Toast from '../components/ui/Toast';
 import { HORN_TYPES, getHornType, setHornType, previewHorn } from '../utils/audio';
+import { containsProfanity } from '../utils/profanity';
 import { useNavigation } from '../hooks/useNavigation';
 import { getLevel, getLevelProgress, getLevelTitle, getLevelEmoji, xpForNextLevel } from '../utils/xp';
 import { getOwnedHorns } from '../utils/store';
@@ -28,10 +29,25 @@ export default function SettingsScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('darkMode') === 'true';
+    }
+    return false;
+  });
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [changingPass, setChangingPass] = useState(false);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     if (userProfile?.wins !== undefined) {
@@ -66,6 +82,7 @@ export default function SettingsScreen() {
     if (!userProfile || !newUsername.trim()) return;
     const name = newUsername.trim();
     if (name === userProfile.username) return;
+    if (containsProfanity(name)) { setToast('اسم المستخدم يحتوي على كلمات غير لائقة'); return; }
 
     setSavingUser(true);
     try {
@@ -230,6 +247,43 @@ export default function SettingsScreen() {
               setSfxVolume(parseFloat(e.target.value));
             }} onMouseUp={playClick} onTouchEnd={playClick} style={{ width: '100%', accentColor: 'var(--neo-yellow)' }} />
           </div>
+        </div>
+
+        {/* Display Card */}
+        <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, background: '#FFF', border: '5px solid #000', boxShadow: '6px 6px 0 #000', borderRadius: 0 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 900, color: '#000', margin: 0, borderBottom: '3px solid #000', paddingBottom: 8 }}>المظهر 🎨</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>{darkMode ? '🌙' : '☀️'}</span>
+              <span style={{ fontSize: 14, fontWeight: 900 }}>الوضع الداكن</span>
+            </div>
+            <button
+              onClick={() => { playClick(); setDarkMode(!darkMode); }}
+              aria-label={darkMode ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
+              style={{
+                width: 56, height: 30, borderRadius: 0, cursor: 'pointer',
+                background: darkMode ? 'var(--neo-green)' : '#DDD',
+                border: '3px solid #000', position: 'relative', transition: 'none',
+                padding: 0,
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: 0, background: '#FFF',
+                border: '2px solid #000', position: 'absolute', top: 2,
+                left: darkMode ? 30 : 2, transition: 'left 0.15s',
+              }} />
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Links */}
+        <div className="card" style={{ padding: '12px', display: 'flex', gap: 10, background: '#FFF', border: '4px solid #000', boxShadow: '4px 4px 0 #000', borderRadius: 0 }}>
+          <button onClick={() => { playClick(); nav.toProfile(); }} className="btn btn-yellow" style={{ flex: 1, padding: '14px 8px', fontSize: 12, fontWeight: 900, borderRadius: 0, border: '3px solid #000' }} aria-label="عرض الإحصائيات والإنجازات">
+            📊 إحصائياتي
+          </button>
+          <button onClick={() => { playClick(); nav.toDailyRewards(); }} className="btn btn-white" style={{ flex: 1, padding: '14px 8px', fontSize: 12, fontWeight: 900, borderRadius: 0, border: '3px solid #000' }} aria-label="المكافآت اليومية">
+            🎁 المكافآت
+          </button>
         </div>
 
         {/* Account Card */}

@@ -11,13 +11,17 @@ export default function Toast({ message, onDone }) {
   if (!visible) return null;
 
   return (
-    <div style={{
+    <div
+      role="alert"
+      aria-live="polite"
+      style={{
       position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
-      background: 'var(--color-header)', color: 'white',
-      padding: '10px 20px', borderRadius: 50,
-      fontSize: 14, fontWeight: 700,
+      background: 'var(--neo-black)', color: 'white',
+      padding: '12px 24px', borderRadius: 0,
+      fontSize: 15, fontWeight: 900,
       zIndex: 9999, whiteSpace: 'nowrap',
-      boxShadow: '0 4px 20px rgba(28,16,64,0.3)',
+      border: '4px solid var(--neo-pink)',
+      boxShadow: '6px 6px 0 var(--neo-pink)',
     }}>
       {message}
     </div>

@@ -5,11 +5,14 @@ import { useRoom } from '../hooks/useRoom';
 import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 import UserAvatar from '../components/ui/UserAvatar';
 import Toast from '../components/ui/Toast';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { recordWin, recordLoss } from '../firebase/leaderboard';
 import { awardCoins } from '../firebase/store';
 import { recordMatch } from '../firebase/stats';
 import { incrementDailyStat } from '../firebase/retention';
 import { recordRecentPlayers } from '../firebase/recentPlayers';
+import { trackModePlayed } from '../firebase/achievements';
+import { createRoom } from '../firebase/rooms';
 import { COIN_REWARDS } from '../utils/store';
 import { useConfetti } from '../components/shared/Confetti';
 import { XP_REWARDS } from '../utils/xp';
@@ -21,6 +24,7 @@ export default function GameOverScreen() {
   const { room, players, isHost, leaveRoom, resetToLobby } = useRoom(roomCode);
   const confetti = useConfetti();
   const [toast, setToast] = useState('');
+  const [rematching, setRematching] = useState(false);
 
   // Determine winner = player with fewest quarterMonkeys
   const winner = players.length > 0
@@ -49,6 +53,7 @@ export default function GameOverScreen() {
     incrementDailyStat(userProfile.uid, 'xp', iWon ? XP_REWARDS.WIN : XP_REWARDS.LOSS).catch(() => {});
     recordMatch(userProfile.uid, { mode: mode, won: iWon, players: players.length }).catch(() => {});
     recordRecentPlayers(userProfile.uid, players.map(p => p.uid)).catch(() => {});
+    trackModePlayed(userProfile.uid, 'monkey').catch(() => {});
   }, [!!winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync lobby redirect
@@ -65,6 +70,29 @@ export default function GameOverScreen() {
   const handleReset = () => {
     playClick();
     resetToLobby();
+  };
+
+  const handleQuickRematch = async () => {
+    if (rematching) return;
+    playClick();
+    setRematching(true);
+    try {
+      await leaveRoom();
+      const settings = {
+        mode: room?.mode || 'monkey',
+        category: room?.category || 'general',
+        timeLimit: room?.timeLimit || 15,
+        maxPlayers: room?.maxPlayers || 5,
+        scoreTarget: room?.scoreTarget || 120,
+        drawTime: room?.drawTime || 80,
+        isPublic: true,
+      };
+      const code = await createRoom(userProfile, settings);
+      nav.toLobby(code);
+    } catch (e) {
+      setToast(e.message || 'فشل إنشاء غرفة جديدة');
+      setRematching(false);
+    }
   };
 
   const shareResult = async () => {
@@ -166,6 +194,11 @@ export default function GameOverScreen() {
             في انتظار المضيف...
           </div>
         )}
+
+        <button onClick={handleQuickRematch} disabled={rematching} className="btn btn-green"
+          style={{ width: '100%', padding: '16px', fontSize: 16, marginBottom: 14, border: '4px solid #000', borderRadius: 0, boxShadow: '4px 4px 0 #000', fontWeight: 900, opacity: rematching ? 0.6 : 1 }}>
+          {rematching ? <LoadingSpinner size={20} color="#000" /> : 'لعبة جديدة سريعة ⚡'}
+        </button>
 
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={shareResult} className="btn-cyan pop"

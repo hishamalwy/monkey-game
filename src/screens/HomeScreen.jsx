@@ -10,9 +10,11 @@ import { findActiveRoom, getGameRoute } from '../firebase/reconnect';
 import { getLevel, getLevelProgress } from '../utils/xp';
 import { calcStreak } from '../utils/retention';
 import { claimDailyBonus } from '../firebase/retention';
+import { getFriendProfiles, acceptFriendRequest, declineFriendRequest } from '../firebase/friends';
 import DailyBonusModal from '../components/shared/DailyBonusModal';
 import ReconnectModal from '../components/shared/ReconnectModal';
 import ConnectionStatus from '../components/shared/ConnectionStatus';
+import PlayerCard from '../components/shared/PlayerCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import hero from '../assets/hero.webp';
 import singleCoinIcon from '../assets/icons/single_coin.png';
@@ -30,6 +32,9 @@ export default function HomeScreen() {
   const [reconnectChecked, setReconnectChecked] = useState(false);
   const [quickPlaying, setQuickPlaying] = useState(null);
   const [quickPlayMode, setQuickPlayMode] = useState(null);
+  const [friends, setFriends] = useState({ friends: [], requests: [] });
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [showFriends, setShowFriends] = useState(false);
 
   useEffect(() => {
     if (!userProfile?.uid || reconnectChecked) return;
@@ -52,6 +57,11 @@ export default function HomeScreen() {
 
   useEffect(() => { cleanupOldRooms(); }, []);
   useEffect(() => { checkDailyBonus(); }, [checkDailyBonus]);
+  useEffect(() => {
+    if (userProfile?.uid) {
+      getFriendProfiles(userProfile.uid).then(setFriends).catch(() => {});
+    }
+  }, [userProfile?.uid]);
 
   const handleBonusClaim = () => { setBonusData(null); };
 
@@ -162,6 +172,42 @@ export default function HomeScreen() {
           </p>
         </div>
 
+        {/* Friends Bar */}
+        {(friends.friends.length > 0 || friends.requests.length > 0) && (
+          <div style={{ width: '100%', maxWidth: 400 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <button onClick={() => setShowFriends(!showFriends)} style={{ fontSize: 12, fontWeight: 900, color: '#000', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} aria-label={`${friends.friends.length} أصدقاء`}>
+                الأصدقاء ({friends.friends.length}) {showFriends ? '▲' : '▼'}
+              </button>
+              {friends.requests.length > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 900, background: 'var(--neo-pink)', color: '#000', padding: '2px 8px', border: '1.5px solid #000' }}>
+                  {friends.requests.length} طلب صداقة
+                </span>
+              )}
+            </div>
+            {showFriends && friends.requests.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                {friends.requests.map(r => (
+                  <div key={r.uid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--neo-yellow)', border: '2.5px solid #000', borderRadius: 0 }}>
+                    <UserAvatar avatarId={r.avatarId} size={32} border="1.5px solid #000" />
+                    <span style={{ flex: 1, fontWeight: 900, fontSize: 12, color: '#000' }}>{r.username}</span>
+                    <button onClick={async () => { await acceptFriendRequest(userProfile.uid, r.uid); setToast('تم قبول الصداقة!'); }} style={{ padding: '4px 10px', background: 'var(--neo-green)', border: '2px solid #000', borderRadius: 0, fontWeight: 900, fontSize: 10, cursor: 'pointer' }}>✓</button>
+                    <button onClick={async () => { await declineFriendRequest(userProfile.uid, r.uid); }} style={{ padding: '4px 10px', background: '#FFF', border: '2px solid #000', borderRadius: 0, fontWeight: 900, fontSize: 10, cursor: 'pointer' }}>✕</button>
+                  </div>
+                ))}
+            </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {friends.friends.slice(0, 8).map(f => (
+                <div key={f.uid} onClick={() => setSelectedPlayer(f.uid)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', minWidth: 48 }}>
+                  <UserAvatar avatarId={f.avatarId} size={40} border="2px solid #000" />
+                  <span style={{ fontSize: 8, fontWeight: 900, color: '#000', maxWidth: 48, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.username}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 400 }}>
           <button
@@ -177,6 +223,7 @@ export default function HomeScreen() {
             <button
               onClick={nav.toBrowseRooms}
               className="btn btn-white"
+              aria-label="انضم لغرفة موجودة"
               style={{ padding: '15px', fontSize: '1.2rem', borderRadius: 0, boxShadow: '4px 4px 0px #000', border: '4px solid #000', fontWeight: 900 }}
             >
               انضم للعب 🤝
@@ -184,6 +231,7 @@ export default function HomeScreen() {
             <button
               onClick={() => navigate('/daily-rewards')}
               className="btn"
+              aria-label="المكافآت اليومية والمهام"
               style={{ padding: '15px', fontSize: '1.2rem', color: '#000', borderRadius: 0, background: 'var(--neo-cyan)', boxShadow: '4px 4px 0px #000', border: '4px solid #000', fontWeight: 900 }}
             >
               مهام 🎁
@@ -224,10 +272,11 @@ export default function HomeScreen() {
 
       <ConnectionStatus />
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
+      {selectedPlayer && <PlayerCard uid={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
 
       {/* Menu Drawer */}
       {menuOpen && (
-        <div className="slide-up" style={{ position: 'absolute', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column' }} onClick={() => setMenuOpen(false)}>
+        <div role="dialog" aria-label="القائمة" className="slide-up" style={{ position: 'absolute', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column' }} onClick={() => setMenuOpen(false)}>
           <div className="card" style={{
             position: 'absolute', right: 0, top: 0, bottom: 0, width: '85%', maxWidth: 320,
             padding: 32, display: 'flex', flexDirection: 'column', gap: 16,
@@ -246,7 +295,7 @@ export default function HomeScreen() {
 
       {/* Rules Modal */}
       {rulesOpen && (
-        <div className="slide-up" style={{ position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div role="dialog" aria-label="قواعد اللعبة" className="slide-up" style={{ position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div className="card" style={{ padding: '32px', width: '100%', maxWidth: 400, textAlign: 'center', borderRadius: 0, border: '6px solid #000', background: '#FFF', boxShadow: '12px 12px 0 var(--neo-pink)' }}>
             <h2 style={{ fontSize: 24, fontWeight: 900, color: '#000', marginBottom: 16 }}>قواعد اللعبة 📖</h2>
             <p style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.7, marginBottom: 24, color: '#000', textAlign: 'right' }}>

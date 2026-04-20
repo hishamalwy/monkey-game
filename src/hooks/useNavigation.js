@@ -22,6 +22,7 @@ export function useNavigation() {
     toCharadesGameOver: (code) => navigate(`/charades-over/${code || roomCode}`, { replace: true }),
     toStore: () => navigate('/store'),
     toProfile: () => navigate('/profile'),
+    toDailyRewards: () => navigate('/daily-rewards'),
   };
 }
 

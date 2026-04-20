@@ -4,13 +4,13 @@ export default function UserAvatar({ avatarId, size = 40, style = {} }) {
   return (
     <div style={{
       width: size, height: size,
-      borderRadius: '12px',
+      borderRadius: 0,
       overflow: 'hidden',
-      border: '3px solid var(--bg-dark-purple)',
+      border: '3px solid #000',
       background: '#FFF',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
-      boxShadow: '2px 2px 0 var(--bg-dark-purple)',
+      boxShadow: '3px 3px 0 #000',
       ...style
     }}>
       <img

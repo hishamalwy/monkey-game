@@ -7,7 +7,10 @@ import {
   getStreakEmoji,
   getDailyChallenges,
   getChallengeProgress,
-  isChallengeClaimed
+  isChallengeClaimed,
+  getWeeklyMissions,
+  getWeeklyProgress,
+  isWeeklyMissionClaimed,
 } from '../utils/retention';
 import { claimDailyBonus, claimChallenge } from '../firebase/retention';
 import BottomNav from '../components/BottomNav';
@@ -180,6 +183,41 @@ export default function DailyRewardsScreen() {
                 التالي
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Weekly Missions */}
+        <div style={{ width: '100%', maxWidth: 400 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, direction: 'rtl', padding: '0 12px' }}>
+            <div style={{ background: 'var(--neo-yellow)', width: 44, height: 44, borderRadius: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #000', fontSize: 24, boxShadow: '4px 4px 0 #000' }}>🗓️</div>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#000' }}>مهام الأسبوع</h3>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {getWeeklyMissions(todayStr).map(mission => {
+              const progress = getWeeklyProgress(mission, userProfile);
+              const complete = progress >= mission.target;
+              const claimed = isWeeklyMissionClaimed(mission, userProfile);
+              const pct = Math.min(100, (progress / mission.target) * 100);
+              return (
+                <div key={mission.id} className="card" style={{ padding: '14px 16px', borderRadius: 0, background: claimed ? '#EEE' : '#FFF', border: `3px solid #000`, boxShadow: '4px 4px 0 var(--neo-yellow)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, direction: 'rtl' }}>
+                    <div style={{ fontSize: 28, width: 48, height: 48, background: claimed ? '#DDD' : 'var(--neo-yellow)', borderRadius: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #000' }}>{mission.emoji}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: '#000' }}>{mission.label}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                        <div style={{ flex: 1, height: 12, background: '#DDD', border: '2px solid #000', borderRadius: 0, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: complete ? 'var(--neo-green)' : 'var(--neo-pink)', transition: 'none' }} />
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 900, color: '#000' }}>{progress}/{mission.target}</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 900, color: '#000', background: '#FFF', padding: '4px 8px', border: '2px solid #000', whiteSpace: 'nowrap' }}>+{mission.reward} 🪙</div>
+                  </div>
+                  {claimed && <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, fontWeight: 900, color: 'var(--neo-green)' }}>تم الاستلام ✅</div>}
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -7,11 +7,16 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { getMatchHistory } from '../firebase/stats';
 import { getLevel, getLevelTitle, getLevelEmoji, getLevelProgress, xpForNextLevel } from '../utils/xp';
 import { calcStreak, getStreakEmoji } from '../utils/retention';
+import { ACHIEVEMENTS, getUnlockedAchievements } from '../utils/achievements';
+import { claimAchievement } from '../firebase/achievements';
+import EmptyState from '../components/shared/EmptyState';
+import Toast from '../components/ui/Toast';
 
 const MODE_LABELS = {
   monkey: { label: 'كلكس', emoji: '🐒', color: 'var(--neo-pink)' },
   draw: { label: 'ارسم وخمن', emoji: '🎨', color: 'var(--neo-yellow)' },
   survival: { label: 'البقاء', emoji: '💀', color: 'var(--neo-green)' },
+  charades: { label: 'بدون كلام', emoji: '🎭', color: 'var(--neo-cyan)' },
 };
 
 export default function ProfileStatsScreen() {
@@ -19,6 +24,7 @@ export default function ProfileStatsScreen() {
   const { userProfile } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState('');
 
   useEffect(() => {
     if (userProfile?.uid) {
@@ -38,6 +44,7 @@ export default function ProfileStatsScreen() {
   const monkeyPlayed = p.monkeyPlayed || 0;
   const drawPlayed = p.drawPlayed || 0;
   const survivalPlayed = p.survivalPlayed || 0;
+  const charadesPlayed = p.charadesPlayed || 0;
   const { streak } = calcStreak(p.lastLoginDate, p.loginStreak);
   const level = getLevel(p.xp || 0);
 
@@ -103,8 +110,8 @@ export default function ProfileStatsScreen() {
         {/* Per-Mode */}
         <div style={{ fontSize: 13, fontWeight: 900, color: '#000', background: 'var(--neo-green)', display: 'inline-block', padding: '2px 8px', border: '2px solid #000', marginTop: 10 }}>إحصائيات الأوضاع</div>
         {Object.entries(MODE_LABELS).map(([mode, info]) => {
-          const played = mode === 'monkey' ? monkeyPlayed : mode === 'draw' ? drawPlayed : survivalPlayed;
-          const modeWins = mode === 'draw' ? (p.wins_draw || 0) : mode === 'monkey' ? Math.max(0, wins - (p.wins_draw || 0)) : 0;
+          const played = mode === 'monkey' ? monkeyPlayed : mode === 'draw' ? drawPlayed : mode === 'survival' ? survivalPlayed : charadesPlayed;
+          const modeWins = mode === 'draw' ? (p.wins_draw || 0) : mode === 'survival' ? (p.wins_survival || 0) : mode === 'charades' ? (p.wins_charades || 0) : Math.max(0, wins - (p.wins_draw || 0) - (p.wins_survival || 0) - (p.wins_charades || 0));
           const rate = played > 0 ? Math.round((modeWins / played) * 100) : 0;
 
           return (
@@ -124,14 +131,45 @@ export default function ProfileStatsScreen() {
           );
         })}
 
+        {/* Achievements */}
+        <div style={{ fontSize: 13, fontWeight: 900, color: '#000', background: 'var(--neo-pink)', display: 'inline-block', padding: '2px 8px', border: '2px solid #000', marginTop: 10 }}>الإنجازات 🏅</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {ACHIEVEMENTS.map(a => {
+            const unlocked = a.condition(p);
+            const claimed = (p.claimedAchievements || []).includes(a.id);
+            return (
+              <div key={a.id} onClick={() => {
+                if (unlocked && !claimed) {
+                  claimAchievement(p.uid, a.id, a.reward)
+                    .then(() => setToast(`+${a.reward} عملة! ${a.emoji}`))
+                    .catch(e => setToast(e.message));
+                }
+              }} style={{
+                padding: '12px 4px', textAlign: 'center', borderRadius: 0,
+                background: claimed ? 'var(--neo-green)' : unlocked ? 'var(--neo-yellow)' : '#EEE',
+                border: `3px solid #000`, cursor: unlocked && !claimed ? 'pointer' : 'default',
+                opacity: unlocked ? 1 : 0.4, position: 'relative',
+                boxShadow: unlocked && !claimed ? '3px 3px 0 #000' : 'none',
+              }}>
+                <div style={{ fontSize: 28 }}>{a.emoji}</div>
+                <div style={{ fontSize: 8, fontWeight: 900, color: '#000', marginTop: 4 }}>{a.label}</div>
+                {unlocked && !claimed && <div style={{ position: 'absolute', top: -4, right: -4, background: 'var(--neo-pink)', border: '1.5px solid #000', width: 14, height: 14, fontSize: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>!</div>}
+                {claimed && <div style={{ position: 'absolute', top: -4, right: -4, background: '#000', color: 'var(--neo-green)', width: 14, height: 14, fontSize: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>✓</div>}
+              </div>
+            );
+          })}
+        </div>
+
         {/* Match History */}
         <div style={{ fontSize: 13, fontWeight: 900, color: '#000', background: 'var(--neo-cyan)', display: 'inline-block', padding: '2px 8px', border: '2px solid #000', marginTop: 10 }}>المباريات الأخيرة</div>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}><LoadingSpinner /></div>
         ) : matches.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#666', fontSize: 12, fontWeight: 900, padding: 30, background: '#FFF', border: '3px dashed #000' }}>
-            لا توجد مباريات مسجلة بعد 🎮
-          </div>
+          <EmptyState
+            icon="🎮"
+            title="لا توجد مباريات مسجلة بعد"
+            description="العب مباريات لتظهر هنا!"
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {matches.map(m => {
@@ -160,6 +198,7 @@ export default function ProfileStatsScreen() {
         if (key === 'home') nav.toHome();
         else if (key === 'leaderboard') nav.toLeaderboard();
       }} />
+      {toast && <Toast message={toast} onDone={() => setToast('')} />}
     </div>
   );
 }

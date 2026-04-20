@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useAudio } from '../context/AudioContext';
 import UserAvatar from '../components/ui/UserAvatar';
 import Toast from '../components/ui/Toast';
-import { listenToRoom, leaveRoom, resetRoomToLobby } from '../firebase/rooms';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { listenToRoom, leaveRoom, resetRoomToLobby, createRoom } from '../firebase/rooms';
 import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 import { useConfetti } from '../components/shared/Confetti';
 import { recordWin, recordLoss } from '../firebase/leaderboard';
@@ -11,6 +12,7 @@ import { awardCoins } from '../firebase/store';
 import { recordMatch } from '../firebase/stats';
 import { incrementDailyStat } from '../firebase/retention';
 import { recordRecentPlayers } from '../firebase/recentPlayers';
+import { trackModePlayed } from '../firebase/achievements';
 import { COIN_REWARDS } from '../utils/store';
 import { XP_REWARDS } from '../utils/xp';
 
@@ -23,6 +25,7 @@ export default function DrawGameOverScreen() {
   const confetti = useConfetti();
   const soundPlayedRef = useRef(false);
   const [toast, setToast] = useState('');
+  const [rematching, setRematching] = useState(false);
 
   useEffect(() => {
     const unsub = listenToRoom(roomCode, data => {
@@ -61,6 +64,7 @@ export default function DrawGameOverScreen() {
     incrementDailyStat(userProfile.uid, 'xp', won ? XP_REWARDS.WIN : XP_REWARDS.LOSS).catch(() => {});
     recordMatch(userProfile.uid, { mode: 'draw', won: won, players: (room.playerOrder || []).length }).catch(() => {});
     recordRecentPlayers(userProfile.uid, room.playerOrder || []).catch(() => {});
+    trackModePlayed(userProfile.uid, 'draw').catch(() => {});
   }, [!!room?.drawState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResetToLobby = async () => {
@@ -76,6 +80,25 @@ export default function DrawGameOverScreen() {
     if (!room || !userProfile) { nav.toHome(); return; }
     await leaveRoom(roomCode, userProfile.uid);
     nav.toHome();
+  };
+
+  const handleQuickRematch = async () => {
+    if (rematching) return;
+    playClick();
+    setRematching(true);
+    try {
+      await leaveRoom(roomCode, userProfile.uid);
+      const settings = {
+        mode: 'draw', category: room?.category || 'general',
+        maxPlayers: room?.maxPlayers || 5, scoreTarget: room?.scoreTarget || 120,
+        drawTime: room?.drawTime || 80, isPublic: true,
+      };
+      const code = await createRoom(userProfile, settings);
+      nav.toLobby(code);
+    } catch (e) {
+      setToast(e.message || 'فشل إنشاء غرفة جديدة');
+      setRematching(false);
+    }
   };
 
   const shareResult = async () => {
@@ -188,6 +211,10 @@ export default function DrawGameOverScreen() {
 
         <button onClick={handleLeave} className="btn btn-pink" style={{ width: '100%', padding: '15px', fontSize: 17, opacity: 0.8 }}>
            🚪 مغادرة الغرفة
+        </button>
+
+        <button onClick={handleQuickRematch} disabled={rematching} className="btn btn-green" style={{ width: '100%', padding: '15px', fontSize: 16, borderRadius: 0, border: '4px solid #000', fontWeight: 900, boxShadow: '4px 4px 0 #000', opacity: rematching ? 0.6 : 1 }}>
+          {rematching ? <LoadingSpinner size={20} color="#000" /> : 'لعبة جديدة سريعة ⚡'}
         </button>
 
         <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>

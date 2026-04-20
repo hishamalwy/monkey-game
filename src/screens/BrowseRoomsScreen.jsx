@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAudio } from '../context/AudioContext';
 import { fetchPublicRooms, joinRoom } from '../firebase/rooms';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import EmptyState from '../components/shared/EmptyState';
 import Toast from '../components/ui/Toast';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
@@ -208,26 +209,26 @@ export default function BrowseRoomsScreen() {
           {loading ? (
             <div style={{ marginTop: 40 }}><LoadingSpinner /></div>
           ) : rooms.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FFF', border: '5px solid #000', borderRadius: 0, boxShadow: '8px 8px 0 var(--neo-pink)' }}>
-              <div style={{ fontSize: 60, marginBottom: 16 }}>🏜️</div>
-              <p style={{ fontWeight: 900, color: '#000', fontSize: 18, margin: '0 0 8px' }}>لا توجد غرف</p>
-              <p style={{ fontSize: 14, fontWeight: 800, color: '#444', margin: 0 }}>لا توجد غرف متاحة. أنشئ غرفة جديدة.</p>
-              <button
-                onClick={nav.toOnlineSetup}
-                className="btn-pink pop"
-                style={{
-                  marginTop: 24, padding: '18px 24px', fontSize: 16, width: '100%', fontWeight: 900,
-                  background: 'var(--neo-pink)', color: '#000', border: '4px solid #000',
-                  boxShadow: '6px 6px 0 #000', borderRadius: 0, cursor: 'pointer'
-                }}
-              >
-                أنشئ غرفة 🚀
-              </button>
-            </div>
-          ) : (
-            rooms
-              .filter(r => modeFilter === 'all' || r.mode === modeFilter)
-              .map((room, idx) => {
+            <EmptyState
+              icon="🏜️"
+              title="لا توجد غرف"
+              description="لا توجد غرف متاحة حالياً. أنشئ غرفة وادعو أصدقاءك!"
+              action={nav.toOnlineSetup}
+              actionLabel="أنشئ غرفة 🚀"
+            />
+          ) : (() => {
+            const filtered = rooms.filter(r => modeFilter === 'all' || r.mode === modeFilter);
+            return filtered.length === 0 ? (
+              <EmptyState
+                icon="🔍"
+                title="لا توجد غرف بهذا النوع"
+                description="جرب فلتر آخر أو أنشئ غرفة جديدة"
+                action={() => setModeFilter('all')}
+                actionLabel="عرض الكل"
+              />
+            ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {filtered.map((room, idx) => {
               const playersCount = room.playerOrder?.length || 0;
               const maxPlayers = room.maxPlayers || 5;
               const isFull = playersCount >= maxPlayers;
@@ -284,9 +285,11 @@ export default function BrowseRoomsScreen() {
                   </button>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+            </div>
+            );
+          })()}
+         </div>
       </div>
 
       {toast && <Toast message={toast} onDone={() => setToast('')} />}

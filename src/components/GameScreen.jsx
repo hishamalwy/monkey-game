@@ -107,23 +107,23 @@ export default function GameScreen({
         {/* Current player badge */}
         <div className="card" style={{
           padding: '6px 20px', display: 'flex', alignItems: 'center', gap: 10,
-          background: isMyTurn ? 'var(--bg-pink)' : '#FFF',
-          color: isMyTurn ? '#FFF' : 'var(--bg-dark-purple)',
-          border: `3px solid var(--bg-dark-purple)`,
+          background: isMyTurn ? 'var(--neo-pink)' : '#FFF',
+          color: isMyTurn ? '#FFF' : 'var(--neo-black)',
+          border: `3px solid var(--neo-black)`,
           transition: 'all 0.3s ease'
         }}>
-          <span style={{ fontSize: '0.85rem', color: isMyTurn ? '#FFF' : 'var(--bg-pink)', fontWeight: 900 }}>دور:</span>
+          <span style={{ fontSize: '0.85rem', color: isMyTurn ? '#000' : 'var(--neo-pink)', fontWeight: 900 }}>دور:</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {currentPlayer?.avatarId !== undefined && (
               <UserAvatar avatarId={currentPlayer.avatarId} size={28} style={{ border: isMyTurn ? '2px solid #FFF' : 'none' }} />
             )}
             <span className="truncate" style={{
-              fontSize: '1rem', color: isMyTurn ? '#FFF' : 'var(--bg-dark-purple)', fontWeight: 900, maxWidth: 130,
+              fontSize: '1rem', color: isMyTurn ? '#000' : 'var(--neo-black)', fontWeight: 900, maxWidth: 130,
               ...(isAiTurn ? { opacity: 0.6 } : {}),
             }}>
               {currentPlayer?.name} {isMyTurn && '(أنت)'}
               {isAiTurn && (
-                <span style={{ fontSize: '0.75rem', marginRight: 6, color: 'rgba(28,16,63,0.45)' }}>
+                <span style={{ fontSize: '0.75rem', marginRight: 6, color: 'rgba(0,0,0,0.45)' }}>
                   يفكر…
                 </span>
               )}
@@ -137,7 +137,7 @@ export default function GameScreen({
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               marginBottom: 6, fontSize: '0.8rem',
-              color: isUrgent ? 'var(--bg-pink)' : 'var(--bg-dark-purple)',
+              color: isUrgent ? 'var(--neo-pink)' : 'var(--neo-black)',
             }}>
               <span>⏱</span>
               <span style={{ fontWeight: 900, fontSize: '1rem', fontVariantNumeric: 'tabular-nums' }}>
@@ -148,7 +148,7 @@ export default function GameScreen({
               <div className="timer-bar" style={{
                 height: '100%',
                 width: `${pct}%`,
-                background: isUrgent ? 'var(--bg-pink)' : 'var(--bg-green)',
+                background: isUrgent ? 'var(--neo-pink)' : 'var(--neo-green)',
                 borderRight: pct > 0 ? 'var(--brutal-border)' : 'none',
               }} />
             </div>
@@ -174,9 +174,9 @@ export default function GameScreen({
           {/* Mobile Focus Hint: shown for 3s when turn starts */}
           {!isAiTurn && showHint && (
              <div style={{
-               position: 'absolute', top: -30, background: 'var(--bg-pink)', color: '#FFF',
-               padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 900,
-               boxShadow: '0 4px 10px rgba(0,0,0,0.1)', animation: 'pop 1s infinite alternate'
+               position: 'absolute', top: -30, background: 'var(--neo-pink)', color: '#000',
+               padding: '4px 12px', borderRadius: 0, fontSize: 13, fontWeight: 900, border: '3px solid #000',
+               boxShadow: '4px 4px 0 #000', animation: 'pop 1s infinite alternate'
              }}>
                 اضغط هنا أو اكتب! ⌨️ 👇
              </div>
@@ -212,7 +212,7 @@ export default function GameScreen({
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: `${fontSize}rem`, 
                 fontWeight: 900, 
-                color: currentWord ? 'var(--bg-dark-purple)' : 'rgba(28,16,63,0.25)',
+                color: currentWord ? 'var(--neo-black)' : 'rgba(0,0,0,0.25)',
                 padding: 0,
                 flexShrink: 0,
                 transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)',
@@ -232,11 +232,11 @@ export default function GameScreen({
             className="btn"
             style={{
               width: '100%',
-              background: 'var(--bg-pink)', color: '#FFF',
+              background: 'var(--neo-pink)', color: '#000',
               padding: '16px', fontSize: '1.25rem',
               opacity: (isAiTurn || !currentWord) ? 0.35 : 1,
-              border: '5px solid var(--bg-dark-purple)',
-              boxShadow: '4px 4px 0 var(--bg-dark-purple)'
+              border: '5px solid #000',
+              boxShadow: '4px 4px 0 #000', borderRadius: 0
             }}
           >
             أشك! 🧐

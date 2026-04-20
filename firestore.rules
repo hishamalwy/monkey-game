@@ -71,5 +71,24 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
+    // ── Reports ───────────────────────────────────────────────
+    // Any authenticated user can create a report
+    // No one can read, update, or delete reports (admin-only via console)
+    match /reports/{reportId} {
+      allow create: if isAuth()
+        && request.resource.data.reporterUid == request.auth.uid;
+      allow read: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Purchases ─────────────────────────────────────────────
+    match /purchases/{purchaseId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if false;
+      allow delete: if false;
+    }
   }
 }

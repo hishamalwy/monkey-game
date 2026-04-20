@@ -31,13 +31,11 @@
 }
 
 .dark {
-  --neo-yellow: #111111;
-  --neo-black: #f6de0d;
-  --neo-white: #1a1a1a;
-  --color-bg: #111111;
-  --color-text: #f6de0d;
-  --brutal-border: 3px solid #f6de0d;
-  --brutal-shadow: 4px 4px 0px #f6de0d;
+  --color-bg: #0d0d0d;
+  --color-card: #1a1a1a;
+  --color-text: #f0f0f0;
+  --brutal-border: 3px solid #333;
+  --brutal-shadow: 4px 4px 0px #333;
 }
 
 
@@ -59,6 +57,16 @@
   inset: 0;
   background: radial-gradient(circle at center, transparent 0%, var(--color-bg) 85%);
   pointer-events: none;
+}
+
+/* ── Dark Mode Overrides ── */
+.dark .brutal-bg {
+  background-image:
+    linear-gradient(#222 1px, transparent 1px),
+    linear-gradient(90deg, #222 1px, transparent 1px);
+}
+.dark .brutal-bg::before {
+  background: radial-gradient(circle at center, transparent 0%, #0d0d0d 85%);
 }
 
 /* Subtle background stickers */
@@ -104,18 +112,36 @@
 
 
 /* Cards, white-bg elements, inputs, keyboard */
-.dark .card        { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; }
-.dark .btn-white   { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; }
-.dark .input-field { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; }
-.dark .kb-key      { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; box-shadow: 2px 2px 0px var(--neo-black) !important; }
+.dark .card        { background: var(--color-card) !important; color: var(--color-text) !important; border-color: #333 !important; }
+.dark .btn-white   { background: var(--color-card) !important; color: var(--color-text) !important; border-color: #333 !important; }
+.dark .input-field { background: var(--color-card) !important; color: var(--color-text) !important; border-color: #333 !important; }
+.dark .kb-key      { background: var(--color-card) !important; color: var(--color-text) !important; border-color: #333 !important; box-shadow: 2px 2px 0px #333 !important; }
 
 /* Specific button variants in dark */
-.dark .btn-dark   { background: var(--neo-black); color: #000; border-color: #000; }
-.dark .btn-yellow { background: var(--neo-white); color: var(--neo-black); border-color: var(--neo-black); }
-.dark .btn-pink   { border-color: var(--neo-black); }
+.dark .btn-dark   { background: #333; color: var(--color-text); border-color: #333; }
+.dark .btn-yellow { background: #2a2200; color: var(--neo-yellow); border-color: #444; }
+.dark .btn-pink   { background: #3d0025; color: var(--neo-pink); border-color: #444; }
+.dark .btn-green  { background: #0a2d0a; color: var(--neo-green); border-color: #333; }
+.dark .btn-cyan   { background: #002a33; color: var(--neo-cyan); border-color: #333; }
+
+/* Dark mode nav & top bars */
+.dark .bottom-nav-container { background: #1a1a1a; border-color: #333; }
+.dark .nav-item .label { color: var(--color-text); }
+.dark .nav-item.active { background: #333; border-color: #444; box-shadow: 4px 4px 0px #444; }
+.dark .top-nav-brutal { background: #1a1a1a; border-color: #333; box-shadow: 0 4px 0px rgba(255,255,255,0.05); }
+.dark .top-nav-brutal h1 { color: var(--color-text); }
+
+/* Dark mode text colors */
+.dark h1, .dark h2, .dark h3, .dark p, .dark span {
+  color: var(--color-text);
+}
 
 /* Pattern background: dimmer in dark mode */
-.dark [aria-hidden="true"] { opacity: 0.08; }
+.dark [aria-hidden="true"] { opacity: 0.04; }
+.dark .bg-stickers { opacity: 0.06; }
+
+/* Dark mode toast */
+.dark .toast-msg { background: #333; color: var(--color-text); border-color: #444; }
 
 * { box-sizing: border-box; }
 
@@ -363,4 +389,51 @@ body, html {
   .slide-up, .pop, .confetti-piece { animation: none !important; }
   .timer-bar { transition: none !important; }
   .btn { transition: none !important; }
+  .page-enter { animation: none !important; }
+}
+
+/* ── Page Transitions ── */
+@keyframes pageSlideIn {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.page-enter {
+  animation: pageSlideIn 0.25s ease-out both;
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  gap: 16px;
+}
+.empty-state-icon {
+  font-size: 64px;
+  line-height: 1;
+}
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--color-text);
+}
+.empty-state-desc {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--color-text);
+  opacity: 0.6;
+  max-width: 260px;
+}
+
+/* ── Focus Visible ── */
+:focus-visible {
+  outline: 3px solid var(--neo-cyan);
+  outline-offset: 2px;
+}
+.btn:focus-visible {
+  outline: 3px solid var(--neo-cyan);
+  outline-offset: 2px;
 }

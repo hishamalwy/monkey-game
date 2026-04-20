@@ -26,8 +26,7 @@ const StoreScreen = lazy(() => import('./screens/StoreScreen'));
 const DailyRewardsScreen = lazy(() => import('./screens/DailyRewardsScreen'));
 const ProfileStatsScreen = lazy(() => import('./screens/ProfileStatsScreen'));
 
-function LazyFallback() {
-  return (
+function LazyFallback() {  return (
     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)' }}>
       <LoadingSpinner />
     </div>

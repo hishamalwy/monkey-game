@@ -71,3 +71,46 @@ export function isChallengeClaimed(challenge, profile) {
   const claimed = profile?.claimedChallenges || [];
   return claimed.includes(`${getTodayStr()}_${challenge.id}`);
 }
+
+const WEEKLY_MISSIONS = [
+  { id: 'w_win_5', label: 'افز 5 ألعاب', type: 'wins', target: 5, reward: 400, emoji: '🏆' },
+  { id: 'w_play_10', label: 'العب 10 مباريات', type: 'games', target: 10, reward: 300, emoji: '🎮' },
+  { id: 'w_xp_500', label: 'اجمع 500 XP', type: 'xp', target: 500, reward: 500, emoji: '⭐' },
+  { id: 'w_survival_3', label: 'العب 3 مباريات بقاء', type: 'survival', target: 3, reward: 350, emoji: '💀' },
+  { id: 'w_draw_3', label: 'العب 3 مباريات رسم', type: 'draw', target: 3, reward: 350, emoji: '🎨' },
+  { id: 'w_charades_3', label: 'العب 3 بدون كلام', type: 'charades', target: 3, reward: 350, emoji: '🎭' },
+];
+
+export function getWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+export function getWeeklyMissions(dateStr) {
+  const weekNum = getWeekNumber(dateStr);
+  const indices = [];
+  const picked = new Set();
+  for (let i = 0; i < 3; i++) {
+    let idx = (weekNum * (i + 7) + i * 11) % WEEKLY_MISSIONS.length;
+    while (picked.has(idx)) idx = (idx + 1) % WEEKLY_MISSIONS.length;
+    picked.add(idx);
+    indices.push(idx);
+  }
+  return indices.map(i => ({ ...WEEKLY_MISSIONS[i], weekly: true }));
+}
+
+export function getWeeklyProgress(mission, profile) {
+  if (!profile) return 0;
+  const weekKey = `week_${mission.type}`;
+  const progress = profile[weekKey] || 0;
+  return Math.min(progress, mission.target);
+}
+
+export function isWeeklyMissionClaimed(mission, profile) {
+  const claimed = profile?.claimedWeekly || [];
+  const weekId = `W${getWeekNumber(getTodayStr())}_${mission.id}`;
+  return claimed.includes(weekId);
+}
