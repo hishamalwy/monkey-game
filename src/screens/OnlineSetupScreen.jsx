@@ -23,7 +23,7 @@ export default function OnlineSetupScreen() {
   const [timeLimit, setTimeLimit]     = useState(15);
   const [scoreTarget, setScoreTarget] = useState(120);
   const [drawTime, setDrawTime]       = useState(80);
-  const [entryFee, setEntryFee]       = useState(100);
+  const [entryFee]                     = useState(100);
   const [loading, setLoading]         = useState(false);
   const [toast, setToast]             = useState('');
   const [modeOpen, setModeOpen]       = useState(false);
@@ -64,32 +64,34 @@ export default function OnlineSetupScreen() {
     <div className="brutal-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       <div className="bg-stickers">
-        <div style={{ position: 'absolute', top: '10%', right: '10%', fontSize: 24, opacity: 0.15, transform: 'rotate(20deg)' }}>🎮</div>
-        <div style={{ position: 'absolute', bottom: '15%', left: '10%', fontSize: 32, opacity: 0.15, transform: 'rotate(-15deg)' }}>🐵</div>
+        <div style={{ position: 'absolute', top: '10%', right: '10%', fontSize: 24, opacity: 0.12, transform: 'rotate(20deg)' }}>🎮</div>
+        <div style={{ position: 'absolute', bottom: '15%', left: '10%', fontSize: 32, opacity: 0.12, transform: 'rotate(-15deg)' }}>🐵</div>
       </div>
 
-      <div className="top-nav-brutal" style={{ background: '#FFF', position: 'relative', zIndex: 10, padding: '10px 16px' }}>
-        <button onClick={nav.toHome} className="btn btn-white" style={{ padding: '6px 12px', borderRadius: '10px', fontSize: 13 }}>← رجوع</button>
-        <h1 style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0, flex: 1, textAlign: 'center' }}>تجهيز الغرفة</h1>
-        <div style={{ width: 68 }} />
+      {/* Header */}
+      <div className="top-nav-brutal" style={{ background: '#FFF', position: 'relative', zIndex: 10, padding: '12px 16px' }}>
+        <button onClick={nav.toHome} className="btn btn-white" style={{ padding: '6px 14px', borderRadius: 0, fontSize: 13, border: '3px solid #000' }}>← رجوع</button>
+        <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--neo-black)', margin: 0, flex: 1, textAlign: 'center' }}>إعداد الغرفة</h1>
+        <div style={{ width: 88 }} />
       </div>
 
       <div className="content-with-nav" style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 5 }}>
 
+        {/* Mode Selector */}
         <div
           onClick={() => setModeOpen(!modeOpen)}
           className="card"
           style={{
-            padding: '12px 16px', background: '#FFF', borderRadius: '14px', border: '3px solid var(--bg-dark-purple)',
+            padding: '12px 16px', background: '#FFF', borderRadius: 0, border: '4px solid #000',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            cursor: 'pointer', boxShadow: '4px 4px 0 var(--bg-dark-purple)'
+            cursor: 'pointer', boxShadow: '6px 6px 0 #000'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontSize: 28 }}>{MODES.find(m => m.id === mode)?.emoji}</div>
-            <div style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>{MODES.find(m => m.id === mode)?.label}</div>
+            <div style={{ fontSize: 28, background: 'var(--neo-yellow)', border: '2px solid #000', padding: 4 }}>{MODES.find(m => m.id === mode)?.emoji}</div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#000' }}>{MODES.find(m => m.id === mode)?.label}</div>
           </div>
-          <div style={{ fontSize: 18, transform: modeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.1s' }}>▼</div>
+          <div style={{ fontSize: 18, background: 'var(--neo-cyan)', border: '2px solid #000', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: modeOpen ? 'rotate(180deg)' : 'none', transition: 'none' }}>▼</div>
         </div>
 
         {modeOpen && (
@@ -102,42 +104,45 @@ export default function OnlineSetupScreen() {
                   onClick={() => { if (m.active) { setMode(m.id); setModeOpen(false); } }}
                   className="card"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px', borderRadius: '12px',
-                    background: selected ? 'var(--bg-pink)' : '#FFF',
-                    borderColor: 'var(--bg-dark-purple)',
-                    boxShadow: selected ? 'none' : '3px 3px 0 var(--bg-dark-purple)',
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px', borderRadius: 0,
+                    background: selected ? 'var(--neo-cyan)' : '#FFF',
+                    borderColor: '#000', borderWidth: '3px',
+                    boxShadow: selected ? 'none' : '4px 4px 0 #000',
                     transform: selected ? 'translate(3px, 3px)' : 'none',
-                    opacity: m.soon ? 0.6 : 1, textAlign: 'right', cursor: m.active ? 'pointer' : 'not-allowed'
+                    opacity: m.soon ? 0.6 : 1, textAlign: 'right', cursor: m.active ? 'pointer' : 'not-allowed',
+                    transition: 'none'
                   }}
                 >
                   <div style={{ fontSize: 24 }}>{m.emoji}</div>
-                  <div style={{ color: selected ? '#FFF' : 'var(--bg-dark-purple)', fontSize: 14, fontWeight: 950 }}>{m.label}</div>
+                  <div style={{ color: '#000', fontSize: 14, fontWeight: 900 }}>{m.label}</div>
                 </button>
               );
             })}
           </div>
         )}
 
-        <div className="card" style={{ padding: '12px', background: '#FFF', borderRadius: '16px', border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>
+        {/* Public / Private */}
+        <div className="card" style={{ padding: '10px', background: '#FFF', borderRadius: 0, border: '4px solid #000', boxShadow: '6px 6px 0 #000' }}>
           <div style={{ display: 'flex', gap: 8 }}>
-             <button onClick={() => setIsPublic(true)} className={`btn ${isPublic ? 'btn-blue' : 'btn-white'}`} style={{ flex: 1, padding: '10px', borderRadius: '10px', fontSize: 14, boxShadow: isPublic ? 'none' : '3px 3px 0 var(--bg-dark-purple)', color: isPublic ? '#FFF' : 'inherit' }}>عامة 🌍</button>
-             <button onClick={() => setIsPublic(false)} className={`btn ${!isPublic ? 'btn-blue' : 'btn-white'}`} style={{ flex: 1, padding: '10px', borderRadius: '10px', fontSize: 14, boxShadow: !isPublic ? 'none' : '3px 3px 0 var(--bg-dark-purple)', color: !isPublic ? '#FFF' : 'inherit' }}>خاصة 🔒</button>
+            <button onClick={() => setIsPublic(true)} className={`btn ${isPublic ? 'btn-green' : 'btn-white'}`} style={{ flex: 1, padding: '10px', borderRadius: 0, fontSize: 14, boxShadow: isPublic ? 'none' : '3px 3px 0 #000', color: '#000', border: '3px solid #000', fontWeight: 900 }}>عام 🌍</button>
+            <button onClick={() => setIsPublic(false)} className={`btn ${!isPublic ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: '10px', borderRadius: 0, fontSize: 14, boxShadow: !isPublic ? 'none' : '3px 3px 0 #000', color: '#000', border: '3px solid #000', fontWeight: 900 }}>خاص 🔒</button>
           </div>
         </div>
 
-        <div className="card" style={{ padding: '14px', background: '#FFF', borderRadius: '16px', border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Settings Card */}
+        <div className="card" style={{ padding: '14px', background: '#FFF', borderRadius: 0, border: '4px solid #000', boxShadow: '8px 8px 0 #000', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {mode !== 'survival' && mode !== 'charades' && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>الموضوع 📚</div>
-              <button onClick={() => setCatOpen(!catOpen)} className="btn btn-white" style={{ width: '100%', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, fontWeight: 950, border: '2px solid' }}>
-                <span>▼</span>
+              <div style={{ fontSize: 11, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-pink)', display: 'inline-block', padding: '2px 10px', border: '2.5px solid #000' }}>الفئة</div>
+              <button onClick={() => setCatOpen(!catOpen)} className="btn btn-white" style={{ width: '100%', padding: '14px', borderRadius: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontWeight: 900, border: '4px solid #000' }}>
+                <span style={{ background: 'var(--neo-cyan)', border: '2px solid #000', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▼</span>
                 <span>{selectedCat.emoji} {selectedCat.name}</span>
               </button>
               {catOpen && (
-                <div style={{ marginTop: 8, padding: 4, maxHeight: 150, overflowY: 'auto', border: '2px dashed #DDD', borderRadius: 8 }}>
+                <div style={{ marginTop: 10, padding: 6, maxHeight: 180, overflowY: 'auto', border: '4px solid #000', borderRadius: 0, background: '#FFF' }}>
                   {currentCategories.map(cat => (
-                    <button key={cat.id} onClick={() => { setCategory(cat.id); setCatOpen(false); }} style={{ width: '100%', padding: '10px', textAlign: 'right', background: category === cat.id ? 'var(--bg-yellow)' : 'transparent', border: 'none', borderRadius: '6px', fontSize: 13, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>{cat.emoji}</span><span>{cat.name}</span></button>
+                    <button key={cat.id} onClick={() => { setCategory(cat.id); setCatOpen(false); }} style={{ width: '100%', padding: '12px', textAlign: 'left', background: category === cat.id ? 'var(--neo-yellow)' : 'transparent', border: 'none', borderRadius: 0, fontSize: 14, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #000' }}><span>{cat.emoji}</span><span>{cat.name}</span></button>
                   ))}
                 </div>
               )}
@@ -145,20 +150,20 @@ export default function OnlineSetupScreen() {
           )}
 
           <div>
-            <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>اللاعبين</div>
+            <div style={{ fontSize: 10, fontWeight: 900, marginBottom: 6, color: '#000', background: 'var(--neo-green)', display: 'inline-block', padding: '1px 6px', border: '1.5px solid #000' }}>اللاعبون</div>
             <div style={{ display: 'flex', gap: 6 }}>
               {(mode === 'draw' ? [3, 4, 5, 8] : mode === 'charades' ? [4, 5, 6, 8] : [2, 3, 4, 5]).map(n => (
-                <button key={n} onClick={() => setMaxPlayers(n)} className={`btn ${maxPlayers === n ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: maxPlayers === n ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px', color: maxPlayers === n ? '#FFF' : 'inherit' }}>{n}</button>
+                <button key={n} onClick={() => setMaxPlayers(n)} className={`btn ${maxPlayers === n ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: maxPlayers === n ? 'none' : '3px 3px 0 #000', borderRadius: 0, color: '#000', border: '3px solid #000', fontWeight: 900 }}>{n}</button>
               ))}
             </div>
           </div>
 
           {(mode === 'monkey' || mode === 'survival') && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>الوقت</div>
+              <div style={{ fontSize: 10, fontWeight: 900, marginBottom: 6, color: '#000', background: 'var(--neo-cyan)', display: 'inline-block', padding: '1px 6px', border: '1.5px solid #000' }}>الوقت</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[10, 15, 20, 0].map(t => (
-                  <button key={t} onClick={() => setTimeLimit(t)} className={`btn ${timeLimit === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 13, boxShadow: timeLimit === t ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px' }}>{t === 0 ? '∞' : `${t}s`}</button>
+                  <button key={t} onClick={() => setTimeLimit(t)} className={`btn ${timeLimit === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 13, boxShadow: timeLimit === t ? 'none' : '3px 3px 0 #000', borderRadius: 0, color: '#000', border: '3px solid #000', fontWeight: 900 }}>{t === 0 ? '∞' : `${t}ث`}</button>
                 ))}
               </div>
             </div>
@@ -166,10 +171,10 @@ export default function OnlineSetupScreen() {
 
           {mode === 'charades' && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>هدف النقاط 🏆</div>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-pink)', display: 'inline-block', padding: '2px 10px', border: '2.5px solid #000' }}>هدف النقاط 🏆</div>
+              <div style={{ display: 'flex', gap: 8 }}>
                 {[10, 20, 30, 50].map(n => (
-                  <button key={n} onClick={() => setCharadesScoreTarget(n)} className={`btn ${charadesScoreTarget === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: charadesScoreTarget === n ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px' }}>{n}</button>
+                  <button key={n} onClick={() => setCharadesScoreTarget(n)} className={`btn ${charadesScoreTarget === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 14, boxShadow: charadesScoreTarget === n ? 'none' : '3px 3px 0 #000', border: '3px solid #000', borderRadius: 0, color: '#000', fontWeight: 900 }}>{n}</button>
                 ))}
               </div>
             </div>
@@ -177,33 +182,33 @@ export default function OnlineSetupScreen() {
 
           {mode === 'charades' && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>وقت التمثيل ⏱️</div>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-cyan)', display: 'inline-block', padding: '2px 10px', border: '2.5px solid #000' }}>وقت الجولة ⏱️</div>
+              <div style={{ display: 'flex', gap: 8 }}>
                 {[45, 60, 75, 90].map(t => (
-                  <button key={t} onClick={() => setCharadesTime(t)} className={`btn ${charadesTime === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 14, boxShadow: charadesTime === t ? 'none' : '2px 2px 0 var(--bg-dark-purple)', borderRadius: '8px' }}>{t}ث</button>
+                  <button key={t} onClick={() => setCharadesTime(t)} className={`btn ${charadesTime === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 14, boxShadow: charadesTime === t ? 'none' : '3px 3px 0 #000', border: '3px solid #000', borderRadius: 0, color: '#000', fontWeight: 900 }}>{t}ث</button>
                 ))}
               </div>
             </div>
           )}
 
           {mode === 'draw' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-               <div>
-                  <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>هدف النقاط</div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {[120, 240, 480].map(n => (
-                      <button key={n} onClick={() => setScoreTarget(n)} className={`btn ${scoreTarget === n ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 12, borderRadius: '6px' }}>{n}</button>
-                    ))}
-                  </div>
-               </div>
-               <div>
-                  <div style={{ fontSize: 11, fontWeight: 950, marginBottom: 6, color: 'var(--bg-pink)' }}>وقت الرسم</div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {[60, 80, 120].map(t => (
-                      <button key={t} onClick={() => setDrawTime(t)} className={`btn ${drawTime === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '8px 0', fontSize: 12, borderRadius: '6px' }}>{t}s</button>
-                    ))}
-                  </div>
-               </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-pink)', display: 'inline-block', padding: '2px 8px', border: '2.5px solid #000' }}>الهدف</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[120, 240, 480].map(n => (
+                    <button key={n} onClick={() => setScoreTarget(n)} className={`btn ${scoreTarget === n ? 'btn-pink' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 12, borderRadius: 0, border: '3px solid #000', fontWeight: 900 }}>{n}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-yellow)', display: 'inline-block', padding: '2px 8px', border: '2.5px solid #000' }}>الوقت</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[60, 80, 120].map(t => (
+                    <button key={t} onClick={() => setDrawTime(t)} className={`btn ${drawTime === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 12, borderRadius: 0, border: '3px solid #000', fontWeight: 900 }}>{t}ث</button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -212,9 +217,9 @@ export default function OnlineSetupScreen() {
           onClick={handleCreate}
           disabled={loading}
           className="btn btn-pink"
-          style={{ width: '100%', padding: '18px', fontSize: '1.25rem', borderRadius: '18px', boxShadow: '6px 6px 0 var(--bg-dark-purple)', marginTop: 'auto' }}
+          style={{ width: '100%', padding: '20px', fontSize: '1.4rem', borderRadius: 0, boxShadow: '8px 8px 0 #000', marginTop: 'auto', border: '5px solid #000', fontWeight: 900 }}
         >
-          {loading ? <LoadingSpinner size={22} /> : 'ابدأ اللعبة! 🚀'}
+          {loading ? <LoadingSpinner size={22} /> : 'إنشاء الغرفة 🚀'}
         </button>
 
       </div>

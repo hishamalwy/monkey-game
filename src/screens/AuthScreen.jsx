@@ -5,7 +5,7 @@ import hero from '../assets/hero.webp';
 
 export default function AuthScreen() {
   const { login, register } = useAuth();
-  const [tab, setTab] = useState('login'); // 'login' | 'register'
+  const [tab, setTab] = useState('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [avatarId, setAvatarId] = useState(0);
@@ -27,14 +27,13 @@ export default function AuthScreen() {
     } catch (e) {
       const code = e.code || '';
       const msg = e.message || '';
-      console.error('Auth error:', code, msg);
 
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
         setError('اسم المستخدم أو كلمة المرور غير صحيحة');
       } else if (code === 'auth/email-already-in-use' || msg.includes('محجوز')) {
         setError('اسم المستخدم محجوز، جرب اسم آخر');
       } else if (code === 'auth/operation-not-allowed') {
-        setError('تسجيل الدخول بالإيميل غير مفعّل في Firebase، فعّله من Console');
+        setError('تسجيل الدخول بالإيميل غير مفعّل في Firebase');
       } else if (code === 'auth/weak-password') {
         setError('كلمة المرور ضعيفة، استخدم 6 أحرف أو أكثر');
       } else if (code === 'auth/network-request-failed') {
@@ -55,29 +54,36 @@ export default function AuthScreen() {
       padding: 20, overflowY: 'auto',
     }}>
       {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <img src={hero} alt="monkey" style={{ width: 80, height: 80, objectFit: 'contain' }} />
-        <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-header)', margin: '8px 0 0' }}>
+      <div style={{ textAlign: 'center', marginBottom: 28, transform: 'rotate(-2deg)' }}>
+        <div className="card" style={{ display: 'inline-block', padding: 12, background: '#FFF', borderRadius: 0, border: '4px solid #000', boxShadow: '8px 8px 0 #000' }}>
+          <img src={hero} alt="monkey" style={{ width: 80, height: 80, objectFit: 'contain' }} />
+        </div>
+        <h1 className="title-glitch" style={{ fontSize: 36, marginTop: 16 }}>
           كلكس!
         </h1>
+        <div style={{ display: 'inline-block', background: 'var(--neo-cyan)', border: '2px solid #000', padding: '2px 10px', fontSize: '10px', fontWeight: 900, transform: 'rotate(2deg)', boxShadow: '2px 2px 0 #000' }}>
+          الإصدار 2.0
+        </div>
       </div>
 
       {/* Card */}
-      <div style={{
-        background: 'var(--color-card)',
+      <div className="card" style={{
         padding: '28px 24px', width: '100%', maxWidth: 400,
-        boxShadow: '0 8px 40px rgba(28,16,64,0.12)',
+        boxShadow: '10px 10px 0px rgba(0,0,0,1)',
+        borderRadius: 0,
+        background: '#FFF'
       }}>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 0, marginBottom: 24, overflow: 'hidden', border: 'var(--brutal-border)' }}>
+        <div style={{ display: 'flex', gap: 0, marginBottom: 24, overflow: 'hidden', border: '3px solid #000', borderRadius: 0 }}>
           {[['login', 'تسجيل دخول'], ['register', 'حساب جديد']].map(([key, label]) => (
             <button key={key} onClick={() => { setTab(key); setError(''); }}
               style={{
-                flex: 1, padding: '10px', fontFamily: 'Cairo, sans-serif',
-                fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer',
-                background: tab === key ? 'var(--color-primary)' : 'transparent',
-                color: tab === key ? 'white' : 'var(--color-muted)',
-                transition: 'all 0.2s ease',
+                flex: 1, padding: '12px', fontFamily: '"Cairo", sans-serif',
+                fontWeight: 800, fontSize: 13, border: 'none', cursor: 'pointer',
+                background: tab === key ? 'var(--neo-yellow)' : 'transparent',
+                color: '#000',
+                borderLeft: key === 'register' ? '3px solid #000' : 'none',
+                transition: 'none',
               }}
             >
               {label}
@@ -105,10 +111,10 @@ export default function AuthScreen() {
           />
 
           {tab === 'register' && (
-            <div>
-              <p style={{ fontSize: 13, color: 'var(--color-muted)', marginBottom: 10, textAlign: 'center' }}>
-                اختر أفاتار
-              </p>
+            <div style={{ marginTop: 8 }}>
+              <div style={{ display: 'inline-block', background: 'var(--neo-green)', border: '2px solid #000', padding: '2px 8px', fontSize: '10px', fontWeight: 900, marginBottom: 8 }}>
+                اختر صورتك
+              </div>
               <AvatarPicker selected={avatarId} onChange={setAvatarId} />
             </div>
           )}
@@ -122,14 +128,13 @@ export default function AuthScreen() {
           <button
             onClick={handle}
             disabled={loading}
-            className="btn btn-primary"
-            style={{ width: '100%', padding: '14px', fontSize: 16, marginTop: 4, opacity: loading ? 0.7 : 1 }}
+            className="btn btn-pink"
+            style={{ width: '100%', padding: '16px', fontSize: 18, marginTop: 12, opacity: loading ? 0.7 : 1, borderRadius: 0, boxShadow: '5px 5px 0 #000' }}
           >
-            {loading ? '...' : tab === 'login' ? 'دخول' : 'إنشاء حساب'}
+            {loading ? 'جاري...' : tab === 'login' ? 'دخول' : 'إنشاء حساب'}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

@@ -3,7 +3,13 @@ import { db } from './config';
 import { XP_REWARDS } from '../utils/xp';
 
 export async function getLeaderboard(max = 20, mode = 'monkey') {
-  const field = mode === 'draw' ? 'wins_draw' : 'wins';
+  const fieldMap = {
+    monkey: 'wins',
+    draw: 'wins_draw',
+    survival: 'wins_survival',
+    charades: 'wins_charades',
+  };
+  const field = fieldMap[mode] || 'wins';
   const q = query(collection(db, 'users'), orderBy(field, 'desc'), limit(max));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -20,7 +26,11 @@ export async function recordWin(uid, mode = 'monkey') {
     updates.wins_draw = increment(1);
     updates.drawPlayed = increment(1);
   } else if (mode === 'survival') {
+    updates.wins_survival = increment(1);
     updates.survivalPlayed = increment(1);
+  } else if (mode === 'charades') {
+    updates.wins_charades = increment(1);
+    updates.charadesPlayed = increment(1);
   } else {
     updates.monkeyPlayed = increment(1);
   }
@@ -37,6 +47,8 @@ export async function recordLoss(uid, mode = 'monkey') {
     updates.drawPlayed = increment(1);
   } else if (mode === 'survival') {
     updates.survivalPlayed = increment(1);
+  } else if (mode === 'charades') {
+    updates.charadesPlayed = increment(1);
   } else {
     updates.monkeyPlayed = increment(1);
   }

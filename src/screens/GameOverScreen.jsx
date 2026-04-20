@@ -1,12 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAudio } from '../context/AudioContext';
 import { useRoom } from '../hooks/useRoom';
 import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 import UserAvatar from '../components/ui/UserAvatar';
+import Toast from '../components/ui/Toast';
 import { recordWin, recordLoss } from '../firebase/leaderboard';
 import { awardCoins } from '../firebase/store';
 import { recordMatch } from '../firebase/stats';
 import { incrementDailyStat } from '../firebase/retention';
+import { recordRecentPlayers } from '../firebase/recentPlayers';
 import { COIN_REWARDS } from '../utils/store';
 import { useConfetti } from '../components/shared/Confetti';
 import { XP_REWARDS } from '../utils/xp';
@@ -17,6 +20,7 @@ export default function GameOverScreen() {
   const { userProfile } = useAuth();
   const { room, players, isHost, leaveRoom, resetToLobby } = useRoom(roomCode);
   const confetti = useConfetti();
+  const [toast, setToast] = useState('');
 
   // Determine winner = player with fewest quarterMonkeys
   const winner = players.length > 0
@@ -24,15 +28,19 @@ export default function GameOverScreen() {
     : null;
 
   const iWon = winner?.uid === userProfile?.uid;
+  const { playWin, playLose, playClick } = useAudio();
+  const playedSound = useRef(false);
 
   // Record win/loss once
   useEffect(() => {
     if (!winner || !userProfile) return;
     const mode = room?.mode || 'monkey';
     if (iWon) {
+      if (!playedSound.current) { playWin(); playedSound.current = true; }
       recordWin(userProfile.uid, mode).catch(() => {});
       awardCoins(userProfile.uid, COIN_REWARDS.WIN).catch(() => {});
     } else {
+      if (!playedSound.current) { playLose(); playedSound.current = true; }
       recordLoss(userProfile.uid, mode).catch(() => {});
       awardCoins(userProfile.uid, COIN_REWARDS.LOSS).catch(() => {});
     }
@@ -40,6 +48,7 @@ export default function GameOverScreen() {
     if (iWon) incrementDailyStat(userProfile.uid, 'wins').catch(() => {});
     incrementDailyStat(userProfile.uid, 'xp', iWon ? XP_REWARDS.WIN : XP_REWARDS.LOSS).catch(() => {});
     recordMatch(userProfile.uid, { mode: mode, won: iWon, players: players.length }).catch(() => {});
+    recordRecentPlayers(userProfile.uid, players.map(p => p.uid)).catch(() => {});
   }, [!!winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync lobby redirect
@@ -48,8 +57,36 @@ export default function GameOverScreen() {
   }, [room?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLeave = async () => {
+    playClick();
     await leaveRoom();
     nav.toHome();
+  };
+
+  const handleReset = () => {
+    playClick();
+    resetToLobby();
+  };
+
+  const shareResult = async () => {
+    playClick();
+    const modeName = room?.mode === 'draw' ? 'ارسم وخمن' : room?.mode === 'charades' ? 'بدون كلام' : room?.mode === 'survival' ? 'البقاء للأقوى' : 'كلكس';
+    const text = iWon 
+      ? `فزت للتو في لعبة ${modeName} ضد ${players.length - 1} لاعبين! 🏆\nمن يتحداك في كلكس؟ 🐒`
+      : `فاز ${winner?.username} في لعبة ${modeName}، ولكن سأنتقم في المرة القادمة! 🐒`;
+    const url = window.location.origin + window.location.pathname;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'نتيجة كلكس',
+          text,
+          url
+        });
+      } catch (e) {}
+    } else {
+      navigator.clipboard?.writeText(`${text}\nالرابط: ${url}`).catch(() => {});
+      setToast('تم نسخ النتيجة!');
+    }
   };
 
   return (
@@ -73,68 +110,75 @@ export default function GameOverScreen() {
 
       {/* Card */}
       <div className="slide-up" style={{
-        background: 'var(--color-card)',
-        padding: '40px 28px', width: '100%', maxWidth: 400,
-        textAlign: 'center', boxShadow: '0 16px 60px rgba(28,16,64,0.2)',
-        position: 'relative', zIndex: 10,
+        background: '#FFF',
+        padding: '40px 28px', width: '100%', maxWidth: 420,
+        textAlign: 'center', boxShadow: '12px 12px 0px #000',
+        position: 'relative', zIndex: 10, border: '6px solid #000', borderRadius: 0
       }}>
         <UserAvatar avatarId={winner?.avatarId ?? 0} size={80} style={{ margin: '0 auto 12px' }} />
 
-        <h1 style={{ fontSize: 30, fontWeight: 900, color: 'var(--color-header)', margin: '0 0 8px' }}>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#000', margin: '0 0 10px' }}>
           {winner?.username}
         </h1>
-        <p style={{ fontSize: 16, color: 'var(--color-primary)', fontWeight: 700, marginBottom: 24 }}>
-          🏆 فاز باللعبة!
-        </p>
+        <div style={{ display: 'inline-block', background: 'var(--neo-yellow)', border: '3px solid #000', padding: '4px 14px', fontSize: 16, fontWeight: 900, marginBottom: 28, boxShadow: '4px 4px 0 #000' }}>
+          🏆 فاز!
+        </div>
 
           {iWon && (
             <div style={{
-            background: 'var(--bg-yellow)', border: 'var(--brutal-border)', padding: 8,
-            fontSize: 13, fontWeight: 900, marginBottom: 0,
+            background: 'var(--neo-green)', border: '2.5px solid #000', padding: '4px 14px',
+            fontSize: 12, fontWeight: 900, marginBottom: 20, display: 'inline-block', boxShadow: '3px 3px 0 #000'
           }}>
-            +{XP_REWARDS.WIN} XP 🏆
+            مكافأة: +{XP_REWARDS.WIN} نقطة 🏆
           </div>
         )}
 
-        {/* Final scores */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
           {players
             .sort((a, b) => (a.quarterMonkeys || 0) - (b.quarterMonkeys || 0))
             .map((p, i) => (
               <div key={p.uid} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 14px', borderRadius: 12,
-                background: i === 0 ? 'rgba(76,175,80,0.08)' : 'rgba(28,16,64,0.04)',
-                border: i === 0 ? '2px solid var(--color-success)' : '2px solid transparent',
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px', borderRadius: 0,
+                background: i === 0 ? 'var(--neo-yellow)' : '#FFF',
+                border: '3px solid #000',
+                boxShadow: i === 0 ? '4px 4px 0 #000' : 'none'
               }}>
-                <span style={{ fontWeight: 900, color: 'var(--color-muted)', width: 20 }}>#{i + 1}</span>
-                <UserAvatar avatarId={p.avatarId ?? 0} size={36} />
-                <span style={{ flex: 1, fontWeight: 700, color: 'var(--color-header)', textAlign: 'right' }}>
+                <span style={{ fontWeight: 900, color: '#000', width: 24, fontSize: 13 }}>#{i + 1}</span>
+                <UserAvatar avatarId={p.avatarId ?? 0} size={38} border="2px solid #000" />
+                <span style={{ flex: 1, fontWeight: 900, color: '#000', textAlign: 'right', fontSize: 14, direction: 'rtl' }}>
                   {p.username}
                 </span>
-                <span style={{ fontSize: 13, color: 'var(--color-secondary)', fontWeight: 700 }}>
-                  {p.quarterMonkeys || 0} أرباع
+                <span style={{ fontSize: 11, color: '#000', fontWeight: 900, background: 'var(--neo-pink)', padding: '2px 8px', border: '1.5px solid #000' }}>
+                  {p.quarterMonkeys || 0} 🐒
                 </span>
               </div>
             ))}
         </div>
 
         {isHost ? (
-          <button onClick={resetToLobby} className="btn btn-yellow"
-            style={{ width: '100%', padding: '15px', fontSize: 17, marginBottom: 12 }}>
-            🔄 العودة للروم
+          <button onClick={handleReset} className="btn btn-yellow"
+            style={{ width: '100%', padding: '20px', fontSize: 18, marginBottom: 14, border: '4.5px solid #000', borderRadius: 0, boxShadow: '6px 6px 0 #000', fontWeight: 900 }}>
+            العودة للقاعدة 🔄
           </button>
         ) : (
-          <p style={{ fontSize: 13, color: 'var(--color-muted)', fontWeight: 700, marginBottom: 12 }}>
-             بانتظار الهوست للعودة للغرفة...
-          </p>
+          <div style={{ fontSize: 13, color: '#555', fontWeight: 900, marginBottom: 16, background: '#EEE', padding: '8px', border: '2px dashed #000', direction: 'rtl' }}>
+            في انتظار المضيف...
+          </div>
         )}
 
-        <button onClick={handleLeave} className="btn btn-primary"
-          style={{ width: '100%', padding: '15px', fontSize: 17, opacity: 0.8 }}>
-          🚪 مغادرة الغرفة
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button onClick={shareResult} className="btn-cyan pop"
+            style={{ flex: 1, padding: '16px', fontSize: 16, border: '3.5px solid #000', borderRadius: 0, fontWeight: 900, boxShadow: '4px 4px 0 #000', color: '#000', transition: 'none' }}>
+            شارك النتيجة ↗️
+          </button>
+          <button onClick={handleLeave} className="btn btn-white"
+            style={{ flex: 1, padding: '16px', fontSize: 16, border: '3.5px solid #000', borderRadius: 0, fontWeight: 900 }}>
+            خروج 🚪
+          </button>
+        </div>
       </div>
+      {toast && <Toast message={toast} onDone={() => setToast('')} />}
     </div>
   );
 }

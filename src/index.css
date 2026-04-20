@@ -1,76 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Neobrutalism Palette - More vibrant & coherent */
-  --bg-yellow: #FFD200;
-  --bg-pink: #FF1F8E;
-  --bg-green: #00E06D;
-  --bg-blue: #3E8BFF;
-  --bg-purple: #9061FF;
-  --bg-dark-purple: #1C1040;
+  /* Neo-Brutalism Palette from Image */
+  --neo-yellow: #f6de0d;
+  --neo-pink: #ff41bb;
+  --neo-cyan: #00d1ff;
+  --neo-green: #85ff7a;
+  --neo-black: #000000;
+  --neo-white: #ffffff;
+  --neo-purple: #8b5cf6;
 
-  --brutal-border: 4px solid var(--bg-dark-purple);
-  --brutal-shadow: 6px 6px 0px var(--bg-dark-purple);
-  --brutal-radius-sm: 8px;
-  --brutal-radius-md: 16px;
-  --brutal-radius-lg: 24px;
+  --brutal-border: 4px solid var(--neo-black);
+  --brutal-shadow: 6px 6px 0px var(--neo-black);
+  --brutal-shadow-sm: 3px 3px 0px var(--neo-black);
+  --brutal-radius-none: 0px;
+  --brutal-radius-sm: 2px;
+  --brutal-radius-md: 4px;
 
-  /* Glassmorphism Accents */
-  --glass-white: rgba(255, 255, 255, 0.9);
-  --glass-dark: rgba(28, 16, 64, 0.85);
-
-  --color-bg: var(--bg-yellow);
-  --color-card: #FFFFFF;
-  --color-primary: var(--bg-pink);
-  --color-header: var(--bg-dark-purple);
-  --color-muted: rgba(28, 16, 64, 0.5);
-  --color-success: var(--bg-green);
-
-  /* Game-mode defaults (Light) */
-  --game-bg: #2D1B4E;
-  --game-surface: rgba(255, 255, 255, 0.1);
-  --game-surface-strong: rgba(255, 255, 255, 0.18);
-  --game-text: #FFFFFF;
-  --game-text-muted: rgba(255, 255, 255, 0.55);
-  --game-accent: #FFD600;
-  --game-success: #76FF03;
-  --game-danger: #FF4757;
+  --color-bg: var(--neo-yellow);
+  --color-card: var(--neo-white);
+  --color-text: var(--neo-black);
+  
+  --game-bg: var(--neo-black);
+  --game-text: var(--neo-white);
+  --game-accent: var(--neo-yellow);
 }
 
 .dark {
-  --bg-yellow: #0F0921;
-  --color-bg: #0F0921;
-  --color-card: #1C1040;
-  --bg-dark-purple: #FFE300; 
-  --color-header: #FFE300;
-  --color-muted: rgba(255, 227, 0, 0.4);
-  --bg-pink: #FF3B9A;
-  --bg-green: #05FF82;
-  --brutal-shadow: 4px 4px 0px #FFE300;
-  --brutal-border: 3px solid #FFE300;
-
-  /* Game mode (Dark override) */
-  --game-bg: #0F0A1F;
-  --game-surface: rgba(226, 204, 0, 0.08);
-  --game-surface-strong: rgba(226, 204, 0, 0.15);
-  --game-text: #FFE300;
-  --game-text-muted: rgba(255, 227, 0, 0.5);
-  --game-accent: #FFE300;
-  --game-success: #05FF82;
-  --game-danger: #FF3B9A;
+  --neo-yellow: #111111;
+  --neo-black: #f6de0d;
+  --neo-white: #1a1a1a;
+  --color-bg: #111111;
+  --color-text: #f6de0d;
+  --brutal-border: 3px solid #f6de0d;
+  --brutal-shadow: 4px 4px 0px #f6de0d;
 }
+
 
 /* ── Unified Brutal Background ── */
 .brutal-bg {
-  background: var(--bg-yellow);
-  background-image: radial-gradient(var(--bg-dark-purple) 1.5px, transparent 1.5px);
-  background-size: 30px 30px;
+  background: var(--color-bg);
+  background-image: 
+    linear-gradient(var(--neo-black) 1px, transparent 1px),
+    linear-gradient(90deg, var(--neo-black) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
   position: relative;
   overflow: hidden;
+}
+
+.brutal-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 0%, var(--color-bg) 85%);
+  pointer-events: none;
 }
 
 /* Subtle background stickers */
@@ -104,10 +92,10 @@
 }
 
 @keyframes rainbowBorder {
-  0% { border-color: var(--bg-pink); }
-  33% { border-color: var(--bg-green); }
-  66% { border-color: var(--bg-blue); }
-  100% { border-color: var(--bg-pink); }
+  0% { border-color: var(--neo-pink); }
+  33% { border-color: var(--neo-green); }
+  66% { border-color: var(--neo-cyan); }
+  100% { border-color: var(--neo-pink); }
 }
 
 .wizard-card { animation: wizardPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
@@ -116,15 +104,15 @@
 
 
 /* Cards, white-bg elements, inputs, keyboard */
-.dark .card        { background: var(--color-card) !important; color: var(--bg-dark-purple) !important; border-color: #E2CC00 !important; }
-.dark .btn-white   { background: var(--color-card) !important; color: var(--bg-dark-purple) !important; border-color: #E2CC00 !important; }
-.dark .input-field { background: var(--color-card) !important; color: var(--bg-dark-purple) !important; border-color: #E2CC00 !important; }
-.dark .kb-key      { background: var(--color-card) !important; color: var(--bg-dark-purple) !important; border-color: #E2CC00 !important; box-shadow: 2px 2px 0px #E2CC00 !important; }
+.dark .card        { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; }
+.dark .btn-white   { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; }
+.dark .input-field { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; }
+.dark .kb-key      { background: var(--neo-white) !important; color: var(--neo-black) !important; border-color: var(--neo-black) !important; box-shadow: 2px 2px 0px var(--neo-black) !important; }
 
 /* Specific button variants in dark */
-.dark .btn-dark   { background: #E2CC00; color: #1A0D38; border-color: #1A0D38; }
-.dark .btn-yellow { background: var(--color-card); color: var(--bg-dark-purple); border-color: #E2CC00; }
-.dark .btn-pink   { border-color: #1A0D38; }
+.dark .btn-dark   { background: var(--neo-black); color: #000; border-color: #000; }
+.dark .btn-yellow { background: var(--neo-white); color: var(--neo-black); border-color: var(--neo-black); }
+.dark .btn-pink   { border-color: var(--neo-black); }
 
 /* Pattern background: dimmer in dark mode */
 .dark [aria-hidden="true"] { opacity: 0.08; }
@@ -133,9 +121,9 @@
 
 body, html {
   margin: 0; padding: 0;
-  background: var(--bg-yellow);
-  color: var(--bg-dark-purple);
-  font-family: 'Cairo', sans-serif;
+  background: var(--color-bg);
+  color: var(--neo-black);
+  font-family: 'Space Grotesk', 'Cairo', sans-serif;
   overflow: hidden;
   height: 100%; width: 100%;
   -webkit-touch-callout: none;
@@ -159,14 +147,14 @@ body, html {
   width: 100%;
   margin: 0 auto;
   position: relative;
-  background: var(--bg-yellow);
+  background: var(--color-bg);
   padding-bottom: env(safe-area-inset-bottom);
   overflow-x: hidden;
 }
 
 @media (min-width: 481px) {
   body {
-    background: #1C1040;
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -174,9 +162,9 @@ body, html {
   #root {
     height: 90vh;
     min-height: 560px;
-    border-radius: 20px;
+    border-radius: var(--brutal-radius-md);
     box-shadow: 12px 12px 0px #000;
-    border: 8px solid var(--bg-dark-purple);
+    border: 6px solid var(--neo-black);
     overflow: hidden;
   }
 }
@@ -185,9 +173,9 @@ body, html {
 .title-glitch {
   font-size: 24px;
   font-weight: 900;
-  color: var(--bg-dark-purple);
-  text-shadow: 2px 2px 0px var(--bg-pink), -1px -1px 0px #FFF;
-  letter-spacing: -0.05em;
+  color: var(--neo-black);
+  text-shadow: 3px 3px 0px var(--neo-pink);
+  letter-spacing: -0.02em;
 }
 
 /* ── UI Components ── */
@@ -195,39 +183,41 @@ body, html {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cairo', sans-serif;
-  font-weight: 900;
+  font-family: 'Space Grotesk', 'Cairo', sans-serif;
+  font-weight: 800;
   cursor: pointer;
   border: var(--brutal-border);
   box-shadow: var(--brutal-shadow);
-  transition: transform 0.05s ease, box-shadow 0.05s ease;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
   outline: none;
   text-align: center;
+  border-radius: var(--brutal-radius-sm);
 }
 .btn:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px var(--bg-dark-purple);
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0px var(--neo-black);
 }
 .btn:active {
-  transform: translate(4px, 4px) !important;
-  box-shadow: 0px 0px 0px var(--bg-dark-purple) !important;
+  transform: translate(2px, 2px) !important;
+  box-shadow: 2px 2px 0px var(--neo-black) !important;
 }
 
 /* Base button flavors */
-.btn-pink    { background: var(--bg-pink);        color: #FFF; }
-.btn-white   { background: #FFF;                  color: var(--bg-dark-purple); }
-.btn-yellow  { background: var(--bg-yellow);      color: var(--bg-dark-purple); }
-.btn-dark    { background: var(--bg-dark-purple); color: #FFF; border-color: #FFF; }
+.btn-pink    { background: var(--neo-pink);       color: #000; }
+.btn-white   { background: #FFF;                  color: var(--neo-black); }
+.btn-yellow  { background: var(--neo-yellow);     color: var(--neo-black); }
+.btn-dark    { background: var(--neo-black);      color: #FFF; border-color: #FFF; }
 /* Semantic aliases used by secondary screens */
-.btn-primary { background: var(--bg-pink);        color: #FFF; }
-.btn-danger  { background: var(--bg-pink);        color: #FFF; }
-.btn-ghost   { background: transparent; color: var(--bg-dark-purple); box-shadow: none; }
-.btn-green   { background: var(--bg-green); color: var(--bg-dark-purple); }
+.btn-primary { background: var(--neo-pink);       color: #000; }
+.btn-danger  { background: var(--neo-pink);       color: #000; }
+.btn-ghost   { background: transparent; color: var(--neo-black); box-shadow: none; }
+.btn-green   { background: var(--neo-green);      color: var(--neo-black); }
 
 .card {
   border: var(--brutal-border);
   box-shadow: var(--brutal-shadow);
-  background: #FFF;
+  background: var(--neo-white);
+  border-radius: var(--brutal-radius-sm);
 }
 
 /* ── Neobrutalist Nav (Square + Shadow) ── */
@@ -262,9 +252,9 @@ body, html {
 }
 
 .nav-item.active {
-  background: var(--bg-yellow);
-  border: 3px solid var(--bg-dark-purple);
-  box-shadow: 4px 4px 0px var(--bg-dark-purple);
+  background: var(--neo-yellow);
+  border: 3px solid var(--neo-black);
+  box-shadow: 4px 4px 0px var(--neo-black);
   transform: translateY(-4px);
 }
 
@@ -277,7 +267,7 @@ body, html {
 .nav-item .label {
   font-size: 11px;
   font-weight: 950;
-  color: var(--bg-dark-purple);
+  color: var(--neo-black);
 }
 
 .top-nav-brutal {
@@ -297,9 +287,9 @@ body, html {
   border: var(--brutal-border);
   box-shadow: var(--brutal-shadow);
   padding: 12px 16px;
-  color: var(--bg-dark-purple);
-  font-family: 'Cairo', sans-serif;
-  font-weight: 900;
+  color: var(--neo-black);
+  font-family: 'Space Grotesk', 'Cairo', sans-serif;
+  font-weight: 800;
   direction: rtl;
   outline: none;
   width: 100%;
@@ -309,20 +299,21 @@ body, html {
 /* ── Keyboard ── */
 .kb-key {
   background: #FFF;
-  border: 3px solid var(--bg-dark-purple);
-  box-shadow: 3px 3px 0px var(--bg-dark-purple);
-  color: var(--bg-dark-purple);
-  font-family: 'Cairo', sans-serif;
-  font-weight: 900;
+  border: 3px solid var(--neo-black);
+  box-shadow: 3px 3px 0px var(--neo-black);
+  color: var(--neo-black);
+  font-family: 'Space Grotesk', 'Cairo', sans-serif;
+  font-weight: 800;
   font-size: clamp(11px, 3.5vw, 16px);
   cursor: pointer;
   touch-action: manipulation; /* prevents double-tap zoom on mobile */
+  border-radius: var(--brutal-radius-sm);
 }
 .kb-key:active, .kb-key.pressed {
-  background: var(--bg-pink);
-  color: #FFF;
+  background: var(--neo-pink);
+  color: #000;
   transform: translate(3px, 3px);
-  box-shadow: 0 0 0 var(--bg-dark-purple);
+  box-shadow: 0 0 0 var(--neo-black);
 }
 
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

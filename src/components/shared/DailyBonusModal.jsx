@@ -1,4 +1,5 @@
 import { getStreakEmoji } from '../../utils/retention';
+import { useAudio } from '../../context/AudioContext';
 import { useNavigate } from 'react-router-dom';
 import singleCoinIcon from '../../assets/icons/single_coin.png';
 import treasureChestIcon from '../../assets/icons/treasure_chest.png';
@@ -7,6 +8,13 @@ const STREAK_DAYS = [1, 2, 3, 4, 5, 6, 7];
 
 export default function DailyBonusModal({ streak, bonus, onClaim }) {
   const navigate = useNavigate();
+  const { playBonus, playClick } = useAudio();
+
+  const handleClaim = () => {
+    playClick();
+    playBonus();
+    onClaim();
+  };
 
   return (
     <div style={{
@@ -24,7 +32,7 @@ export default function DailyBonusModal({ streak, bonus, onClaim }) {
             </div>
             <div className="card-rainbow" style={{
               position: 'absolute', top: -5, right: -15, background: 'var(--bg-pink)', color: '#FFF',
-              padding: '4px 12px', transform: 'rotate(12deg)', fontWeight: 950, fontSize: 14, borderRadius: '10px'
+              padding: '4px 12px', transform: 'rotate(12deg)', fontWeight: 900, fontSize: 14, borderRadius: '10px'
             }}>
               هدية! 🎁
             </div>
@@ -44,7 +52,7 @@ export default function DailyBonusModal({ streak, bonus, onClaim }) {
               borderWidth: 2,
               background: d <= streak ? 'var(--bg-green)' : '#FFF',
               color: d <= streak ? '#FFF' : 'var(--bg-dark-purple)',
-              fontWeight: 950, fontSize: 14,
+              fontWeight: 900, fontSize: 14,
               borderRadius: '8px',
               transform: d === streak ? 'scale(1.15) rotate(-5deg)' : 'none',
               boxShadow: d === streak ? 'var(--brutal-shadow)' : 'none'
@@ -56,7 +64,7 @@ export default function DailyBonusModal({ streak, bonus, onClaim }) {
 
         <div className="wizard-card card" style={{
           background: '#FFF', border: 'var(--brutal-border)',
-          padding: '16px 24px', marginBottom: 24, fontWeight: 950, fontSize: 24,
+          padding: '16px 24px', marginBottom: 24, fontWeight: 900, fontSize: 24,
           color: 'var(--bg-dark-purple)', borderRadius: '16px',
           boxShadow: 'var(--brutal-shadow)',
           display: 'flex', alignItems: 'center', gap: 10
@@ -65,7 +73,7 @@ export default function DailyBonusModal({ streak, bonus, onClaim }) {
         </div>
 
         <button 
-          onClick={onClaim} 
+          onClick={handleClaim} 
           className="btn btn-pink" 
           style={{ width: '100%', maxWidth: 280, padding: '16px', fontSize: 20, borderRadius: '16px' }}
         >

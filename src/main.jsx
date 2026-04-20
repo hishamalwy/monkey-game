@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import './index.css';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { AudioProvider } from './context/AudioContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -11,7 +12,9 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <HashRouter>
         <AuthProvider>
-          <App />
+          <AudioProvider>
+            <App />
+          </AudioProvider>
         </AuthProvider>
       </HashRouter>
     </ErrorBoundary>

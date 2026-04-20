@@ -1,9 +1,11 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useAudio } from './context/AudioContext';
 import SplashScreen from './screens/SplashScreen';
 import AuthScreen from './screens/AuthScreen';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import InviteHandler from './components/shared/InviteHandler';
 
 const HomeScreen = lazy(() => import('./screens/HomeScreen'));
 const OnlineSetupScreen = lazy(() => import('./screens/OnlineSetupScreen'));
@@ -33,17 +35,38 @@ function LazyFallback() {
 }
 
 function AuthGate({ children }) {
+  const location = useLocation();
   const { user, loading } = useAuth();
   if (loading) return <SplashScreen />;
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/auth" state={{ from: location }} replace />;
   return children;
 }
 
 function PublicGate({ children }) {
+  const location = useLocation();
   const { user, loading } = useAuth();
   if (loading) return <SplashScreen />;
-  if (user) return <Navigate to="/home" replace />;
+  if (user) {
+    const from = location.state?.from?.pathname || '/home';
+    return <Navigate to={from} replace />;
+  }
   return children;
+}
+
+function GlobalAudioOrchestrator() {
+  const location = useLocation();
+  const { playBgm, stopBgm } = useAudio();
+
+  useEffect(() => {
+    const isGamePlay = /^\/(game|round-result|draw|survival|charades)\//.test(location.pathname);
+    if (!isGamePlay) {
+      playBgm();
+    } else {
+      stopBgm();
+    }
+  }, [location.pathname, playBgm, stopBgm]);
+
+  return null;
 }
 
 export default function App() {
@@ -55,6 +78,8 @@ export default function App() {
 
   return (
     <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, width: '100%', overflow: 'hidden' }}>
+      <GlobalAudioOrchestrator />
+      <InviteHandler />
       <Suspense fallback={<LazyFallback />}>
         <Routes>
           <Route path="/auth" element={<PublicGate><AuthScreen /></PublicGate>} />

@@ -1,4 +1,4 @@
-export const getHornType = () => localStorage.getItem('hornType') || 'ambulance';
+export const getHornType = () => localStorage.getItem('hornType') || 'car';
 export const setHornType = (id) => localStorage.setItem('hornType', id);
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -60,18 +60,19 @@ export const playSound = (type) => {
 
 // ── Horn sound type ─────────────────────────────────────────────────
 export const HORN_TYPES = [
-  { id: 'ambulance', label: 'إسعاف 🚨',      src: 'horn_ambulance.png' },
-  { id: 'duck',      label: 'بطة حقيقية 🦆', src: 'horn_duck.png' },
-  { id: 'laser',     label: 'ليزر فضائي ⚡', emoji: '⚡' },
-  { id: 'boing',     label: 'زمبلك كوميدي 🌀', emoji: '🌀' },
-  { id: 'ghost',     label: 'رعب شبحي 👻', emoji: '👻' },
-  { id: 'ufo',       label: 'غزو فضائي 🛸', emoji: '🛸' },
-  { id: 'sonar',     label: 'رادار غواصة 🛰️', emoji: '🛰️' },
-  { id: 'bike',      label: 'جرس عجلة 🔔', emoji: '🔔' },
-  { id: 'slide',     label: 'صفارة كوميدية 🎶', emoji: '🎶' },
-  { id: 'train',     label: 'قطار بخاري 🚂', emoji: '🚂' },
-  { id: 'cuckoo',    label: 'ساعة كوكو 🐦', emoji: '🐦' },
-  { id: 'drop',      label: 'نقطة مياه 💧', emoji: '💧' },
+  { id: 'car',       label: 'كلاكس عربية 🚗', src: 'horn_car.png' },
+  { id: 'ambulance', label: 'إسعاف 🚨',      src: 'horn_ambulance_v2.png' },
+  { id: 'duck',      label: 'بطة حقيقية 🦆', src: 'horn_duck_v2.png' },
+  { id: 'laser',     label: 'ليزر فضائي ⚡', src: 'horn_laser.png' },
+  { id: 'boing',     label: 'زمبلك كوميدي 🌀', src: 'horn_boing.png' },
+  { id: 'ghost',     label: 'رعب شبحي 👻', src: 'horn_ghost.png' },
+  { id: 'ufo',       label: 'غزو فضائي 🛸', src: 'horn_ufo.png' },
+  { id: 'sonar',     label: 'رادار غواصة 🛰️', src: 'horn_sonar.png' },
+  { id: 'bike',      label: 'جرس عجلة 🔔', src: 'horn_bike.png' },
+  { id: 'slide',     label: 'صفارة كوميدية 🎶', src: 'horn_slide.png' },
+  { id: 'train',     label: 'قطار بخاري 🚂', src: 'horn_train.png' },
+  { id: 'cuckoo',    label: 'ساعة كوكو 🐦', src: 'horn_cuckoo.png' },
+  { id: 'drop',      label: 'نقطة مياه 💧', src: 'horn_drop.png' },
 ];
 
 
@@ -270,6 +271,23 @@ function _doStartHorn(overrideType) {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
     osc.start(now);
     hornNodes = { oscs: [osc], gain };
+  } else if (type === 'car') {
+    // Normal Car Horn: Two dissonant mid-range frequencies (e.g., 400Hz and 500Hz)
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    osc1.connect(gain);
+    osc2.connect(gain);
+    osc1.type = 'square';
+    osc2.type = 'square';
+    osc1.frequency.setValueAtTime(400, now);
+    osc2.frequency.setValueAtTime(500, now);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+    
+    osc1.start();
+    osc2.start();
+    hornNodes = { oscs: [osc1, osc2], gain };
   }
 }
 

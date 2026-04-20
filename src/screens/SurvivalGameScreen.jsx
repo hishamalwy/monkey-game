@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAudio } from '../context/AudioContext';
 import { listenToRoom } from '../firebase/rooms';
 import { submitSurvivalAnswer, survivalReveal, survivalNextQuestion, endSurvivalGame } from '../firebase/survivalRooms';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -11,6 +12,7 @@ export default function SurvivalGameScreen() {
   const roomCode = useRoomCode();
   const nav = useNavigation();
   const { userProfile } = useAuth();
+  const { playClick, playCorrect, playIncorrect, playTension, stopTension } = useAudio();
   const [room, setRoom] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [toast, setToast] = useState('');
@@ -54,6 +56,29 @@ export default function SurvivalGameScreen() {
     return () => clearInterval(timerIntervalRef.current);
   }, [room?.survivalState?.currentQuestionIndex, room?.survivalState?.status, room?.survivalState?.roundStartTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (status === 'question' && timer <= 5 && timer > 0) {
+      playTension();
+    } else {
+      stopTension();
+    }
+  }, [status, timer, playTension, stopTension]);
+
+  useEffect(() => {
+    return () => stopTension();
+  }, [stopTension]);
+
+  const prevStatusRef = useRef(status);
+  useEffect(() => {
+    if (prevStatusRef.current === 'question' && status === 'reveal') {
+      const myAns = survivalState?.answers?.[userProfile?.uid]?.answer;
+      const correct = currentQ?.correct;
+      if (myAns === correct) playCorrect();
+      else if (myAns !== undefined) playIncorrect();
+    }
+    prevStatusRef.current = status;
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const survivalState = room?.survivalState;
   const isHost = room?.hostUid === userProfile?.uid;
   const lives = survivalState?.alivePlayers?.[userProfile?.uid] || 0;
@@ -88,6 +113,7 @@ export default function SurvivalGameScreen() {
 
   const handleAnswer = async (idx) => {
     if (status !== 'question' || !isAlive || selectedAnswer !== null) return;
+    playClick();
     setSelectedAnswer(idx);
     try {
       await submitSurvivalAnswer(roomCode, userProfile?.uid, idx);
@@ -99,20 +125,8 @@ export default function SurvivalGameScreen() {
 
   const handleReveal = async () => {
     if (!isHost || status !== 'question') return;
-    const correctIdx = currentQ.correct;
-    const newAlivePlayers = { ...survivalState.alivePlayers };
-    const eliminatedThisRound = [];
-    Object.keys(survivalState.alivePlayers).forEach(uid => {
-      const cur = survivalState.alivePlayers[uid];
-      if (cur <= 0) return;
-      const ans = survivalState.answers[uid]?.answer;
-      if (ans === undefined || ans !== correctIdx) {
-        newAlivePlayers[uid] = cur - 1;
-        if (newAlivePlayers[uid] <= 0) eliminatedThisRound.push(uid);
-      }
-    });
     try {
-      await survivalReveal(roomCode, newAlivePlayers, eliminatedThisRound);
+      await survivalReveal(roomCode, userProfile.uid);
     } catch (e) {
       setToast(e.message);
     }
@@ -122,20 +136,27 @@ export default function SurvivalGameScreen() {
     if (!isHost || status !== 'reveal') return;
     const aliveCount = Object.values(survivalState.alivePlayers).filter(v => v > 0).length;
     if (aliveCount <= 1 || survivalState.currentQuestionIndex >= survivalState.questions.length - 1) {
-      await endSurvivalGame(roomCode);
+      await endSurvivalGame(roomCode, userProfile.uid);
       return;
     }
     try {
-      await survivalNextQuestion(roomCode, survivalState.currentQuestionIndex + 1);
+      await survivalNextQuestion(roomCode, userProfile.uid);
     } catch (e) {
       setToast(e.message);
     }
   };
 
   const Heart = ({ filled }) => (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill={filled ? '#FF1F8E' : 'rgba(28,16,64,0.15)'} stroke={filled ? '#C0006E' : 'rgba(28,16,64,0.25)'} strokeWidth="1">
-      <path d="M10 17s-7-5.25-7-9.5A4.5 4.5 0 0 1 10 4.16 4.5 4.5 0 0 1 17 7.5C17 11.75 10 17 10 17z" />
-    </svg>
+    <div style={{
+      width: 18, height: 18, 
+      background: filled ? 'var(--neo-pink)' : '#DDD',
+      border: '1.5px solid #000',
+      boxShadow: filled ? '1.5px 1.5px 0 #000' : 'none',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 10, fontWeight: 900
+    }}>
+      {filled ? '♥' : '♡'}
+    </div>
   );
 
   const timerDanger = timer <= 5;
@@ -150,7 +171,7 @@ export default function SurvivalGameScreen() {
       {/* HEADER */}
       <div style={{
         background: '#FFF',
-        borderBottom: '4px solid var(--bg-dark-purple)',
+        borderBottom: '5px solid #000',
         padding: '10px 14px',
         display: 'flex',
         alignItems: 'center',
@@ -161,35 +182,29 @@ export default function SurvivalGameScreen() {
         <button
           onClick={() => nav.toHome()}
           className="btn btn-white"
-          style={{ width: 38, height: 38, fontSize: 15, borderRadius: '10px', padding: 0, flexShrink: 0 }}
+          style={{ width: 44, height: 44, fontSize: 16, borderRadius: 0, border: '3.5px solid #000', padding: 0, flexShrink: 0 }}
         >✕</button>
 
         <div style={{
-          background: 'var(--bg-dark-purple)', color: 'var(--bg-yellow)',
-          padding: '5px 14px', borderRadius: '100px', fontWeight: 950, fontSize: 13,
-          border: '3px solid var(--bg-dark-purple)', boxShadow: '3px 3px 0 var(--bg-pink)',
+          background: '#000', color: 'var(--neo-yellow)',
+          padding: '6px 14px', borderRadius: 0, fontWeight: 900, fontSize: 13,
+          border: 'none', boxShadow: '4px 4px 0 var(--neo-pink)',
         }}>
-          ⚔️ {totalAlive} ناجٍ  •  س{survivalState.currentQuestionIndex + 1}
+          ⚔️ {totalAlive} ناجي  •  سؤال {survivalState.currentQuestionIndex + 1}
         </div>
 
-        <div style={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>
-          <svg width="42" height="42" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
-            <circle cx="21" cy="21" r="17" fill="none" stroke="#EEE" strokeWidth="4" />
-            <circle
-              cx="21" cy="21" r="17" fill="none"
-              stroke={timerDanger ? 'var(--bg-pink)' : 'var(--bg-green)'}
-              strokeWidth="4"
-              strokeDasharray={`${2 * Math.PI * 17}`}
-              strokeDashoffset={`${2 * Math.PI * 17 * (1 - timerPct / 100)}`}
-              strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
-            />
-          </svg>
+        <div style={{ position: 'relative', width: 46, height: 46, flexShrink: 0, background: '#000', border: '3.5px solid #000', boxShadow: '3px 3px 0 #FFF' }}>
+          <div style={{
+            position: 'absolute', inset: 0, 
+            background: timerDanger ? 'var(--neo-pink)' : 'var(--neo-green)',
+            clipPath: `inset(${(1 - timerPct / 100) * 100}% 0 0 0)`,
+            transition: 'clip-path 1s linear'
+          }}></div>
           <div style={{
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 950, fontSize: 14,
-            color: timerDanger ? 'var(--bg-pink)' : 'var(--bg-dark-purple)',
-            animation: timerDanger ? 'pulse 0.5s infinite' : 'none',
+            fontWeight: 900, fontSize: 16,
+            color: '#FFF', mixBlendMode: 'difference',
+            zIndex: 1
           }}>
             {timer}
           </div>
@@ -198,11 +213,11 @@ export default function SurvivalGameScreen() {
 
       {/* PLAYER STRIP */}
       <div style={{
-        background: 'rgba(255,255,255,0.7)',
-        borderBottom: '4px solid var(--bg-dark-purple)',
-        padding: '8px 12px',
+        background: '#FAFAFA',
+        borderBottom: '5px solid #000',
+        padding: '10px 12px',
         display: 'flex',
-        gap: 8,
+        gap: 12,
         overflowX: 'auto',
         flexShrink: 0,
         scrollbarWidth: 'none',
@@ -216,29 +231,28 @@ export default function SurvivalGameScreen() {
               key={p.uid}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                minWidth: 52, gap: 4,
+                minWidth: 54, gap: 6,
                 opacity: dead ? 0.4 : 1,
-                filter: dead ? 'grayscale(1)' : 'none',
-                transition: 'opacity 0.4s',
+                transition: 'none',
               }}
             >
               <div style={{ position: 'relative' }}>
                 <div style={{
-                  borderRadius: '50%',
-                  border: isMe ? '3px solid var(--bg-pink)' : '3px solid var(--bg-dark-purple)',
-                  boxShadow: isMe ? '0 0 0 2px #FFF, 3px 3px 0 var(--bg-pink)' : 'none',
+                  borderRadius: 0,
+                  border: isMe ? '3.5px solid var(--neo-pink)' : '3.5px solid #000',
+                  boxShadow: isMe ? '4px 4px 0 #000' : 'none',
                 }}>
-                  <UserAvatar avatarId={p.avatarId ?? 1} size={34} />
+                  <UserAvatar avatarId={p.avatarId ?? 1} size={36} border="1.5px solid #fff" />
                 </div>
                 {dead && (
                   <div style={{
                     position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: 16, borderRadius: '50%',
-                    background: 'rgba(0,0,0,0.35)',
+                    justifyContent: 'center', fontSize: 18, borderRadius: 0,
+                    background: 'rgba(0,0,0,0.6)', color: '#FFF'
                   }}>💀</div>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 1 }}>
+              <div style={{ display: 'flex', gap: 2 }}>
                 <Heart filled={p.lives >= 1} />
                 <Heart filled={p.lives >= 2} />
                 <Heart filled={p.lives >= 3} />
@@ -262,28 +276,28 @@ export default function SurvivalGameScreen() {
         {/* Question card */}
         <div style={{
           width: '100%', maxWidth: 420,
-          background: 'var(--bg-dark-purple)',
-          border: '4px solid var(--bg-dark-purple)',
-          borderRadius: '18px',
-          boxShadow: '6px 6px 0 var(--bg-pink)',
-          padding: '20px 18px',
+          background: '#FFF',
+          border: '5px solid #000',
+          borderRadius: 0,
+          boxShadow: '10px 10px 0 var(--neo-pink)',
+          padding: '24px 20px',
           textAlign: 'center',
           position: 'relative',
         }}>
           <div style={{
-            position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
-            background: 'var(--bg-yellow)', color: 'var(--bg-dark-purple)',
-            padding: '2px 12px', borderRadius: '100px',
-            fontWeight: 950, fontSize: 11,
-            border: '3px solid var(--bg-dark-purple)',
+            position: 'absolute', top: -14, left: 16,
+            background: 'var(--neo-yellow)', color: '#000',
+            padding: '2px 10px', borderRadius: 0,
+            fontWeight: 900, fontSize: 10,
+            border: '3px solid #000',
             whiteSpace: 'nowrap',
           }}>
             سؤال {survivalState.currentQuestionIndex + 1}
           </div>
           <p style={{
-            color: '#FFF', fontWeight: 950,
-            fontSize: currentQ.q.length > 80 ? 15 : currentQ.q.length > 50 ? 17 : 19,
-            lineHeight: 1.5, margin: 0, marginTop: 4,
+            color: '#000', fontWeight: 900,
+            fontSize: currentQ.q.length > 80 ? 14 : currentQ.q.length > 50 ? 16 : 18,
+            lineHeight: 1.4, margin: 0, marginTop: 4,
           }}>
             {currentQ.q}
           </p>
@@ -292,7 +306,7 @@ export default function SurvivalGameScreen() {
         {/* Answer grid */}
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr',
-          gap: 10, width: '100%', maxWidth: 420,
+          gap: 12, width: '100%', maxWidth: 420,
         }}>
           {currentQ.a.map((ans, i) => {
             const isSelected = selectedAnswer === i || myAns === i;
@@ -300,14 +314,14 @@ export default function SurvivalGameScreen() {
             const isWrong = status === 'reveal' && isSelected && i !== currentQ.correct;
 
             let bg = '#FFF';
-            let color = 'var(--bg-dark-purple)';
-            let shadow = isSelected ? 'none' : '4px 4px 0 var(--bg-dark-purple)';
+            let color = '#000';
+            let shadow = isSelected ? 'none' : '5px 5px 0 #000';
             let transform = isSelected && !isCorrect && !isWrong ? 'translate(4px,4px)' : 'none';
-            let border = '3.5px solid var(--bg-dark-purple)';
+            let border = '3.5px solid #000';
 
-            if (isSelected && !isCorrect && !isWrong) { bg = 'var(--bg-pink)'; color = '#FFF'; }
-            if (isCorrect) { bg = 'var(--bg-green)'; color = '#FFF'; shadow = '4px 4px 0 var(--bg-dark-purple)'; transform = 'none'; }
-            if (isWrong) { bg = '#FF4D4D'; color = '#FFF'; shadow = '4px 4px 0 var(--bg-dark-purple)'; transform = 'none'; }
+            if (isSelected && !isCorrect && !isWrong) { bg = 'var(--neo-pink)'; color = '#000'; }
+            if (isCorrect) { bg = 'var(--neo-green)'; shadow = '5px 5px 0 #000'; transform = 'none'; }
+            if (isWrong) { bg = 'var(--neo-pink)'; shadow = '5px 5px 0 #000'; transform = 'none'; border = '4px dashed #000'; }
 
             return (
               <button
@@ -316,26 +330,27 @@ export default function SurvivalGameScreen() {
                 onClick={() => handleAnswer(i)}
                 className="pop"
                 style={{
-                  background: bg, color, border, borderRadius: '14px',
-                  padding: '12px 8px',
-                  fontWeight: 950, fontSize: 14,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  boxShadow: shadow, transform, transition: 'all 0.1s',
+                  background: bg, color, border, borderRadius: 0,
+                  padding: '16px 10px',
+                  fontWeight: 900, fontSize: 13,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                  boxShadow: shadow, transform, transition: 'none',
                   cursor: isAlive && status === 'question' && !hasAnswered ? 'pointer' : 'default',
                 }}
               >
                 <div style={{
-                  width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                  width: 28, height: 28, borderRadius: 0, flexShrink: 0,
                   background: isSelected || isCorrect || isWrong
-                    ? 'rgba(255,255,255,0.25)' : 'rgba(28,16,64,0.1)',
+                    ? '#000' : '#DDD',
+                  color: isSelected || isCorrect || isWrong ? '#FFF' : '#000',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 950, fontSize: 12,
+                  fontWeight: 900, fontSize: 12, border: '2px solid #000'
                 }}>
                   {labels[i]}
                 </div>
                 <span style={{
                   textAlign: 'center', lineHeight: 1.3,
-                  fontSize: ans.length > 80 ? 10 : ans.length > 45 ? 11 : 13,
+                  fontSize: ans.length > 80 ? 10 : ans.length > 45 ? 11 : 12,
                 }}>
                   {ans}
                 </span>
@@ -348,23 +363,23 @@ export default function SurvivalGameScreen() {
         {!isAlive && status === 'question' && (
           <div style={{
             width: '100%', maxWidth: 420,
-            background: 'var(--bg-dark-purple)', color: 'var(--bg-yellow)',
-            border: '4px solid var(--bg-pink)', borderRadius: '14px',
-            padding: '12px', textAlign: 'center', fontWeight: 950, fontSize: 14,
-            boxShadow: '4px 4px 0 var(--bg-pink)',
+            background: '#000', color: 'var(--neo-yellow)',
+            border: '4px solid var(--neo-pink)', borderRadius: 0,
+            padding: '14px', textAlign: 'center', fontWeight: 900, fontSize: 13,
+            boxShadow: '6px 6px 0 var(--neo-pink)',
           }}>
-            💀 خسرت كل قلوبك!<br />
-            <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.8 }}>انتظر انتهاء الجولة...</span>
+            💀 خرجت من اللعبة!<br />
+            <span style={{ fontSize: 9, fontWeight: 900, opacity: 0.8 }}>في انتظار نهاية الجولة...</span>
           </div>
         )}
 
         {/* Answer received banner for non-host */}
         {!isHost && hasAnswered && status === 'question' && (
           <div style={{
-            background: 'var(--bg-green)', color: 'var(--bg-dark-purple)',
-            border: '3px solid var(--bg-dark-purple)', borderRadius: '12px',
-            padding: '8px 20px', fontWeight: 950, fontSize: 13,
-            boxShadow: '3px 3px 0 var(--bg-dark-purple)',
+            background: 'var(--neo-green)', color: '#000',
+            border: '3.5px solid #000', borderRadius: 0,
+            padding: '10px 24px', fontWeight: 900, fontSize: 12,
+            boxShadow: '4px 4px 0 #000',
           }}>
             👍 تم استلام إجابتك!
           </div>
@@ -373,25 +388,26 @@ export default function SurvivalGameScreen() {
 
       {/* FOOTER */}
       <div style={{
-        background: '#FFF', borderTop: '4px solid var(--bg-dark-purple)',
-        padding: '12px 16px env(safe-area-inset-bottom)',
+        background: '#FFF', borderTop: '5px solid #000',
+        padding: '16px 16px env(safe-area-inset-bottom)',
         zIndex: 10, flexShrink: 0,
       }}>
         {isHost && status === 'question' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontWeight: 950, fontSize: 12, color: 'var(--bg-dark-purple)' }}>تقدّم الإجابات</span>
-              <span style={{ fontWeight: 950, fontSize: 12, color: 'var(--bg-pink)' }}>{answeredCount} / {totalAlive}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, direction: 'ltr' }}>
+              <span style={{ fontWeight: 900, fontSize: 11, color: '#000' }}>ردود اللاعبين</span>
+              <span style={{ fontWeight: 900, fontSize: 11, color: '#000' }}>{answeredCount} / {totalAlive}</span>
             </div>
             <div style={{
-              width: '100%', height: 12, background: '#EEE',
-              borderRadius: 20, overflow: 'hidden',
-              border: '3px solid var(--bg-dark-purple)',
+              width: '100%', height: 16, background: '#DDD',
+              borderRadius: 0, overflow: 'hidden',
+              border: '3.5px solid #000',
             }}>
               <div style={{
                 width: `${(answeredCount / (totalAlive || 1)) * 100}%`,
-                height: '100%', background: 'var(--bg-green)',
-                transition: 'width 0.4s ease',
+                height: '100%', background: 'var(--neo-green)',
+                transition: 'none',
+                borderRight: answeredCount > 0 ? '3.5px solid #000' : 'none'
               }} />
             </div>
           </div>
@@ -402,24 +418,24 @@ export default function SurvivalGameScreen() {
             onClick={handleNext}
             className="btn btn-green"
             style={{
-              width: '100%', padding: '15px', fontSize: 17,
-              borderRadius: '14px', boxShadow: '4px 4px 0 var(--bg-dark-purple)',
-              fontWeight: 950,
+              width: '100%', padding: '16px', fontSize: 16,
+              borderRadius: 0, border: '4.5px solid #000', boxShadow: '6px 6px 0 #000',
+              fontWeight: 900
             }}
           >
-            {totalAlive <= 1 ? '🏁 نهاية المسابقة' : '➡️ السؤال التالي'}
+            {totalAlive <= 1 ? '🏁 إنهاء اللعبة' : '➡️ السؤال التالي'}
           </button>
         )}
 
         {!isHost && status === 'question' && !hasAnswered && (
-          <div style={{ textAlign: 'center', fontWeight: 950, fontSize: 13, color: 'var(--bg-dark-purple)' }}>
-            ⚡ اختر أسرع إجابة!
+          <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 12, color: '#000' }}>
+            ⚡ اختر إجابتك بسرعة!
           </div>
         )}
 
         {!isHost && status === 'reveal' && (
-          <div style={{ textAlign: 'center', fontWeight: 950, fontSize: 13, color: 'var(--bg-dark-purple)', opacity: 0.7 }}>
-            ⏳ بانتظار الهوست...
+          <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 12, color: '#000', opacity: 0.7 }}>
+            ⏳ في انتظار المضيف...
           </div>
         )}
       </div>

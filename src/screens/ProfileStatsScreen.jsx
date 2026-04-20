@@ -9,9 +9,9 @@ import { getLevel, getLevelTitle, getLevelEmoji, getLevelProgress, xpForNextLeve
 import { calcStreak, getStreakEmoji } from '../utils/retention';
 
 const MODE_LABELS = {
-  monkey: { label: 'كلكس!', emoji: '🐒', color: 'var(--bg-pink)' },
-  draw: { label: 'رسم وتخمين', emoji: '🎨', color: 'var(--bg-yellow)' },
-  survival: { label: 'سيرفايفر', emoji: '💀', color: 'var(--bg-green)' },
+  monkey: { label: 'كلكس', emoji: '🐒', color: 'var(--neo-pink)' },
+  draw: { label: 'ارسم وخمن', emoji: '🎨', color: 'var(--neo-yellow)' },
+  survival: { label: 'البقاء', emoji: '💀', color: 'var(--neo-green)' },
 };
 
 export default function ProfileStatsScreen() {
@@ -43,87 +43,81 @@ export default function ProfileStatsScreen() {
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{
-        padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '4px solid var(--bg-dark-purple)', background: 'var(--bg-yellow)',
-      }}>
-        <button onClick={nav.toHome} className="btn btn-dark" style={{ padding: '6px 14px', fontSize: 13 }}>← رجوع</button>
-        <div style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>الملف الشخصي 📊</div>
-        <div style={{ width: 60 }} />
+      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '5px solid #000', background: '#FFF' }}>
+        <button onClick={nav.toHome} className="btn btn-white" style={{ padding: '6px 14px', fontSize: 13, fontWeight: 900, borderRadius: 0, border: '3px solid #000' }}>← رجوع</button>
+        <div style={{ fontSize: 18, fontWeight: 900, color: '#000' }}>إحصائياتك 📊</div>
+        <div style={{ width: 88 }} />
       </div>
 
       <div className="content-with-nav" style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+
         {/* Profile Header */}
-        <div className="card" style={{ padding: 20, textAlign: 'center' }}>
-          <UserAvatar avatarId={p.avatarId ?? 0} size={80} style={{ margin: '0 auto 10px' }} />
-          <div style={{ fontSize: 20, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>{p.username}</div>
-          <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--bg-pink)', marginTop: 4 }}>
-            {getLevelEmoji(p.xp ?? 0)} لفل {level} — {getLevelTitle(level)}
+        <div className="card" style={{ padding: 24, textAlign: 'center', borderRadius: 0, border: '4px solid #000', boxShadow: '8px 8px 0 var(--neo-cyan)' }}>
+          <UserAvatar avatarId={p.avatarId ?? 0} size={84} style={{ margin: '0 auto 14px', border: '4px solid #000' }} />
+          <div style={{ fontSize: 20, fontWeight: 900, color: '#000' }}>{p.username}</div>
+          <div style={{ fontSize: 11, fontWeight: 900, color: '#000', background: 'var(--neo-yellow)', display: 'inline-block', padding: '2px 10px', border: '2px solid #000', marginTop: 8 }}>
+            {getLevelEmoji(p.xp ?? 0)} مستوى {level} — {getLevelTitle(level)}
           </div>
-          <div style={{ width: '100%', height: 10, background: '#E5E7EB', border: '2px solid var(--bg-dark-purple)', overflow: 'hidden', marginTop: 12 }}>
-            <div style={{ height: '100%', width: `${getLevelProgress(p.xp ?? 0)}%`, background: 'var(--bg-green)', transition: 'width 0.3s ease' }} />
+          <div style={{ width: '100%', height: 16, background: '#DDD', border: '3px solid #000', overflow: 'hidden', marginTop: 16, borderRadius: 0 }}>
+            <div style={{ height: '100%', width: `${getLevelProgress(p.xp ?? 0)}%`, background: 'var(--neo-green)', borderRight: '3px solid #000' }} />
           </div>
-          <div style={{ fontSize: 10, color: 'var(--color-muted)', fontWeight: 700, marginTop: 4 }}>
-            {p.xp ?? 0} / {xpForNextLevel(level)} XP
+          <div style={{ fontSize: 10, color: '#000', fontWeight: 900, marginTop: 6 }}>
+            {p.xp ?? 0} / {xpForNextLevel(level)} نقطة خبرة
           </div>
         </div>
 
         {/* Overview Stats */}
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {[
-            { val: games, label: 'مباريات', color: 'var(--bg-dark-purple)' },
-            { val: wins, label: 'انتصارات', color: 'var(--bg-pink)' },
-            { val: `${winRate}%`, label: 'نسبة الفوز', color: 'var(--bg-green)' },
-            { val: p.coins || 0, label: 'عملة', color: 'var(--bg-yellow)' },
+            { val: games, label: 'مباريات', color: '#000' },
+            { val: wins, label: 'فوز', color: 'var(--neo-pink)' },
+            { val: `${winRate}%`, label: 'معدل', color: 'var(--neo-green)' },
+            { val: p.coins || 0, label: 'عملات', color: 'var(--neo-yellow)' },
           ].map(s => (
-            <div key={s.label} className="card" style={{ flex: 1, padding: 14, textAlign: 'center' }}>
-              <div style={{ fontSize: 22, fontWeight: 950, color: s.color }}>{s.val}</div>
-              <div style={{ fontSize: 10, color: 'var(--color-muted)', fontWeight: 800 }}>{s.label}</div>
+            <div key={s.label} className="card" style={{ padding: '12px 2px', textAlign: 'center', borderRadius: 0, border: '2px solid #000', boxShadow: '3px 3px 0 #000' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: s.color }}>{s.val}</div>
+              <div style={{ fontSize: 8, color: '#555', fontWeight: 900 }}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Streak & Rank */}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div className="card" style={{ flex: 1, padding: 14, textAlign: 'center' }}>
-            <div style={{ fontSize: 28 }}>{getStreakEmoji(streak)}</div>
-            <div style={{ fontSize: 18, fontWeight: 950 }}>{streak}</div>
-            <div style={{ fontSize: 10, color: 'var(--color-muted)', fontWeight: 800 }}>ستريك أيام</div>
+        {/* Streak & Extra */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div className="card" style={{ flex: 1, padding: '14px 10px', textAlign: 'center', borderRadius: 0, border: '3px solid #000', boxShadow: '4px 4px 0 var(--neo-pink)' }}>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>{getStreakEmoji(streak)}</div>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>{streak}</div>
+            <div style={{ fontSize: 9, color: '#555', fontWeight: 900 }}>يوم متتالي</div>
           </div>
-          <div className="card" style={{ flex: 1, padding: 14, textAlign: 'center' }}>
-            <div style={{ fontSize: 28 }}>🏆</div>
-            <div style={{ fontSize: 18, fontWeight: 950 }}>{p.wins_draw || 0}</div>
-            <div style={{ fontSize: 10, color: 'var(--color-muted)', fontWeight: 800 }}>فوز رسم</div>
+          <div className="card" style={{ flex: 1, padding: '14px 10px', textAlign: 'center', borderRadius: 0, border: '3px solid #000', boxShadow: '4px 4px 0 var(--neo-yellow)' }}>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>🎨</div>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>{p.wins_draw || 0}</div>
+            <div style={{ fontSize: 9, color: '#555', fontWeight: 900 }}>فوز بالرسم</div>
           </div>
-          <div className="card" style={{ flex: 1, padding: 14, textAlign: 'center' }}>
-            <div style={{ fontSize: 28 }}>⚡</div>
-            <div style={{ fontSize: 18, fontWeight: 950 }}>{p.xp || 0}</div>
-            <div style={{ fontSize: 10, color: 'var(--color-muted)', fontWeight: 800 }}>XP كلي</div>
+          <div className="card" style={{ flex: 1, padding: '14px 10px', textAlign: 'center', borderRadius: 0, border: '3px solid #000', boxShadow: '4px 4px 0 var(--neo-cyan)' }}>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>⚡</div>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>{p.xp || 0}</div>
+            <div style={{ fontSize: 9, color: '#555', fontWeight: 900 }}>مجموع XP</div>
           </div>
         </div>
 
-        {/* Per-Mode Stats */}
-        <div style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>إحصائيات الأوضاع</div>
+        {/* Per-Mode */}
+        <div style={{ fontSize: 13, fontWeight: 900, color: '#000', background: 'var(--neo-green)', display: 'inline-block', padding: '2px 8px', border: '2px solid #000', marginTop: 10 }}>إحصائيات الأوضاع</div>
         {Object.entries(MODE_LABELS).map(([mode, info]) => {
           const played = mode === 'monkey' ? monkeyPlayed : mode === 'draw' ? drawPlayed : survivalPlayed;
           const modeWins = mode === 'draw' ? (p.wins_draw || 0) : mode === 'monkey' ? Math.max(0, wins - (p.wins_draw || 0)) : 0;
           const rate = played > 0 ? Math.round((modeWins / played) * 100) : 0;
 
           return (
-            <div key={mode} className="card" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%',
-                background: info.color, border: '3px solid var(--bg-dark-purple)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
-              }}>
+            <div key={mode} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, borderRadius: 0, border: '3px solid #000', boxShadow: '4px 4px 0 #000' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 0, background: mode === 'monkey' ? 'var(--neo-pink)' : mode === 'draw' ? 'var(--neo-yellow)' : 'var(--neo-green)', border: '3px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, boxShadow: '2px 2px 0 #000' }}>
                 {info.emoji}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>{info.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#000' }}>{info.label}</div>
                 <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: 'var(--color-muted)', fontWeight: 700 }}>{played} لعبة</span>
-                  <span style={{ fontSize: 11, color: 'var(--bg-green)', fontWeight: 700 }}>{modeWins} فوز</span>
-                  <span style={{ fontSize: 11, color: 'var(--bg-pink)', fontWeight: 700 }}>{rate}%</span>
+                  <span style={{ fontSize: 10, color: '#000', fontWeight: 900 }}>{played} مباريات</span>
+                  <span style={{ fontSize: 10, color: '#000', fontWeight: 900 }}>{modeWins} فوز</span>
+                  <span style={{ fontSize: 10, color: '#000', fontWeight: 900 }}>{rate}% معدل</span>
                 </div>
               </div>
             </div>
@@ -131,30 +125,27 @@ export default function ProfileStatsScreen() {
         })}
 
         {/* Match History */}
-        <div style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>آخر المباريات</div>
+        <div style={{ fontSize: 13, fontWeight: 900, color: '#000', background: 'var(--neo-cyan)', display: 'inline-block', padding: '2px 8px', border: '2px solid #000', marginTop: 10 }}>المباريات الأخيرة</div>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}><LoadingSpinner /></div>
         ) : matches.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--color-muted)', fontSize: 13, fontWeight: 700, padding: 20 }}>
-            لا توجد مباريات بعد — العب الأولى! 🎮
+          <div style={{ textAlign: 'center', color: '#666', fontSize: 12, fontWeight: 900, padding: 30, background: '#FFF', border: '3px dashed #000' }}>
+            لا توجد مباريات مسجلة بعد 🎮
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {matches.map(m => {
               const info = MODE_LABELS[m.mode] || MODE_LABELS.monkey;
               const date = m.playedAt?.toDate?.() || new Date();
-              const timeStr = date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
+              const timeStr = date.toLocaleDateString('ar', { month: 'short', day: 'numeric' });
               return (
-                <div key={m.id} className="card" style={{
-                  padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10,
-                  borderLeft: `5px solid ${m.won ? 'var(--bg-green)' : 'var(--bg-pink)'}`,
-                }}>
+                <div key={m.id} className="card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 0, border: '3px solid #000', borderLeft: `8px solid ${m.won ? 'var(--neo-green)' : 'var(--neo-pink)'}` }}>
                   <span style={{ fontSize: 20 }}>{info.emoji}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--bg-dark-purple)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: '#000' }}>
                       {info.label} — {m.won ? 'فوز ✅' : 'خسارة ❌'}
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--color-muted)', fontWeight: 700 }}>
+                    <div style={{ fontSize: 10, color: '#555', fontWeight: 900 }}>
                       {timeStr} • {m.players || '?'} لاعبين
                     </div>
                   </div>

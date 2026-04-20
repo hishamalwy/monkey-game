@@ -7,30 +7,27 @@ import { appCategories } from '../data/categories';
 import { playSound, getHornType, startHorn, stopHorn } from '../utils/audio';
 import { isPlayerMuted } from '../services/socket';
 
-const MONKEY_LIMIT = 4; // 4 أرباع = قرد كامل = خروج
+const MONKEY_LIMIT = 4;
 
 function checkGameOver(players, playerOrder) {
   return playerOrder.filter(uid => players[uid] && (players[uid].quarterMonkeys || 0) < MONKEY_LIMIT);
 }
 
-// syncHornState was removed - now using Socket.io for low-latency events
-
 export function useRoom(roomCode) {
   const [room, setRoom] = useState(undefined);
   const [computedTimer, setComputedTimer] = useState(null);
   const timerRef = useRef(null);
-  const penaltyFiredRef = useRef(false); // prevent double-fire on timer
-  const penaltyProcessingRef = useRef(false); // Prevent concurrent penalty updates
-  const prevPlayerUidRef = useRef(null); // Track previous player for penalty reset
-  const prevStatusRef = useRef(null); // Track previous status for penalty reset
+  const penaltyFiredRef = useRef(false);
+  const penaltyProcessingRef = useRef(false);
+  const prevPlayerUidRef = useRef(null);
+  const prevStatusRef = useRef(null);
   const uid = auth.currentUser?.uid;
 
   const remoteHornPlayingRef = useRef(false);
 
-  // Global stop on unmount
   useEffect(() => {
     return () => {
-      stopHorn(); 
+      stopHorn();
     };
   }, []);
 
@@ -39,7 +36,6 @@ export function useRoom(roomCode) {
     const unsub = listenToRoom(roomCode, (data) => {
       setRoom(data);
 
-      // Reset penalty guard reliably
       const curPlayerUid = data?.gameState?.currentPlayerUid;
       const curStatus = data?.status;
       if (curPlayerUid !== prevPlayerUidRef.current || curStatus !== prevStatusRef.current) {
@@ -48,7 +44,6 @@ export function useRoom(roomCode) {
       prevPlayerUidRef.current = curPlayerUid;
       prevStatusRef.current = curStatus;
 
-      // Firestore Sound Sync (Fallback/Secondary)
       const isHonking = data?.gameState?.isHonking;
       const isRemoteHonker = isHonking && data.gameState.honkerUid !== uid;
       if (isRemoteHonker && !remoteHornPlayingRef.current) {
@@ -64,7 +59,6 @@ export function useRoom(roomCode) {
     return unsub;
   }, [roomCode, uid]);
 
-  // Client-side timer
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (!room?.gameState || !room?.timeLimit || room.timeLimit === 0) {
@@ -92,21 +86,19 @@ export function useRoom(roomCode) {
     const order = room.playerOrder || [];
     const playersMap = room.players;
     const currentIdx = order.indexOf(room.gameState.currentPlayerUid);
-    
-    // Check up to next N-1 players to find a survivor
+
     for (let i = 1; i <= order.length; i++) {
       const candidateUid = order[(currentIdx + i) % order.length];
       const p = playersMap[candidateUid];
       if (p && (p.quarterMonkeys || 0) < MONKEY_LIMIT) return candidateUid;
     }
-    return room.gameState.currentPlayerUid; // Should not happen with game over check
+    return room.gameState.currentPlayerUid;
   }, [room]);
 
-  // ── Apply penalty & check for game over ──────────────────────
   const applyPenalty = useCallback(async (loserUid, reason, type = 'penalty') => {
     if (!room || (room.status !== 'playing' && room.status !== 'suspect_question') || penaltyProcessingRef.current) return;
     penaltyProcessingRef.current = true;
-    
+
     try {
       const newPlayers = { ...room.players };
       if (newPlayers[loserUid]) {
@@ -118,7 +110,6 @@ export function useRoom(roomCode) {
 
       const surviving = checkGameOver(newPlayers, room.playerOrder || []);
 
-      // Game over if only 1 (or 0) survivors
       if (surviving.length <= 1) {
         playSound('win');
         const winnerUid = surviving[0] || null;
@@ -145,7 +136,6 @@ export function useRoom(roomCode) {
     }
   }, [room, roomCode]);
 
-  // ── Letter press ─────────────────────────────────────────────
   const pressLetter = useCallback(async (letter) => {
     if (!isMyTurn || !room) return;
     const currentWord = (room.gameState.currentWord || '');
@@ -153,31 +143,25 @@ export function useRoom(roomCode) {
     const normNewWord = normalizeArabic(newWordString);
     const usedWords = room.gameState.usedWords || [];
 
-    // DUPLICATE CHECK: If the player types a letter that finishes a word ALREADY USED
     const cat = appCategories.find(c => c.id === room.category) || appCategories[0];
     const categoryWords = cat.words;
     const normalizedCategory = categoryWords.map(w => normalizeArabic(w));
 
-    // AUTO-COMPLETION REMOVED: 
-    // We no longer automatically finish the round for words like 'Mali'.
-    // The game continues and the next player must decide to Challenge or Continue.
-
     const exactIdx = normalizedCategory.findIndex(w => w === normNewWord);
-    
-    // Auto-completion check: NORMAL COMPLETION = NO PENALTY, JUST ROUND END
+
     if (exactIdx !== -1 && !usedWords.map(w => normalizeArabic(w)).includes(normNewWord)) {
        playSound('win');
        const updatedUsed = [...usedWords, normNewWord];
-       
+
        await updateGameState(roomCode, {
           status: 'round_result',
-          'gameState.currentWord': newWordString, // Sync the visual word too
+          'gameState.currentWord': newWordString,
           'gameState.usedWords': updatedUsed,
-          lastResult: { 
-            type: 'word_complete', 
-            loserUid: null, 
-            reason: `اكتملت الدولة: ${categoryWords[exactIdx]}`, 
-            word: categoryWords[exactIdx] 
+          lastResult: {
+            type: 'word_complete',
+            loserUid: null,
+            reason: `اكتملت الدولة: ${categoryWords[exactIdx]}`,
+            word: categoryWords[exactIdx],
           },
           'gameState.isHonking': false,
           'gameState.honkerUid': null,
@@ -194,7 +178,6 @@ export function useRoom(roomCode) {
     });
   }, [isMyTurn, room, roomCode, uid, nextPlayerUid, applyPenalty]);
 
-  // ── Delete ───────────────────────────────────────────────────
   const pressDelete = useCallback(async () => {
     if (!isMyTurn || !room) return;
     const word = room.gameState.currentWord || '';
@@ -202,7 +185,6 @@ export function useRoom(roomCode) {
     await updateGameState(roomCode, { 'gameState.currentWord': word.slice(0, -1) });
   }, [isMyTurn, room, roomCode]);
 
-  // ── Challenge ────────────────────────────────────────────────
   const pressChallenge = useCallback(async () => {
     if (!isMyTurn || !room) return;
     const word = room.gameState.currentWord || '';
@@ -224,13 +206,10 @@ export function useRoom(roomCode) {
     });
   }, [isMyTurn, room, roomCode, uid]);
 
-  // الهوست أو النظام ينهي التحدي
   const resolveSuspect = useCallback(async (isValid) => {
     if (!room || room.status !== 'suspect_question') return;
     const { suspectedUid, challengerUid, suspectAnswer, challengingWord } = room.gameState;
 
-    // A word is only a "win" for the suspect if it's VALID and LONGER than what's on board
-    // If it's a valid word but already finished at that letter, it's a loss for the suspect!
     const isActuallyLonger = (suspectAnswer || '').length > (challengingWord || '').length;
 
     if (isValid && suspectAnswer) {
@@ -240,31 +219,24 @@ export function useRoom(roomCode) {
     }
 
     if (isValid && isActuallyLonger) {
-      // Suspect was bluffing a longer word successfully! Challenger loses.
       await applyPenalty(challengerUid, `المشتبه به كان صادقاً! الكلمة: ${suspectAnswer}`, 'challenge_failed');
     } else {
-      // Suspect failed: either invalid word, or they just confirmed they finished a word!
-      const reason = !isValid 
-        ? `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.` 
+      const reason = !isValid
+        ? `التحدي ناجح! الكلمة غير صحيحة أو لا تكمل ما سبق.`
         : `خسرت لأنك أكملت كلمة! الكلمة: ${suspectAnswer}`;
       await applyPenalty(suspectedUid, reason, 'challenge_success');
     }
   }, [room, applyPenalty, roomCode]);
 
-
-  // المشتبه به يدخل الكلمة
   const submitSuspectWord = useCallback(async (answer) => {
     if (!room || room.status !== 'suspect_question') return;
     await updateGameState(roomCode, { 'gameState.suspectAnswer': answer });
-    // Manual/Host resolution only
   }, [room, roomCode]);
 
-  // ── Next round ───────────────────────────────────────────────
   const confirmNextRound = useCallback(async () => {
     if (!isHost || !room) return;
     const loserUid = room.lastResult?.loserUid || room.gameState?.currentPlayerUid;
     const order = room.playerOrder || [];
-    // Start from loser's position, skip eliminated players
     let nextUid = loserUid;
     for (let i = 0; i < order.length; i++) {
       const candidate = order[(order.indexOf(loserUid) + i) % order.length];
@@ -285,12 +257,10 @@ export function useRoom(roomCode) {
     });
   }, [isHost, room, roomCode]);
 
-  // ── Leave room ───────────────────────────────────────────────
   const doLeaveRoom = useCallback(async () => {
-    await leaveRoom(roomCode, uid, isHost);
-  }, [roomCode, uid, isHost]);
+    await leaveRoom(roomCode, uid);
+  }, [roomCode, uid]);
 
-  // ── Timer expiry — scheduled from real Firestore timestamp ─────────
   useEffect(() => {
     if (!isHost || !room?.timeLimit || room.timeLimit === 0 || room.status !== 'playing') return;
     const { timeRemainingAtLastAction, lastActionAt } = room.gameState || {};
@@ -299,8 +269,6 @@ export function useRoom(roomCode) {
     const expiresAt = lastActionAt.toMillis() + timeRemainingAtLastAction * 1000;
     const msLeft = expiresAt - Date.now();
 
-    // If the round already expired before we got here, skip — prevents
-    // firing a fresh penalty the instant a new round starts (race fix).
     if (msLeft <= 0) return;
 
     const timeoutId = setTimeout(() => {
@@ -312,13 +280,10 @@ export function useRoom(roomCode) {
     return () => clearTimeout(timeoutId);
   }, [isHost, room?.gameState?.lastActionAt, room?.gameState?.timeRemainingAtLastAction, room?.status]);
 
-
-  const resetToLobby = useCallback(async () => {
+  const resetToLobbyFn = useCallback(async () => {
     if (!isHost) return;
-    await resetRoomToLobby(roomCode);
-  }, [isHost, roomCode]);
-
-
+    await resetRoomToLobby(roomCode, uid);
+  }, [isHost, roomCode, uid]);
 
   return {
     room,
@@ -333,12 +298,12 @@ export function useRoom(roomCode) {
     submitSuspectWord,
     resolveSuspect,
     leaveRoom: doLeaveRoom,
-    resetToLobby,
+    resetToLobby: resetToLobbyFn,
     triggerHorn: (on) => {
-      updateGameState(roomCode, { 
+      updateGameState(roomCode, {
         'gameState.isHonking': on,
         'gameState.honkerUid': on ? uid : null,
-        'gameState.lastHornType': getHornType()
+        'gameState.lastHornType': getHornType(),
       });
     },
   };

@@ -8,9 +8,12 @@ function getOpposingTeam(team) {
   return team === 'A' ? 'B' : 'A';
 }
 
-export async function startCharadesGame(roomCode) {
+export async function startCharadesGame(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) throw new Error('الغرفة غير موجودة');
   const room = snap.data();
+  if (room.hostUid !== callerUid) throw new Error('فقط الهوست يبدأ اللعبة');
+
   const scoreTarget = room.scoreTarget || 20;
   const charadesTime = room.charadesTime || 60;
 
@@ -45,8 +48,11 @@ export async function startCharadesGame(roomCode) {
 }
 
 export async function charadesJoinTeam(roomCode, uid, team) {
+  if (team !== 'A' && team !== 'B') return;
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  const room = snap.data();
+  if (!room || !(room.players || {})[uid]) return;
+  const cs = room.charadesState;
   if (!cs || cs.phase !== 'chooseTeam') return;
 
   const teams = {
@@ -71,12 +77,14 @@ export async function charadesSetTeamLeader(roomCode, team, uid) {
   });
 }
 
-export async function charadesConfirmTeams(roomCode) {
+export async function charadesConfirmTeams(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (room.hostUid !== callerUid) return;
+  const cs = room.charadesState;
   if (!cs) return;
 
-  const room = snap.data();
   const allPlayers = room.playerOrder || [];
   const hostUid = room.hostUid;
   let teams = {
@@ -91,12 +99,10 @@ export async function charadesConfirmTeams(roomCode) {
   }
 
   let teamLeaders = { ...(cs.teamLeaders || { A: null, B: null }) };
-  
-  // Host is always leader of their team
+
   if (teams.A.includes(hostUid)) teamLeaders.A = hostUid;
   else if (teams.B.includes(hostUid)) teamLeaders.B = hostUid;
 
-  // Ensure other team has a leader too
   if (!teamLeaders.A && teams.A.length > 0) teamLeaders.A = teams.A[0];
   if (!teamLeaders.B && teams.B.length > 0) teamLeaders.B = teams.B[0];
 
@@ -135,14 +141,16 @@ export async function charadesVoteTitle(roomCode, uid, optionIndex) {
   await updateDoc(doc(db, 'rooms', roomCode), patch);
 }
 
-export async function charadesResolveTitle(roomCode) {
+export async function charadesResolveTitle(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (room.hostUid !== callerUid) return;
+  const cs = room.charadesState;
   if (!cs || cs.phase !== 'titleVote' || !cs.titleOptions?.length) return;
 
   const votes = cs.titleVotes || {};
   const counts = {};
-  // If no one voted, we'll pick first option
   if (Object.keys(votes).length === 0) {
     counts[0] = 1;
   } else {
@@ -199,9 +207,12 @@ export async function charadesVoteActor(roomCode, uid, actorUid) {
   await updateDoc(doc(db, 'rooms', roomCode), patch);
 }
 
-export async function charadesResolveActor(roomCode) {
+export async function charadesResolveActor(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (room.hostUid !== callerUid) return;
+  const cs = room.charadesState;
   if (!cs || cs.phase !== 'selectActor') return;
 
   const guessingTeam = getOpposingTeam(cs.choosingTeam);
@@ -209,9 +220,8 @@ export async function charadesResolveActor(roomCode) {
 
   const votes = cs.actorVotes || {};
   const counts = {};
-  
+
   if (Object.keys(votes).length === 0) {
-    // Pick someone who hasn't acted yet, or just anyone if all acted
     const actedSet = new Set(cs.actedPlayers?.[guessingTeam] || []);
     const candidates = guessingTeamMembers.filter(uid => !actedSet.has(uid));
     const fallback = candidates.length > 0 ? candidates[0] : guessingTeamMembers[0];
@@ -249,7 +259,7 @@ export async function charadesResolveActor(roomCode) {
     'charadesState.currentActorUid': winnerUid,
     'charadesState.currentChallenge': challenge ? challenge.text : null,
     'charadesState.actorReady': false,
-    'charadesState.prepTimerEndsAt': Date.now() + 20000, // 20s prep
+    'charadesState.prepTimerEndsAt': Date.now() + 20000,
     'charadesState.timeEndsAt': null,
     'charadesState.guessedCorrectly': false,
     'charadesState.actorVotes': {},
@@ -258,10 +268,12 @@ export async function charadesResolveActor(roomCode) {
   });
 }
 
-export async function charadesActorReady(roomCode) {
+export async function charadesActorReady(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
   const cs = snap.data()?.charadesState;
   if (!cs || cs.phase !== 'acting' || cs.actorReady) return;
+  if (cs.currentActorUid !== callerUid) return;
 
   const charadesTime = cs.charadesTime || 60;
 
@@ -272,9 +284,11 @@ export async function charadesActorReady(roomCode) {
   });
 }
 
-export async function charadesHostConfirmCorrect(roomCode) {
+export async function charadesHostConfirmCorrect(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
   const room = snap.data();
+  if (room.hostUid !== callerUid) return;
   const cs = room?.charadesState;
   if (!cs || cs.phase !== 'acting') return;
 
@@ -283,7 +297,6 @@ export async function charadesHostConfirmCorrect(roomCode) {
   const halfTime = charadesTime / 2;
   const timeLeft = cs.timeEndsAt ? Math.max(0, Math.round((cs.timeEndsAt - Date.now()) / 1000)) : charadesTime;
 
-  // نقطتين لو جاوبوا قبل نص الوقت، نقطة واحدة لو بعد نص الوقت
   const beforeHalf = timeLeft > halfTime;
   const points = beforeHalf ? 2 : 1;
 
@@ -310,10 +323,14 @@ export async function charadesHostConfirmCorrect(roomCode) {
   await updateDoc(doc(db, 'rooms', roomCode), patch);
 }
 
-export async function charadesLeaderAdjustScore(roomCode, team, delta) {
+export async function charadesLeaderAdjustScore(roomCode, callerUid, team, delta) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (room.hostUid !== callerUid) return;
+  const cs = room.charadesState;
   if (!cs) return;
+  if (team !== 'A' && team !== 'B') return;
 
   const current = cs.scores?.[team] || 0;
   const newScore = Math.max(0, current + delta);
@@ -323,10 +340,12 @@ export async function charadesLeaderAdjustScore(roomCode, team, delta) {
   });
 }
 
-
-export async function charadesEndRound(roomCode) {
+export async function charadesEndRound(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (room.hostUid !== callerUid) return;
+  const cs = room.charadesState;
   if (!cs) return;
 
   const patch = {
@@ -349,9 +368,12 @@ export async function charadesEndRound(roomCode) {
   await updateDoc(doc(db, 'rooms', roomCode), patch);
 }
 
-export async function charadesNextRound(roomCode) {
+export async function charadesNextRound(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const cs = snap.data()?.charadesState;
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (room.hostUid !== callerUid) return;
+  const cs = room.charadesState;
   if (!cs) return;
 
   const scoreTarget = cs.scoreTarget || 20;

@@ -42,7 +42,7 @@ export default function AvatarPicker({ selected, onChange, purchases = [], onLoc
                 </div>
               )}
             </button>
-            <div style={{ fontSize: 11, fontWeight: 950, marginTop: 6, color: 'var(--bg-dark-purple)' }}>
+            <div style={{ fontSize: 11, fontWeight: 900, marginTop: 6, color: 'var(--bg-dark-purple)' }}>
               {isOwned ? (isActive ? 'مختار' : 'مملوك') : `${item.price} 🪙`}
             </div>
           </div>

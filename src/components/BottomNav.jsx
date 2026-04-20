@@ -23,7 +23,7 @@ export default function BottomNav({ active, onNavigate }) {
               alt={tab.label}
               className="icon"
             />
-            <span className="label">{tab.label}</span>
+            <span className="label" style={{ fontWeight: 900 }}>{tab.label}</span>
           </button>
         );
       })}

@@ -1,7 +1,8 @@
 import {
   doc, getDoc, setDoc, updateDoc, onSnapshot,
   serverTimestamp, deleteField, arrayUnion, deleteDoc,
-  query, where, getDocs, limit, arrayRemove, collection
+  query, where, getDocs, limit, arrayRemove, collection,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from './config';
 import { normalizeArabic } from '../utils/textUtils';
@@ -24,12 +25,10 @@ async function generateUniqueCode() {
 }
 
 export async function createRoom(userProfile, settings = {}) {
-  // 🧹 Cleanup: Delete any existing rooms created by this user
   try {
-    const q = query(collection(db, 'rooms'), where('hostUid', '==', userProfile.uid));
+    const q = query(collection(db, 'rooms'), where('hostUid', '==', userProfile.uid), limit(10));
     const snap = await getDocs(q);
-    const batch = snap.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(batch);
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
   } catch (err) {
     console.error('Room cleanup failed:', err);
   }
@@ -45,7 +44,7 @@ export async function createRoom(userProfile, settings = {}) {
     mode: settings.mode || 'monkey',
     category: settings.category || 'countries',
     maxPlayers: settings.maxPlayers || 5,
-    isPublic: settings.isPublic ?? true, 
+    isPublic: settings.isPublic ?? true,
     timeLimit: settings.timeLimit || 15,
     scoreTarget: settings.scoreTarget || 40,
     drawTime: settings.drawTime || 80,
@@ -61,15 +60,15 @@ export async function createRoom(userProfile, settings = {}) {
         avatarId: userProfile.avatarId || 0,
         isReady: true,
         points: 0,
-        quarterMonkeys: 0
-      }
+        quarterMonkeys: 0,
+      },
     },
     gameState: {
       currentPlayerUid: null,
       currentWord: '',
       history: [],
-      lastActionAt: null
-    }
+      lastActionAt: null,
+    },
   };
 
   await setDoc(roomRef, roomData);
@@ -78,23 +77,28 @@ export async function createRoom(userProfile, settings = {}) {
 
 export async function joinRoom(code, userProfile) {
   const roomRef = doc(db, 'rooms', code);
-  const snap = await getDoc(roomRef);
 
-  if (!snap.exists()) throw new Error('الغرفة غير موجودة');
-  const room = snap.data();
-  if (room.status !== 'lobby') throw new Error('اللعبة بدأت بالفعل');
-  if (Object.keys(room.players).length >= (room.maxPlayers || 8)) throw new Error('الغرفة ممتلئة');
-  if (room.players[userProfile.uid]) return; // already in room
+  await runTransaction(db, async (txn) => {
+    const snap = await txn.get(roomRef);
+    if (!snap.exists()) throw new Error('الغرفة غير موجودة');
+    const room = snap.data();
 
-  await updateDoc(roomRef, {
-    [`players.${userProfile.uid}`]: {
-      uid: userProfile.uid,
-      username: userProfile.username,
-      avatarId: userProfile.avatarId,
-      isReady: true,
-      quarterMonkeys: 0,
-    },
-    playerOrder: arrayUnion(userProfile.uid),
+    if (room.status !== 'lobby') throw new Error('اللعبة بدأت بالفعل');
+    if (Object.keys(room.players || {}).length >= (room.maxPlayers || 8)) {
+      throw new Error('الغرفة ممتلئة');
+    }
+    if (room.players[userProfile.uid]) return;
+
+    txn.update(roomRef, {
+      [`players.${userProfile.uid}`]: {
+        uid: userProfile.uid,
+        username: userProfile.username,
+        avatarId: userProfile.avatarId,
+        isReady: true,
+        quarterMonkeys: 0,
+      },
+      playerOrder: arrayUnion(userProfile.uid),
+    });
   });
 }
 
@@ -105,20 +109,30 @@ export async function setReady(code, uid, isReady) {
 }
 
 export async function startGame(code) {
-  const snap = await getDoc(doc(db, 'rooms', code));
-  const room = snap.data();
-  const firstUid = room.playerOrder[0];
+  const roomRef = doc(db, 'rooms', code);
 
-  await updateDoc(doc(db, 'rooms', code), {
-    status: 'playing',
-    gameState: {
-      currentWord: '',
-      usedWords: [],
-      currentPlayerUid: firstUid,
-      timeRemainingAtLastAction: room.timeLimit,
-      lastActionAt: serverTimestamp(),
-    },
-    lastResult: null,
+  await runTransaction(db, async (txn) => {
+    const snap = await txn.get(roomRef);
+    if (!snap.exists()) throw new Error('الغرفة غير موجودة');
+    const room = snap.data();
+
+    if (room.hostUid !== txn._authUid) {
+      throw new Error('فقط الهوست يقدر يبدأ اللعبة');
+    }
+    if (room.status !== 'lobby') throw new Error('اللعبة بدأت بالفعل');
+
+    const firstUid = room.playerOrder[0];
+    txn.update(roomRef, {
+      status: 'playing',
+      gameState: {
+        currentWord: '',
+        usedWords: [],
+        currentPlayerUid: firstUid,
+        timeRemainingAtLastAction: room.timeLimit,
+        lastActionAt: serverTimestamp(),
+      },
+      lastResult: null,
+    });
   });
 }
 
@@ -126,54 +140,68 @@ export async function updateGameState(code, patch) {
   await updateDoc(doc(db, 'rooms', code), patch);
 }
 
-export async function updateRoomSettings(code, settings) {
-  await updateDoc(doc(db, 'rooms', code), settings);
-}
-
-export async function leaveRoom(code, uid, isHost) {
+export async function updateRoomSettings(code, uid, settings) {
   const roomRef = doc(db, 'rooms', code);
-  
-  // 🚪 If host leaves, kill the room for everyone
-  if (isHost) {
-    await deleteDoc(roomRef);
-    return;
-  }
-
   const snap = await getDoc(roomRef);
-  if (!snap.exists()) return;
+  if (!snap.exists()) throw new Error('الغرفة غير موجودة');
+  if (snap.data().hostUid !== uid) throw new Error('فقط الهوست يقدر يغير الإعدادات');
+  if (snap.data().status !== 'lobby') throw new Error('ما تقدر تغير الإعدادات بعد ما اللعبة تبدأ');
 
-  const room = snap.data();
-  const currentUids = Object.keys(room.players || {});
-  const remainingUids = currentUids.filter(id => id !== uid);
-
-  // If nobody left, delete the room
-  if (remainingUids.length === 0) {
-    await deleteDoc(roomRef);
-    return;
-  }
-
-  const patch = {
-    [`players.${uid}`]: deleteField(),
-    playerOrder: arrayRemove(uid),
-  };
-
-  await updateDoc(roomRef, patch);
+  await updateDoc(roomRef, settings);
 }
 
-export async function kickPlayer(code, uid) {
+export async function leaveRoom(code, uid) {
   const roomRef = doc(db, 'rooms', code);
-  await updateDoc(roomRef, {
-    [`players.${uid}`]: deleteField(),
-    playerOrder: arrayRemove(uid),
+
+  await runTransaction(db, async (txn) => {
+    const snap = await txn.get(roomRef);
+    if (!snap.exists()) return;
+    const room = snap.data();
+    const isHost = room.hostUid === uid;
+
+    if (isHost) {
+      txn.delete(roomRef);
+      return;
+    }
+
+    const currentUids = Object.keys(room.players || {});
+    const remainingUids = currentUids.filter(id => id !== uid);
+
+    if (remainingUids.length === 0) {
+      txn.delete(roomRef);
+      return;
+    }
+
+    txn.update(roomRef, {
+      [`players.${uid}`]: deleteField(),
+      playerOrder: arrayRemove(uid),
+    });
   });
 }
 
-export async function resetRoomToLobby(code) {
+export async function kickPlayer(code, hostUid, targetUid) {
+  const roomRef = doc(db, 'rooms', code);
+  const snap = await getDoc(roomRef);
+  if (!snap.exists()) throw new Error('الغرفة غير موجودة');
+  const room = snap.data();
+
+  if (room.hostUid !== hostUid) throw new Error('فقط الهوست يقدر يطرد لاعب');
+  if (hostUid === targetUid) throw new Error('ما تقدر تطرد نفسك');
+  if (!room.players[targetUid]) throw new Error('اللاعب مش في الغرفة');
+
+  await updateDoc(roomRef, {
+    [`players.${targetUid}`]: deleteField(),
+    playerOrder: arrayRemove(targetUid),
+  });
+}
+
+export async function resetRoomToLobby(code, hostUid) {
   const roomRef = doc(db, 'rooms', code);
   const snap = await getDoc(roomRef);
   if (!snap.exists()) return;
+  if (snap.data().hostUid !== hostUid) throw new Error('فقط الهوست يقدر يعيد اللعبة');
   const room = snap.data();
-  
+
   const updates = {
     status: 'lobby',
     gameState: deleteField(),
@@ -181,10 +209,9 @@ export async function resetRoomToLobby(code) {
     survivalState: deleteField(),
     charadesState: deleteField(),
     lastResult: deleteField(),
-    currentWord: '', // Ensure old data is cleared
+    currentWord: '',
   };
 
-  // Reset all players stats for the new game
   if (room.players) {
     Object.keys(room.players).forEach(uid => {
       updates[`players.${uid}.quarterMonkeys`] = 0;
@@ -199,13 +226,13 @@ export async function cleanupOldRooms() {
   try {
     const twoHoursAgo = new Date();
     twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
-    
+
     const q = query(
       collection(db, 'rooms'),
       where('createdAt', '<', twoHoursAgo),
       limit(20)
     );
-    
+
     const snap = await getDocs(q);
     const batch = snap.docs.map(d => deleteDoc(d.ref));
     await Promise.all(batch);
@@ -222,7 +249,6 @@ export function listenToRoom(code, callback) {
 }
 
 export async function fetchPublicRooms() {
-  // Run a quick cleanup first
   cleanupOldRooms().catch(() => {});
 
   const q = query(
@@ -232,10 +258,43 @@ export async function fetchPublicRooms() {
     limit(20)
   );
   const snap = await getDocs(q);
-  // Manual filter for rooms with at least one player in playerOrder
   return snap.docs
     .map(d => d.data())
     .filter(room => (room.playerOrder || []).length > 0);
+}
+
+export async function quickPlay(userProfile, mode = 'monkey') {
+  const q = query(
+    collection(db, 'rooms'),
+    where('isPublic', '==', true),
+    where('status', '==', 'lobby'),
+    where('mode', '==', mode),
+    limit(10)
+  );
+  const snap = await getDocs(q);
+  const rooms = snap.docs.map(d => d.data()).filter(room => {
+    const count = (room.playerOrder || []).length;
+    return count > 0 && count < (room.maxPlayers || 5) && !room.players?.[userProfile.uid];
+  });
+
+  if (rooms.length > 0) {
+    rooms.sort((a, b) => (b.playerOrder?.length || 0) - (a.playerOrder?.length || 0));
+    const target = rooms[0];
+    await joinRoom(target.code, userProfile);
+    return target.code;
+  }
+
+  const settings = {
+    mode,
+    category: mode === 'draw' ? drawCategories[0].id : appCategories[0].id,
+    timeLimit: 15,
+    maxPlayers: 5,
+    isPublic: true,
+    drawTime: 80,
+    entryFee: 0,
+    wordChoices: 3,
+  };
+  return createRoom(userProfile, settings);
 }
 
 export function resolveChallenge(currentWord, categoryId, mode = 'monkey') {
@@ -243,11 +302,19 @@ export function resolveChallenge(currentWord, categoryId, mode = 'monkey') {
   const cat = cats.find(c => c.id === categoryId) || cats[0];
   const normalizedWords = cat.words.map(w => normalizeArabic(w));
   const normalizedWord = normalizeArabic(currentWord);
-  const isPrefixValid = normalizedWords.some(w => w.startsWith(normalizedWord));
 
-  if (isPrefixValid) {
-    const idx = normalizedWords.findIndex(w => w.startsWith(normalizedWord));
-    return { valid: true, word: cat.words[idx] };
+  let bestMatch = null;
+  let bestLength = 0;
+
+  for (let i = 0; i < normalizedWords.length; i++) {
+    if (normalizedWords[i].startsWith(normalizedWord) && normalizedWords[i].length > bestLength) {
+      bestMatch = cat.words[i];
+      bestLength = normalizedWords[i].length;
+    }
+  }
+
+  if (bestMatch) {
+    return { valid: true, word: bestMatch };
   }
   return { valid: false };
 }

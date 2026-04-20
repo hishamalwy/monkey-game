@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAudio } from '../context/AudioContext';
 import { fetchPublicRooms, joinRoom } from '../firebase/rooms';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Toast from '../components/ui/Toast';
@@ -10,12 +11,13 @@ import { useNavigation } from '../hooks/useNavigation';
 export default function BrowseRoomsScreen() {
   const nav = useNavigation();
   const { userProfile } = useAuth();
+  const { playClick, playJoin } = useAudio();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(null); // code of room being joined
+  const [joining, setJoining] = useState(null);
   const [toast, setToast] = useState('');
-
   const [joinCode, setJoinCode] = useState('');
+  const [modeFilter, setModeFilter] = useState('all');
 
   const loadRooms = async () => {
     setLoading(true);
@@ -29,14 +31,14 @@ export default function BrowseRoomsScreen() {
     }
   };
 
-  useEffect(() => {
-    loadRooms();
-  }, []);
+  useEffect(() => { loadRooms(); }, []);
 
   const handleJoin = async (code) => {
+    playClick();
     setJoining(code);
     try {
       await joinRoom(code, userProfile);
+      playJoin();
       nav.toLobby(code);
     } catch (e) {
       setToast(e.message || 'فشل الانضمام');
@@ -45,10 +47,17 @@ export default function BrowseRoomsScreen() {
   };
 
   const getModeLabel = (mode) => {
-    if (mode === 'draw') return '🎨 خمن و ارسم';
+    if (mode === 'draw') return '🎨 ارسم وخمن';
     if (mode === 'survival') return '⚔️ البقاء';
     if (mode === 'charades') return '🎭 بدون كلام';
     return '🔊 كلكس';
+  };
+
+  const getModeColor = (mode) => {
+    if (mode === 'draw') return 'var(--neo-cyan)';
+    if (mode === 'survival') return 'var(--neo-pink)';
+    if (mode === 'charades') return 'var(--neo-purple)';
+    return 'var(--neo-yellow)';
   };
 
   const getCatName = (room) => {
@@ -60,9 +69,11 @@ export default function BrowseRoomsScreen() {
 
   const handleManualJoin = async (codeStr) => {
     if (codeStr.length !== 4) return;
+    playClick();
     setJoining(codeStr);
     try {
       await joinRoom(codeStr, userProfile);
+      playJoin();
       nav.toLobby(codeStr);
     } catch (e) {
       setToast(e.message || 'كود غير صحيح');
@@ -77,181 +88,199 @@ export default function BrowseRoomsScreen() {
   };
 
   return (
-    <div style={{ 
-      width: '100%', height: '100%', display: 'flex', flexDirection: 'column', 
-      backgroundColor: '#FAFAFA',
-      backgroundImage: 'radial-gradient(rgba(28, 16, 63, 0.15) 2px, transparent 2px)',
-      backgroundSize: '24px 24px'
-    }}>
-      
-      {/* Dynamic Refresher Style */}
+    <div className="brutal-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+
       <style>{`
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .refreshing { animation: rotate 0.8s linear infinite; }
-        .room-card {
-           border: 4px solid var(--bg-dark-purple);
-           box-shadow: 6px 6px 0 var(--bg-dark-purple);
-           transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .room-card:hover { 
-           transform: translate(-3px, -3px);
-           box-shadow: 9px 9px 0 var(--bg-dark-purple);
-        }
-        .hero-section {
-           background: var(--bg-yellow);
-           border-bottom: 6px solid var(--bg-dark-purple);
-           padding: 32px 20px;
-           position: relative;
-           overflow: hidden;
-        }
-        .hero-pattern {
-           position: absolute;
-           top: -10px; right: -10px;
-           font-size: 80px;
-           opacity: 0.1;
-           transform: rotate(20deg);
-           pointer-events: none;
-        }
       `}</style>
 
       {/* Header */}
-      <div style={{ position: 'relative', zIndex: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF', borderBottom: '4px solid var(--bg-dark-purple)' }}>
-        <button onClick={nav.toHome} className="pop" style={{ background: '#FAFAFA', border: '3px solid var(--bg-dark-purple)', padding: '6px 14px', fontSize: 14, fontWeight: 900, boxShadow: '3px 3px 0 var(--bg-dark-purple)', cursor: 'pointer' }}>
+      <div style={{ position: 'relative', zIndex: 10, padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF', borderBottom: '5px solid #000' }}>
+        <button onClick={nav.toHome} className="pop" style={{ background: '#FFF', border: '4.5px solid #000', padding: '10px 18px', fontSize: 13, fontWeight: 900, boxShadow: '4px 4px 0 #000', cursor: 'pointer', borderRadius: 0, transition: 'none' }}>
           ← رجوع
         </button>
-        <div style={{ fontSize: 18, fontWeight: 950, color: 'var(--bg-dark-purple)' }}>الغرف العامة 🌍</div>
-        <button onClick={loadRooms} className="pop" style={{ background: 'var(--bg-yellow)', border: '3px solid var(--bg-dark-purple)', padding: '4px 10px', fontSize: 18, fontWeight: 900, boxShadow: '3px 3px 0 var(--bg-dark-purple)', cursor: 'pointer' }}>
+        <div style={{ fontSize: 18, fontWeight: 900, color: '#000' }}>الغرف العامة 🌍</div>
+        <button onClick={loadRooms} className="pop" style={{ background: 'var(--neo-cyan)', border: '4.5px solid #000', padding: '8px 14px', fontSize: 20, fontWeight: 900, boxShadow: '4px 4px 0 #000', cursor: 'pointer', borderRadius: 0, transition: 'none' }}>
           <span className={loading ? 'refreshing' : ''} style={{ display: 'inline-block' }}>🔄</span>
         </button>
       </div>
 
-      {/* Hero: Code Entry */}
+      {/* Code Entry */}
       <div style={{ padding: '16px 20px 8px' }}>
-         <div style={{ 
-           background: 'var(--bg-yellow)', border: '4px solid var(--bg-dark-purple)', 
-           boxShadow: '4px 4px 0 var(--bg-dark-purple)', padding: '16px', 
-           borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', 
-           position: 'relative', overflow: 'hidden' 
-         }}>
-           <div style={{ position: 'absolute', top: -10, right: -10, fontSize: 60, opacity: 0.1, transform: 'rotate(20deg)', pointerEvents: 'none' }}>🐒</div>
-           
-           <h1 style={{ fontSize: 16, fontWeight: 950, color: 'var(--bg-dark-purple)', marginBottom: 16, textAlign: 'center', marginTop: 0, zIndex: 2 }}>
-              لديك رمز دعوة؟ ادخله هنا! 🎫
-           </h1>
-           
-           <div style={{ position: 'relative', display: 'flex', flexDirection: 'row', direction: 'ltr', justifyContent: 'center', gap: 10, zIndex: 2 }}>
-              {[0, 1, 2, 3].map(i => (
-                <div key={i} className="pop" style={{
-                  width: 44, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, fontWeight: 950, background: '#FFF', color: 'var(--bg-dark-purple)',
-                  border: `3px solid ${joinCode.length === i ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
-                  boxShadow: joinCode.length === i ? '3px 3px 0 var(--bg-pink)' : '3px 3px 0 rgba(0,0,0,0.1)',
-                  borderRadius: 10, transition: 'all 0.1s',
-                  transform: joinCode.length === i ? 'scale(1.05) translateY(-3px)' : 'none'
-                }}>
-                  {joinCode[i] || ''}
-                </div>
-              ))}
-              <input 
-                type="text"
-                autoFocus
-                value={joinCode}
-                onChange={e => handleCodeChange(e.target.value)}
-                maxLength={4}
-                style={{
-                  position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%',
-                  direction: 'ltr'
-                }}
-              />
-           </div>
-           {joining && joinCode.length === 4 && (
-             <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', zIndex: 2 }}>
-               <LoadingSpinner size={20} color="var(--bg-dark-purple)" />
-             </div>
-           )}
-         </div>
-      </div>
+        <div style={{
+          background: 'var(--neo-yellow)', border: '5px solid #000',
+          boxShadow: '6px 6px 0 #000', padding: '16px',
+          borderRadius: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
+          position: 'relative', overflow: 'hidden'
+        }}>
+          <div style={{ position: 'absolute', top: -10, right: -10, fontSize: 60, opacity: 0.1, transform: 'rotate(20deg)', pointerEvents: 'none' }}>🎫</div>
 
-      {/* Body: Public Rooms */}
-      <div style={{ flex: 1, padding: '12px 20px 20px', overflowY: 'auto', position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-           <h2 style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: 0, opacity: 0.8 }}>
-              استكشف الغرف المتاحة 👇
-           </h2>
+          <h1 style={{ fontSize: 14, fontWeight: 900, color: '#000', marginBottom: 16, textAlign: 'center', marginTop: 0, zIndex: 2, fontStyle: 'italic' }}>
+            ادخل كود الغرفة
+          </h1>
+
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'row', direction: 'ltr', justifyContent: 'center', gap: 10, zIndex: 2 }}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="pop" style={{
+                width: 48, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 26, fontWeight: 900, background: '#FFF', color: '#000',
+                border: `4px solid ${joinCode.length === i ? 'var(--neo-cyan)' : '#000'}`,
+                boxShadow: joinCode.length === i ? '4px 4px 0 var(--neo-cyan)' : '4px 4px 0 rgba(0,0,0,0.1)',
+                borderRadius: 0, transition: 'none',
+                transform: joinCode.length === i ? 'translateY(-4px)' : 'none'
+              }}>
+                {joinCode[i] || ''}
+              </div>
+            ))}
+            <input
+              type="text"
+              autoFocus
+              value={joinCode}
+              onChange={e => handleCodeChange(e.target.value)}
+              maxLength={4}
+              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', direction: 'ltr' }}
+            />
+          </div>
+          {joining && joinCode.length === 4 && (
+            <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', zIndex: 2 }}>
+              <LoadingSpinner size={20} color="#000" />
+            </div>
+          )}
         </div>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {rooms.some(r => (r.playerOrder?.length || 0) < (r.maxPlayers || 5)) && (
+          <button
+            onClick={() => {
+              const availableRoom = rooms.find(r => (r.playerOrder?.length || 0) < (r.maxPlayers || 5));
+              if (availableRoom) handleJoin(availableRoom.code);
+            }}
+            disabled={joining}
+            className="pop"
+            style={{
+              width: '100%', marginTop: 12, padding: '16px', fontSize: 16, fontWeight: 900,
+              background: 'var(--neo-green)', color: '#000', border: '4px solid #000',
+              boxShadow: '6px 6px 0 #000', borderRadius: 0, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+            }}
+          >
+            مباراة سريعة ⚡
+          </button>
+        )}
+      </div>
+
+      {/* Room List */}
+      <div className="brutal-bg" style={{ flex: 1, padding: '12px 20px 20px', overflowY: 'auto', position: 'relative', zIndex: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <h2 style={{ fontSize: 13, fontWeight: 900, color: '#000', margin: 0, background: 'var(--neo-green)', padding: '2px 8px', border: '2px solid #000', boxShadow: '3px 3px 0 #000' }}>
+            الغرف المتاحة 👇
+          </h2>
+        </div>
+
+        {/* Mode Filter */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {[
+            { id: 'all', emoji: '🌍', label: 'الكل' },
+            { id: 'monkey', emoji: '🔊', label: 'كلكس' },
+            { id: 'draw', emoji: '🎨', label: 'رسم' },
+            { id: 'survival', emoji: '⚔️', label: 'بقاء' },
+            { id: 'charades', emoji: '🎭', label: 'تمثيل' },
+          ].map(f => (
+            <button
+              key={f.id}
+              onClick={() => setModeFilter(f.id)}
+              style={{
+                padding: '6px 14px', fontSize: 12, fontWeight: 900,
+                background: modeFilter === f.id ? 'var(--neo-yellow)' : '#FFF',
+                border: '2.5px solid #000', borderRadius: 0,
+                boxShadow: modeFilter === f.id ? 'none' : '2px 2px 0 #000',
+                transform: modeFilter === f.id ? 'translate(2px, 2px)' : 'none',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                whiteSpace: 'nowrap', color: '#000', transition: 'none',
+              }}
+            >
+              {f.emoji} {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {loading ? (
             <div style={{ marginTop: 40 }}><LoadingSpinner /></div>
           ) : rooms.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FAFAFA', border: '4px dashed #D1D5DB', borderRadius: 16 }}>
+            <div style={{ textAlign: 'center', padding: '50px 20px', background: '#FFF', border: '5px solid #000', borderRadius: 0, boxShadow: '8px 8px 0 var(--neo-pink)' }}>
               <div style={{ fontSize: 60, marginBottom: 16 }}>🏜️</div>
-              <p style={{ fontWeight: 900, color: '#6B7280', fontSize: 18, margin: '0 0 8px' }}>لا توجد غرف عامة حالياً</p>
-              <p style={{ fontSize: 14, fontWeight: 700, color: '#9CA3AF', margin: 0 }}>أسس إمبراطوريتك وكن أول من ينشئ غرفة!</p>
-              <button 
-                onClick={nav.toOnlineSetup} 
-                className="btn-pink pop" 
-                style={{ 
-                  marginTop: 24, padding: '16px 24px', fontSize: 16, width: '100%', fontWeight: 950,
-                  background: 'var(--bg-pink)', color: '#FFF', border: '4px solid var(--bg-dark-purple)',
-                  boxShadow: '4px 4px 0 var(--bg-dark-purple)', borderRadius: 12, cursor: 'pointer'
+              <p style={{ fontWeight: 900, color: '#000', fontSize: 18, margin: '0 0 8px' }}>لا توجد غرف</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#444', margin: 0 }}>لا توجد غرف متاحة. أنشئ غرفة جديدة.</p>
+              <button
+                onClick={nav.toOnlineSetup}
+                className="btn-pink pop"
+                style={{
+                  marginTop: 24, padding: '18px 24px', fontSize: 16, width: '100%', fontWeight: 900,
+                  background: 'var(--neo-pink)', color: '#000', border: '4px solid #000',
+                  boxShadow: '6px 6px 0 #000', borderRadius: 0, cursor: 'pointer'
                 }}
               >
-                انشئ غرفتك الآن 🚀
+                أنشئ غرفة 🚀
               </button>
             </div>
           ) : (
-            rooms.map((room, idx) => {
+            rooms
+              .filter(r => modeFilter === 'all' || r.mode === modeFilter)
+              .map((room, idx) => {
               const playersCount = room.playerOrder?.length || 0;
               const maxPlayers = room.maxPlayers || 5;
               const isFull = playersCount >= maxPlayers;
 
               return (
-                <div 
-                  key={room.code} 
-                  className="pop" 
-                  style={{ 
+                <div
+                  key={room.code}
+                  className="pop"
+                  style={{
                     padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, background: '#FFF',
-                    border: '3px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)',
-                    borderRadius: 12, animationDelay: `${idx * 100}ms`
+                    border: '3px solid #000', boxShadow: '6px 6px 0 #000',
+                    borderRadius: 0, animationDelay: `${idx * 100}ms`
                   }}
                 >
-                  <div style={{ 
-                    width: 44, height: 44, background: room.mode === 'survival' ? 'var(--bg-pink)' : 'var(--bg-yellow)', 
-                    border: '2px solid var(--bg-dark-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22, flexShrink: 0, borderRadius: 10, boxShadow: '2px 2px 0 var(--bg-dark-purple)'
+                  <div style={{
+                    width: 44, height: 44,
+                    background: getModeColor(room.mode),
+                    border: '3px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 22, flexShrink: 0, borderRadius: 0, boxShadow: '2px 2px 0 #000'
                   }}>
                     {room.mode === 'survival' ? '⚔️' : room.mode === 'draw' ? '🎨' : room.mode === 'charades' ? '🎭' : '🔊'}
                   </div>
 
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                      <span style={{ fontSize: 9, background: 'var(--bg-dark-purple)', color: '#FFF', padding: '1px 8px', borderRadius: 10, fontWeight: 950 }}>
-                         {getModeLabel(room.mode)}
+                      <span style={{ fontSize: 9, background: '#000', color: 'var(--neo-yellow)', padding: '1px 8px', borderRadius: 0, fontWeight: 900 }}>
+                        {getModeLabel(room.mode)}
                       </span>
                     </div>
-                    <h3 style={{ fontSize: 14, fontWeight: 950, color: 'var(--bg-dark-purple)', margin: '2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 900, color: '#000', margin: '2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {getCatName(room)}
                     </h3>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--bg-dark-purple)', opacity: 0.6 }}>
-                      #{room.code} • {playersCount}/{maxPlayers} لاعب
+                    <div style={{ fontSize: 11, fontWeight: 900, color: '#000', opacity: 0.7 }}>
+                      كود: #{room.code} • {playersCount}/{maxPlayers} لاعب
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     disabled={isFull || joining}
                     onClick={() => handleJoin(room.code)}
                     className="pop"
-                    style={{ 
-                      padding: '8px 16px', fontSize: 14, fontWeight: 950, minWidth: 70,
-                      background: isFull ? '#FAFAFA' : 'var(--bg-yellow)',
-                      color: isFull ? '#9CA3AF' : 'var(--bg-dark-purple)',
-                      border: isFull ? '2px dashed #D1D5DB' : '2px solid var(--bg-dark-purple)',
-                      boxShadow: isFull ? 'none' : '3px 3px 0 var(--bg-dark-purple)',
-                      borderRadius: 10, cursor: isFull ? 'not-allowed' : 'pointer'
+                    style={{
+                      padding: '10px 20px', fontSize: 14, fontWeight: 900, minWidth: 80,
+                      background: isFull ? '#DDD' : 'var(--neo-cyan)',
+                      color: '#000',
+                      border: '3.5px solid #000',
+                      boxShadow: isFull ? 'none' : '4px 4px 0 #000',
+                      borderRadius: 0, cursor: isFull ? 'not-allowed' : 'pointer',
+                      transition: 'none',
+                      transform: joining === room.code ? 'translate(2px, 2px)' : 'none'
                     }}
                   >
-                    {joining === room.code ? <LoadingSpinner size={14} /> : isFull ? 'ممتلئة' : 'انضمام'}
+                    {joining === room.code ? '...' : isFull ? 'ممتلئة' : 'انضم'}
                   </button>
                 </div>
               );
@@ -259,11 +288,6 @@ export default function BrowseRoomsScreen() {
           )}
         </div>
       </div>
-
-      {/* Decorative Background Elements */}
-      <div style={{ position: 'absolute', top: '40%', left: -20, fontSize: 100, opacity: 0.03, transform: 'rotate(-15deg)', pointerEvents: 'none' }}>🌴</div>
-      <div style={{ position: 'absolute', bottom: 40, right: -10, fontSize: 80, opacity: 0.03, transform: 'rotate(20deg)', pointerEvents: 'none' }}>🐒</div>
-      <div style={{ position: 'absolute', top: '60%', right: 40, fontSize: 40, opacity: 0.03, transform: 'rotate(45deg)', pointerEvents: 'none' }}>🍌</div>
 
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
     </div>

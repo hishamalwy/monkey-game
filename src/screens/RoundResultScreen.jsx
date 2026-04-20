@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAudio } from '../context/AudioContext';
 import { useRoom } from '../hooks/useRoom';
 import { useNavigation, useRoomCode } from '../hooks/useNavigation';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -10,9 +11,12 @@ export default function RoundResultScreen() {
   const nav = useNavigation();
   const { room, players, isHost, confirmNextRound } = useRoom(roomCode);
   const { user } = useAuth();
+  const { playClick, playPenalty, playWin, playLose, playTimeup, playTick } = useAudio();
   const [countdown, setCountdown] = useState(5);
 
   const mountedRef = useRef(false);
+  const playedSoundRef = useRef(false);
+
   useEffect(() => {
     // If explicitly null from Firestore, the room is gone
     if (room === null) { nav.toHome(); return; }
@@ -27,18 +31,32 @@ export default function RoundResultScreen() {
     
     if (room.status === 'round_result') {
         mountedRef.current = true;
+        if (!playedSoundRef.current && room.lastResult) {
+          const amITheLoser = room.lastResult.loserUid === user?.uid;
+          if (amITheLoser) {
+            playPenalty();
+          } else {
+            playClick(); // Just a blip for others
+          }
+          playedSoundRef.current = true;
+        }
     }
-  }, [room?.status, room === null]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [room?.status, room === null, room?.lastResult, user?.uid, playPenalty, playClick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Countdown timer logic
   useEffect(() => {
     if (countdown <= 0) {
+      playTimeup();
       if (isHost) confirmNextRound();
       return;
     }
-    const timer = setInterval(() => setCountdown(c => c - 1), 1000);
+    const timer = setInterval(() => {
+      setCountdown(c => c - 1);
+      if (countdown <= 2) playTick();
+      else playClick();
+    }, 1000);
     return () => clearInterval(timer);
-  }, [countdown, isHost, confirmNextRound]);
+  }, [countdown, isHost, confirmNextRound, playClick, playTimeup, playTick]);
 
   if (!room) {
     return (
@@ -109,54 +127,62 @@ export default function RoundResultScreen() {
   const bgColor = amITheLoser ? '#FFF0F5' : '#FFFFF0';
 
   return (
-    <div style={{
+    <div className="brutal-bg" style={{
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: 20,
-      background: bgColor,
     }}>
       <div className="slide-up" style={{
         background: '#FFF',
-        border: `6px solid ${amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
+        border: '6px solid #000',
         borderRadius: 0,
         padding: '32px 24px',
         width: '100%',
         maxWidth: 420,
         textAlign: 'center',
-        boxShadow: `12px 12px 0px ${amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)'}`,
+        boxShadow: `12px 12px 0px ${amITheLoser ? 'var(--neo-pink)' : 'var(--neo-yellow)'}`,
         position: 'relative',
         overflow: 'hidden'
       }}>
         {/* Countdown Progress Bar */}
         <div style={{
-          position: 'absolute', top: 0, left: 0, height: 8,
-          background: amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)',
-          width: `${(countdown / 5) * 100}%`,
-          transition: 'width 1s linear'
-        }} />
+          position: 'absolute', top: 0, left: 0, height: 10,
+          background: '#000',
+          width: '100%',
+          overflow: 'hidden'
+        }}>
+           <div style={{
+             height: '100%', background: amITheLoser ? 'var(--neo-pink)' : 'var(--neo-green)',
+             width: `${(countdown / 5) * 100}%`,
+             transition: 'width 1s linear'
+           }} />
+        </div>
+        <div style={{ height: 10 }} />
 
         <div style={{ fontSize: 64, marginBottom: 16 }}>
           {getEmoji()}
         </div>
 
         <h2 style={{
-          fontSize: 28, fontWeight: 900, marginBottom: 8,
-          color: amITheLoser ? 'var(--bg-pink)' : 'var(--bg-dark-purple)',
-          textTransform: 'uppercase'
+          fontSize: 32, fontWeight: 900, marginBottom: 12,
+          color: '#000',
+          direction: 'rtl'
         }}>
           {getHeadline()}
         </h2>
 
-        <div style={{
+        <div className="card" style={{
            display: 'inline-block',
-           padding: '8px 16px',
-           background: amITheLoser ? 'var(--bg-pink)' : 'var(--bg-yellow)',
-           color: amITheLoser ? '#FFF' : 'var(--bg-dark-purple)',
-           border: '3px solid var(--bg-dark-purple)',
-           fontWeight: 800, fontSize: 14,
-           marginBottom: 24,
-           transform: 'rotate(-2deg)'
+           padding: '10px 18px',
+           background: amITheLoser ? 'var(--neo-pink)' : 'var(--neo-yellow)',
+           color: '#000',
+           border: '3px solid #000',
+           fontWeight: 900, fontSize: 13,
+           marginBottom: 28,
+           boxShadow: '4px 4px 0 #000',
+           borderRadius: 0,
+           direction: 'rtl'
         }}>
           {getSubMessage()}
         </div>
@@ -169,30 +195,31 @@ export default function RoundResultScreen() {
             const isMe = p.uid === myUid;
             
             return (
-              <div key={p.uid} style={{
+              <div key={p.uid} className="card" style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 16px',
-                background: isLoser ? 'var(--bg-pink)' : isMe ? '#FFF9E6' : '#f9fafb',
-                border: `3px solid ${isLoser ? 'var(--bg-dark-purple)' : isMe ? 'var(--bg-yellow)' : '#E5E7EB'}`,
-                boxShadow: isLoser ? '4px 4px 0px var(--bg-dark-purple)' : 'none',
-                transform: isLoser ? 'scale(1.02)' : 'none',
-                transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+                background: isLoser ? 'var(--neo-pink)' : isMe ? 'var(--neo-yellow)' : '#FFF',
+                border: '3px solid #000',
+                borderRadius: 0,
+                boxShadow: (isLoser || isMe) ? '4px 4px 0 #000' : 'none',
+                transform: isLoser ? 'scale(1.02) rotate(-1deg)' : 'none',
+                transition: 'none',
               }}>
-                <UserAvatar avatarId={p.avatarId ?? 1} size={44} />
-                <div style={{ flex: 1, textAlign: 'right' }}>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: isLoser ? '#FFF' : 'var(--bg-dark-purple)', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-start' }}>
+                <UserAvatar avatarId={p.avatarId ?? 1} size={48} border="2px solid #000" />
+                <div style={{ flex: 1, textAlign: 'right', direction: 'rtl' }}>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: '#000', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
                     {p.username}
-                    {isMe && <span style={{ fontSize: 10, background: isLoser ? '#FFF' : 'var(--bg-pink)', color: isLoser ? 'var(--bg-pink)' : '#FFF', padding: '1px 6px', borderRadius: 8 }}>أنت</span>}
+                    {isMe && <span style={{ fontSize: 9, background: '#000', color: '#FFF', padding: '1px 6px', borderRadius: 0 }}>أنت</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 4, marginTop: 4, justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 5, marginTop: 6, justifyContent: 'flex-start' }}>
                      {[0,1,2,3].map(i => (
                        <div key={i} style={{
-                         width: 10, height: 10, borderRadius: '20%',
-                         background: i < (qm % 4) || (qm > 0 && i < 4 && qm % 4 === 0) ? (isLoser ? '#FFF' : 'var(--bg-pink)') : '#E5E7EB',
-                         border: '1.5px solid var(--bg-dark-purple)'
+                         width: 12, height: 12, borderRadius: 0,
+                         background: i < (qm % 4) || (qm > 0 && i < 4 && qm % 4 === 0) ? '#000' : '#FFF',
+                         border: '2px solid #000'
                        }} />
                      ))}
-                     {Math.floor(qm/4) > 0 && Array(Math.floor(qm/4)).fill(0).map((_,i) => <span key={i}>🐒</span>)}
+                     {Math.floor(qm/4) > 0 && Array(Math.floor(qm/4)).fill(0).map((_,i) => <span key={i} style={{ fontSize: 18 }}>🐒</span>)}
                   </div>
                 </div>
                 {isLoser && <span style={{ fontSize: 24 }}>🔻</span>}
@@ -200,19 +227,20 @@ export default function RoundResultScreen() {
             );
           })}
         </div>
-
+ 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
            <div style={{
-              fontSize: 14, fontWeight: 900, color: 'var(--bg-dark-purple)',
-              background: '#F3F4F6', padding: '10px', border: '2px solid var(--bg-dark-purple)'
+              fontSize: 13, fontWeight: 900, color: '#000',
+              background: 'var(--neo-cyan)', padding: '12px', border: '3px solid #000', borderRadius: 0,
+              boxShadow: '4px 4px 0 #000', direction: 'rtl'
            }}>
-              الجولة التالية هتبدأ خلال: <span style={{ color: 'var(--bg-pink)', fontSize: 18 }}>{countdown}</span> ثانية
+              الجولة التالية في: <span style={{ color: '#000', fontSize: 18, borderBottom: '2px solid #000' }}>{countdown}</span> ث
            </div>
 
            {isHost && (
-             <button onClick={confirmNextRound} className="btn btn-primary"
-               style={{ width: '100%', padding: '16px', fontSize: 18, border: '4px solid var(--bg-dark-purple)', boxShadow: '4px 4px 0 var(--bg-dark-purple)' }}>
-               ابدأ دلوقتي! ⚡
+             <button onClick={confirmNextRound} className="btn btn-yellow"
+               style={{ width: '100%', padding: '18px', fontSize: 18, border: '4.5px solid #000', boxShadow: '6px 6px 0 #000', fontWeight: 900 }}>
+               ابدأ الآن ⚡
              </button>
            )}
         </div>

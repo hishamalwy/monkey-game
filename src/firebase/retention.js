@@ -1,4 +1,4 @@
-import { doc, updateDoc, increment, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore';
 import { db } from './config';
 import { awardCoins } from './store';
 import { getTodayStr, calcStreak, getStreakBonus, getDailyChallenges, isChallengeComplete, isChallengeClaimed } from '../utils/retention';
@@ -11,7 +11,7 @@ export async function claimDailyBonus(uid, profile) {
   await updateDoc(doc(db, 'users', uid), {
     lastLoginDate: getTodayStr(),
     loginStreak: streak,
-    coins: increment(bonus),
+    coins: bonus,
   });
 
   return { claimed: true, streak, bonus };
@@ -20,28 +20,29 @@ export async function claimDailyBonus(uid, profile) {
 export async function incrementDailyStat(uid, statType, amount = 1) {
   const todayKey = `today_${statType}`;
   const ref = doc(db, 'users', uid);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return;
 
-  const data = snap.data();
-  const lastReset = data.dailyStatsDate;
-  const today = getTodayStr();
+  await runTransaction(db, async (txn) => {
+    const snap = await txn.get(ref);
+    if (!snap.exists()) return;
 
-  const updates = { [todayKey]: increment(amount) };
+    const data = snap.data();
+    const lastReset = data.dailyStatsDate;
+    const today = getTodayStr();
 
-  if (lastReset !== today) {
-    updates.dailyStatsDate = today;
-    updates.today_wins = statType === 'wins' ? 1 : 0;
-    updates.today_games = statType === 'games' ? 1 : 0;
-    updates.today_xp = statType === 'xp' ? amount : 0;
-    updates.today_survival = statType === 'survival' ? 1 : 0;
-    updates.today_draw = statType === 'draw' ? 1 : 0;
-    updates.claimedChallenges = [];
-    delete updates[todayKey];
-    updates[todayKey] = statType === 'xp' ? amount : 1;
-  }
+    const updates = { [todayKey]: (data[todayKey] || 0) + amount };
 
-  await updateDoc(ref, updates);
+    if (lastReset !== today) {
+      updates.dailyStatsDate = today;
+      updates.today_wins = statType === 'wins' ? 1 : 0;
+      updates.today_games = statType === 'games' ? 1 : 0;
+      updates.today_xp = statType === 'xp' ? amount : 0;
+      updates.today_survival = statType === 'survival' ? 1 : 0;
+      updates.today_draw = statType === 'draw' ? 1 : 0;
+      updates.claimedChallenges = [];
+    }
+
+    txn.update(ref, updates);
+  });
 }
 
 export async function claimChallenge(uid, challenge, profile) {
@@ -49,9 +50,18 @@ export async function claimChallenge(uid, challenge, profile) {
   if (!isChallengeComplete(challenge, profile)) throw new Error('التحدي لم يكتمل بعد');
   if (isChallengeClaimed(challenge, profile)) throw new Error('تم استلام المكافأة بالفعل');
 
-  await updateDoc(doc(db, 'users', uid), {
-    claimedChallenges: [...(profile.claimedChallenges || []), challengeKey],
-    coins: increment(challenge.reward),
+  const ref = doc(db, 'users', uid);
+  await runTransaction(db, async (txn) => {
+    const snap = await txn.get(ref);
+    if (!snap.exists()) throw new Error('المستخدم غير موجود');
+    const data = snap.data();
+    const claimed = data.claimedChallenges || [];
+    if (claimed.includes(challengeKey)) throw new Error('تم استلام المكافأة بالفعل');
+
+    txn.update(ref, {
+      claimedChallenges: [...claimed, challengeKey],
+      coins: (data.coins || 0) + challenge.reward,
+    });
   });
 }
 

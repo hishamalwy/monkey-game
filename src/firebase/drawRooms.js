@@ -1,8 +1,10 @@
 import {
-  doc, getDoc, updateDoc, arrayUnion,
+  doc, getDoc, updateDoc, arrayUnion, runTransaction,
 } from 'firebase/firestore';
 import { db } from './config';
 import { drawCategories } from '../data/drawCategories';
+
+const MAX_STROKES = 150;
 
 function pickWords(roomCategory, count = 3) {
   const cat = drawCategories.find(c => c.id === roomCategory) || drawCategories[0];
@@ -17,11 +19,11 @@ function buildInitialHint(word) {
 function normalizeGuess(str) {
   return str
     .trim()
-    .replace(/[\u0610-\u061A\u064B-\u065F]/g, '') // strip tashkeel
+    .replace(/[\u0610-\u061A\u064B-\u065F]/g, '')
     .replace(/\s+/g, ' ')
     .replace(/أ|إ|آ/g, 'ا')
-    .replace(/ة/g, 'ه') // common arabic variation
-    .replace(/ى/g, 'ي') // common arabic variation
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
     .toLowerCase();
 }
 
@@ -29,19 +31,21 @@ function calculateCloseness(guess, word) {
   const n1 = normalizeGuess(guess);
   const n2 = normalizeGuess(word);
   if (n1 === n2) return 'correct';
-  
-  // Very simple closeness: if one contains the other or length difference is small + most chars match
+
   if (n1.length > 2 && n2.length > 2) {
     if (n2.includes(n1) || n1.includes(n2)) return 'close';
   }
   return 'wrong';
 }
 
-export async function startDrawGame(roomCode) {
+export async function startDrawGame(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) throw new Error('الغرفة غير موجودة');
   const room = snap.data();
-  const { playerOrder, wordChoices = 3, category = 'objects', scoreTarget = 100 } = room;
+  if (room.hostUid !== callerUid) throw new Error('فقط الهوست يبدأ اللعبة');
+  if (room.status === 'playing' || room.status === 'draw_over') throw new Error('اللعبة بدأت');
 
+  const { playerOrder, wordChoices = 3, category = 'objects', scoreTarget = 100 } = room;
   const drawerUid = playerOrder[0];
   const words = pickWords(category, wordChoices);
 
@@ -70,11 +74,15 @@ export async function startDrawGame(roomCode) {
   });
 }
 
-export async function chooseDrawWord(roomCode, word) {
+export async function chooseDrawWord(roomCode, callerUid, word) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
   const room = snap.data();
-  const drawTime = room.drawTime || 80;
+  const ds = room.drawState;
+  if (!ds || ds.roundStatus !== 'choosing') return;
+  if (ds.drawerUid !== callerUid) return;
 
+  const drawTime = room.drawTime || 80;
   const hint = buildInitialHint(word);
   const endsAt = Date.now() + drawTime * 1000;
 
@@ -95,100 +103,122 @@ export async function chooseDrawWord(roomCode, word) {
 }
 
 export async function submitDrawGuess(roomCode, uid, username, guess, drawTime = 80) {
-  const snap = await getDoc(doc(db, 'rooms', roomCode));
-  const room = snap.data();
-  const ds = room?.drawState;
+  const roomRef = doc(db, 'rooms', roomCode);
 
-  if (!ds || ds.roundStatus !== 'drawing') return { correct: false };
-  if ((ds.guessersDone || []).includes(uid)) return { correct: false, alreadyGuessed: true };
+  return runTransaction(db, async (txn) => {
+    const snap = await txn.get(roomRef);
+    if (!snap.exists()) return { correct: false };
+    const room = snap.data();
+    const ds = room?.drawState;
 
-  const closeness = calculateCloseness(guess, ds.chosenWord || '');
-  const correct = closeness === 'correct';
-  const isClose = closeness === 'close';
+    if (!ds || ds.roundStatus !== 'drawing') return { correct: false };
+    if (!(room.players || {})[uid]) return { correct: false };
+    if ((ds.guessersDone || []).includes(uid)) return { correct: false, alreadyGuessed: true };
 
-  const players = room.playerOrder || [];
-  const playerCount = players.length;
-  const rank = (ds.guessersDone || []).length; // 0-indexed rank of current correct guesser
-  const points = Math.max(5, 15 - rank * 3); // 15, 12, 9, 6, 5...
+    const closeness = calculateCloseness(guess, ds.chosenWord || '');
+    const correct = closeness === 'correct';
+    const isClose = closeness === 'close';
 
-  const newMessage = {
-    uid,
-    username,
-    text: correct ? 'خمّن الكلمة الصحيحة! ✅' : (isClose ? 'قريب جداً! 🤏' : guess),
-    originalText: guess, 
-    isCorrect: correct,
-    isClose: isClose,
-    points: correct ? points : 0,
-    ts: Date.now(),
-  };
+    const playerCount = (room.playerOrder || []).length;
+    const rank = (ds.guessersDone || []).length;
+    const points = Math.max(5, 15 - rank * 3);
 
-  // Build messages array — never overwrite the same path twice in one patch
-  const messagesToAdd = [newMessage];
+    const messagesToAdd = [{
+      uid, username,
+      text: correct ? 'خمّن الكلمة الصحيحة! ✅' : (isClose ? 'قريب جداً! 🤏' : guess),
+      originalText: guess,
+      isCorrect: correct,
+      isClose,
+      points: correct ? points : 0,
+      ts: Date.now(),
+    }];
 
-  const patch = {};
+    const patch = {};
 
-  if (correct) {
-    patch[`drawState.roundScores.${uid}`] = points;
-    patch[`drawState.scores.${uid}`] = (ds.scores?.[uid] || 0) + points;
-    patch['drawState.guessersDone'] = arrayUnion(uid);
+    if (correct) {
+      patch[`drawState.roundScores.${uid}`] = points;
+      const newTotal = (ds.scores?.[uid] || 0) + points;
+      patch[`drawState.scores.${uid}`] = newTotal;
+      patch['drawState.guessersDone'] = arrayUnion(uid);
 
-    const activePlayers = Object.keys(room.players || {});
-    const othersCount = Math.max(1, activePlayers.length - 1); // everyone except drawer
-    const nowDone = (ds.guessersDone || []).length + 1;
-    if (nowDone >= othersCount) {
-      const drawerPoints = 10 + (nowDone * 5); 
-      messagesToAdd.push({
-        uid: 'system', username: 'المنادي',
-        text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now() + 1,
-      });
-      patch['drawState.roundStatus'] = 'reveal';
-      patch[`drawState.scores.${ds.drawerUid}`] = (ds.scores?.[ds.drawerUid] || 0) + drawerPoints;
-      patch[`drawState.roundScores.${ds.drawerUid}`] = drawerPoints;
+      const activePlayers = Object.keys(room.players || {});
+      const othersCount = Math.max(1, activePlayers.length - 1);
+      const nowDone = (ds.guessersDone || []).length + 1;
+
+      if (nowDone >= othersCount) {
+        const drawerPoints = 10 + (nowDone * 5);
+        messagesToAdd.push({
+          uid: 'system', username: 'المنادي',
+          text: 'الكل حلها صح! 🎉 برافو عليكم', ts: Date.now() + 1,
+        });
+        patch['drawState.roundStatus'] = 'reveal';
+        const newDrawerTotal = (ds.scores?.[ds.drawerUid] || 0) + drawerPoints;
+        patch[`drawState.scores.${ds.drawerUid}`] = newDrawerTotal;
+        patch[`drawState.roundScores.${ds.drawerUid}`] = drawerPoints;
+      }
     }
-  }
 
-  // Single write for messages — no double-path bug
-  patch['drawState.messages'] = arrayUnion(...messagesToAdd);
-
-  await updateDoc(doc(db, 'rooms', roomCode), patch);
-  return { correct, points };
+    patch['drawState.messages'] = arrayUnion(...messagesToAdd);
+    txn.update(roomRef, patch);
+    return { correct, points };
+  });
 }
 
-export async function addStroke(roomCode, stroke) {
+export async function addStroke(roomCode, callerUid, stroke) {
+  const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
+  const room = snap.data();
+  const ds = room.drawState;
+  if (!ds || ds.roundStatus !== 'drawing') return;
+  if (ds.drawerUid !== callerUid) return;
+  if ((ds.strokes || []).length >= MAX_STROKES) return;
+
   await updateDoc(doc(db, 'rooms', roomCode), {
     'drawState.strokes': arrayUnion(stroke),
   });
 }
 
-export async function clearDrawCanvas(roomCode) {
+export async function clearDrawCanvas(roomCode, callerUid) {
+  const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
+  if (snap.data().drawState?.drawerUid !== callerUid) return;
+
   await updateDoc(doc(db, 'rooms', roomCode), {
     'drawState.strokes': [],
     'drawState.bgFill': null,
   });
 }
 
-export async function undoLastStroke(roomCode) {
+export async function undoLastStroke(roomCode, callerUid) {
   const roomRef = doc(db, 'rooms', roomCode);
   const snap = await getDoc(roomRef);
   const ds = snap.data()?.drawState;
   if (!ds || !ds.strokes || ds.strokes.length === 0) return;
+  if (ds.drawerUid !== callerUid) return;
+
   const newStrokes = [...ds.strokes];
   newStrokes.pop();
   await updateDoc(roomRef, { 'drawState.strokes': newStrokes });
 }
 
-export async function fillBackground(roomCode, color) {
+export async function fillBackground(roomCode, callerUid, color) {
+  const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
+  if (snap.data().drawState?.drawerUid !== callerUid) return;
+
   await updateDoc(doc(db, 'rooms', roomCode), {
     'drawState.bgFill': color,
   });
 }
 
-export async function revealHint(roomCode) {
+export async function revealHint(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
   const room = snap.data();
   const ds = room?.drawState;
 
   if (!ds || ds.roundStatus !== 'drawing' || !ds.chosenWord) return;
+  if (ds.drawerUid !== callerUid) return;
 
   const wordChars = ds.chosenWord.split('');
   const hintChars = ds.hint.split('');
@@ -198,7 +228,7 @@ export async function revealHint(roomCode) {
     return acc;
   }, []);
 
-  if (hiddenPositions.length <= 1) return; // keep at least 1 hidden
+  if (hiddenPositions.length <= 1) return;
 
   const idx = hiddenPositions[Math.floor(Math.random() * hiddenPositions.length)];
   hintChars[idx] = wordChars[idx];
@@ -209,15 +239,17 @@ export async function revealHint(roomCode) {
   });
 }
 
-export async function endDrawRound(roomCode) {
+export async function endDrawRound(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
   const room = snap.data();
+  if (room.hostUid !== callerUid) return;
   const ds = room?.drawState;
 
-  if (!ds || ds.roundStatus !== 'drawing') return; 
+  if (!ds || ds.roundStatus !== 'drawing') return;
 
   const correctCount = ds.guessersDone?.length || 0;
-  const drawerPoints = correctCount > 0 ? (10 + correctCount * 5) : 0; // 10 base + 5 per person
+  const drawerPoints = correctCount > 0 ? (10 + correctCount * 5) : 0;
 
   const newScores = { ...(ds.scores || {}) };
   newScores[ds.drawerUid] = (newScores[ds.drawerUid] || 0) + drawerPoints;
@@ -231,22 +263,27 @@ export async function endDrawRound(roomCode) {
   });
 }
 
-export async function revealWordLength(roomCode) {
+export async function revealWordLength(roomCode, callerUid) {
+  const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
+  if (snap.data().drawState?.drawerUid !== callerUid) return;
+
   await updateDoc(doc(db, 'rooms', roomCode), {
     'drawState.showWordLength': true,
   });
 }
 
-export async function nextDrawRound(roomCode) {
+export async function nextDrawRound(roomCode, callerUid) {
   const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (!snap.exists()) return;
   const room = snap.data();
+  if (room.hostUid !== callerUid) return;
   const ds = room?.drawState;
 
   if (!ds || ds.roundStatus !== 'reveal') return;
 
   const { playerOrder, scoreTarget = 100, wordChoices = 3 } = room;
 
-  // Check if anyone hit scoreTarget
   const winner = playerOrder.find(uid => (ds.scores?.[uid] || 0) >= scoreTarget);
   if (winner) {
     await updateDoc(doc(db, 'rooms', roomCode), {
@@ -257,7 +294,6 @@ export async function nextDrawRound(roomCode) {
   }
 
   const nextRound = ds.currentRound + 1;
-  // Cycle through players endlessly until scoreTarget is hit
   const drawerUid = playerOrder[(nextRound - 1) % playerOrder.length];
   const words = pickWords(room.category || 'objects', wordChoices);
 

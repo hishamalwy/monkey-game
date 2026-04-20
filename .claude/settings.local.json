@@ -5,7 +5,8 @@
       "Bash(npm install:*)",
       "Bash(wmic logicaldisk:*)",
       "Bash(npx vite:*)",
-      "Bash(grep -E \"\\\\.jsx$\")"
+      "Bash(grep -E \"\\\\.jsx$\")",
+      "Bash(grep -rn \"[A-Z_]\\\\{4,\\\\}_\" c:/Users/hisham.alwy/Desktop/Monkey/src/screens/ --include=\"*.jsx\")"
     ]
   }
 }

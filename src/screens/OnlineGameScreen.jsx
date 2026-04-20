@@ -6,6 +6,7 @@ import UserAvatar from '../components/ui/UserAvatar';
 import GameScreen from '../components/GameScreen';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { stopHorn, startHorn, getHornType, HORN_TYPES, warmAudio, playSound } from '../utils/audio';
+import { useAudio } from '../context/AudioContext';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import { connectSocket, disconnectSocket, emitSound, togglePlayerMute, isPlayerMuted } from '../services/socket';
 import { appCategories } from '../data/categories';
@@ -18,14 +19,28 @@ export default function OnlineGameScreen() {
   const {
     room, players, isMyTurn, computedTimer, isHost,
     pressLetter, pressDelete, pressChallenge, leaveRoom, submitSuspectWord, resolveSuspect,
-    triggerHorn, pressFinishWord, resolveFinishWord, passTurn, resetToLobby,
+    triggerHorn, resetToLobby,
   } = useRoom(roomCode);
+  const { playTension, stopTension } = useAudio();
   const vh = useVisualViewport();
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isHonking, setIsHonking] = useState(false);
   const [, setTick] = useState(0); // For forcing re-renders on mute
   const [suspectWord, setSuspectWord] = useState('');
+
+  // Tension music logic
+  useEffect(() => {
+    if (room?.status === 'playing' && computedTimer <= 5 && computedTimer > 0) {
+      playTension();
+    } else {
+      stopTension();
+    }
+  }, [computedTimer, room?.status, playTension, stopTension]);
+
+  useEffect(() => {
+    return () => stopTension();
+  }, [stopTension]);
 
   // Sound Server connection
   useEffect(() => {
@@ -38,12 +53,12 @@ export default function OnlineGameScreen() {
   const MONKEY_LIMIT = 4;
 
   // Color ramp: empty → yellow → orange → red → skull
-  const QM_COLORS = ['#D1D5DB', '#FCD34D', '#F97316', '#EF4444', '#1C1040'];
+  const QM_COLORS = ['#E5E7EB', 'var(--neo-yellow)', '#FF8C00', 'var(--neo-pink)', 'var(--neo-black)'];
 
   const MonkeySVG = ({ qm }) => {
     const pct = Math.min((qm / 4) * 100, 100);
     const fillColor = QM_COLORS[Math.min(qm, 4)];
-    const strokeColor = qm >= 4 ? '#fff' : 'var(--bg-dark-purple)';
+    const strokeColor = qm >= 4 ? '#fff' : 'var(--neo-black)';
     return (
       <svg viewBox="0 0 100 100" width="38" height="38" style={{ overflow: 'visible', display: 'block' }}>
         {/* Background (empty monkey) */}
@@ -76,9 +91,9 @@ export default function OnlineGameScreen() {
         const filled = i < (qm % 4) || (qm > 0 && i < 4 && qm % 4 === 0);
         return (
           <div key={i} style={{
-            width: 10, height: 10, borderRadius: '20%',
-            background: filled ? (isLoser ? '#FFF' : 'var(--bg-pink)') : '#E5E7EB',
-            border: '1.5px solid var(--bg-dark-purple)'
+            width: 10, height: 10, borderRadius: 0,
+            background: filled ? (isLoser ? '#FFF' : 'var(--neo-pink)') : '#DDD',
+            border: '2px solid var(--neo-black)'
           }} />
         );
       })}
@@ -193,8 +208,8 @@ export default function OnlineGameScreen() {
       <header style={{ padding: '16px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <h2 className="title-glitch" style={{ margin: 0, fontSize: 24, transform: 'none', lineHeight: 1 }}>كلكس!</h2>
-          <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--bg-pink)' }}>
-             قرد الـ {room.category === 'objects' ? 'أشياء' : room.category === 'clubs' ? 'أندية' : room.category === 'countries' ? 'بلاد' : room.category || 'عام' }
+          <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--neo-black)', background: 'var(--neo-pink)', padding: '2px 8px', display: 'inline-block', border: '2px solid #000', marginTop: 4, boxShadow: '2px 2px 0 #000' }}>
+            الفئة: {room.category === 'objects' ? 'أشياء' : room.category === 'clubs' ? 'أندية' : room.category === 'countries' ? 'بلاد' : room.category || 'عام'}
           </div>
         </div>
         <button onClick={() => setShowExitConfirm(true)} className="btn btn-white" style={{ padding: '8px 16px', fontSize: 14 }}>✕ خروج</button>
@@ -204,9 +219,8 @@ export default function OnlineGameScreen() {
         <svg width="0" height="0" style={{ position: 'absolute' }}>
           <defs>
             <mask id="global-monkey-mask">
-              <circle cx="50" cy="32" r="20" fill="white" /><circle cx="26" cy="36" r="10" fill="white" /><circle cx="74" cy="36" r="10" fill="white" />
-              <path d="M 32 47 h 36 v 32 q 0 10 -18 10 q -18 0 -18 -10 Z" fill="white" />
-              <path d="M 68 80 Q 95 95 90 60 Q 90 40 75 60" fill="none" stroke="white" strokeWidth="10" strokeLinecap="round" />
+              <rect x="0" y="0" width="100" height="100" fill="white" />
+              <circle cx="50" cy="32" r="22" fill="black" />
             </mask>
           </defs>
         </svg>
@@ -218,23 +232,24 @@ export default function OnlineGameScreen() {
           return (
             <div key={p.uid} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '10px 10px 8px', minWidth: 76, flexShrink: 0,
-              background: isActive ? 'var(--bg-pink)' : eliminated ? '#F3F4F6' : '#FFF',
-              border: `3px solid ${isActive ? 'var(--bg-dark-purple)' : eliminated ? '#D1D5DB' : 'var(--bg-dark-purple)'}`,
-              borderRadius: 4,
-              boxShadow: isActive ? '4px 4px 0px var(--bg-dark-purple)' : '2px 2px 0px rgba(0,0,0,0.08)',
-              transform: isActive ? 'translateY(-5px) scale(1.04)' : 'none',
-              opacity: eliminated ? 0.5 : 1,
-              transition: 'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+              padding: '12px 10px 10px', minWidth: 84, flexShrink: 0,
+              background: isActive ? 'var(--neo-yellow)' : eliminated ? '#DDD' : '#FFF',
+              border: `4px solid #000`,
+              borderRadius: 0,
+              boxShadow: isActive ? '6px 6px 0px #000' : 'none',
+              transform: isActive ? 'translateY(-4px)' : 'none',
+              opacity: eliminated ? 0.7 : 1,
+              transition: 'none',
+              zIndex: isActive ? 10 : 1
             }}>
-              <div style={{ position: 'relative', marginBottom: 4 }}>
-                <UserAvatar avatarId={p.avatarId ?? 0} size={40} />
+              <div style={{ position: 'relative', marginBottom: 8 }}>
+                <UserAvatar avatarId={p.avatarId ?? 0} size={44} border="2px solid #000" />
                 {eliminated && (
                   <div style={{
-                    position: 'absolute', inset: 0, borderRadius: '50%',
-                    background: 'rgba(28,16,64,0.6)',
+                    position: 'absolute', inset: 0, borderRadius: 0,
+                    background: 'rgba(0,0,0,0.7)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18,
+                    fontSize: 20, border: '2px solid #000'
                   }}>💀</div>
                 )}
                 
@@ -247,13 +262,13 @@ export default function OnlineGameScreen() {
                        setTick(t => t+1);
                     }}
                     style={{
-                      position: 'absolute', bottom: -2, right: -4,
-                      background: isPlayerMuted(p.uid) ? 'var(--bg-pink)' : '#FFF',
-                      border: '2px solid var(--bg-dark-purple)',
-                      width: 24, height: 24, borderRadius: '50%', padding: 0,
+                      position: 'absolute', bottom: -6, right: -6,
+                      background: isPlayerMuted(p.uid) ? 'var(--neo-pink)' : '#FFF',
+                      border: '2.5px solid #000',
+                      width: 28, height: 28, borderRadius: 0, padding: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, zIndex: 5, cursor: 'pointer',
-                      boxShadow: '2px 2px 0 rgba(0,0,0,0.1)'
+                      fontSize: 14, zIndex: 5, cursor: 'pointer',
+                      boxShadow: '3px 3px 0 rgba(0,0,0,0.1)'
                     }}
                   >
                     {isPlayerMuted(p.uid) ? '🔇' : '🔊'}
@@ -261,20 +276,20 @@ export default function OnlineGameScreen() {
                 )}
               </div>
               <span style={{
-                fontSize: 10, fontWeight: 900, lineHeight: 1.2, marginBottom: 5,
-                color: isActive ? '#FFF' : 'var(--bg-dark-purple)',
-                maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                fontSize: 10, fontWeight: 900, lineHeight: 1.2, marginBottom: 8,
+                color: '#000',
+                maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {p.username}
               </span>
               <MonkeySVG qm={qm} />
-              <QuarterPips qm={qm} />
+              <QuarterPips qm={qm} isLoser={eliminated} />
             </div>
           );
         })}
       </div>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 8, borderTopLeftRadius: 32, borderTopRightRadius: 32, background: 'var(--color-card)', boxShadow: '0 -4px 20px rgba(0,0,0,0.05)' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 12, borderRadius: 0, background: '#FFF', borderTop: '5px solid #000' }}>
         <GameScreen
           currentWord={room.gameState.currentWord}
           timeRemaining={computedTimer}
@@ -285,8 +300,6 @@ export default function OnlineGameScreen() {
           onKeyPress={pressLetter}
           onDelete={pressDelete}
           onChallenge={pressChallenge}
-          onFinish={pressFinishWord}
-          onNext={passTurn}
           isOnline={true}
         />
       </main>
@@ -295,14 +308,14 @@ export default function OnlineGameScreen() {
         const hornId = getHornType();
         const horn = HORN_TYPES.find(h => h.id === hornId) || HORN_TYPES[0];
         return (
-          <div style={{ position: 'absolute', bottom: 24, left: 24, zIndex: 100 }}>
+          <div style={{ position: 'absolute', bottom: 32, left: 32, zIndex: 100 }}>
              <button onMouseDown={handleHornStart} onMouseUp={handleHornEnd} onTouchStart={(e) => { e.preventDefault(); handleHornStart(); }} onTouchEnd={(e) => { e.preventDefault(); handleHornEnd(); }}
                className={`btn ${isHonking ? 'btn-pink' : 'btn-yellow'} pop`}
-               style={{ width: 72, height: 72, borderRadius: '50%', padding: 12, boxShadow: 'var(--brutal-shadow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               style={{ width: 80, height: 80, borderRadius: 0, padding: 14, boxShadow: '8px 8px 0 #000', border: '5px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'none' }}>
                {horn.src ? (
                  <img src={`${import.meta.env.BASE_URL}icons/${horn.src}`} alt={horn.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                ) : (
-                 <span style={{ fontSize: 34 }}>{horn.emoji}</span>
+                 <span style={{ fontSize: 38 }}>{horn.emoji}</span>
                )}
              </button>
           </div>
@@ -310,19 +323,19 @@ export default function OnlineGameScreen() {
       })()}
 
       {room.status === 'suspect_question' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,16,63,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div className="card slide-up" style={{ padding: 28, width: '100%', maxWidth: 360, textAlign: 'center', border: '5px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card slide-up" style={{ padding: 28, width: '100%', maxWidth: 360, textAlign: 'center', border: '5px solid #000', boxShadow: '12px 12px 0 #000', borderRadius: 0 }}>
              <div style={{ fontSize: 56, marginBottom: 16 }}>🧐</div>
-             <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 8px' }}>تحدي شاكك!</h3>
-             
-             {(isSuspected && !room.gameState.suspectAnswer) ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: 'var(--bg-dark-purple)' }}>انت كنت بتفكر في دولة إيه؟ 🐒</p>
-                  <input 
-                     type="text" 
-                     placeholder="اكتب اسم الدولة هنا..."
+             <h3 style={{ fontSize: 24, fontWeight: 900, color: '#000', margin: '0 0 8px' }}>تحدي! 🧐</h3>
+
+              {(isSuspected && !room.gameState.suspectAnswer) ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <p style={{ fontSize: 16, fontWeight: 900, margin: '0 0 14px', color: '#000', direction: 'rtl' }}>ما هي الكلمة المقصودة؟ 🐒</p>
+                  <input
+                     type="text"
+                     placeholder="اكتب الكلمة..."
                      className="input-field"
-                     style={{ fontSize: 18, padding: 12, textAlign: 'center' }}
+                     style={{ fontSize: 20, padding: 16, textAlign: 'center', borderRadius: 0, border: '4px solid #000', fontWeight: 900, background: '#FFF' }}
                      autoFocus
                      value={suspectWord}
                      onChange={(e) => setSuspectWord(e.target.value)}
@@ -338,119 +351,82 @@ export default function OnlineGameScreen() {
                        submitSuspectWord(suspectWord);
                        setSuspectWord('');
                      }
-                  }} className="btn btn-pink" style={{ padding: 16, fontSize: 18 }}>إرسال 🚀</button>
+                  }} className="btn btn-pink" style={{ padding: 18, fontSize: 18, borderRadius: 0, border: '4px solid #000', boxShadow: '6px 6px 0 #000', fontWeight: 900 }}>إرسال 🚀</button>
                 </div>
               ) : (
                 <div>
                    {isHost && !room.gameState.suspectAnswer && (
-                     <div style={{ padding: '8px 16px', background: 'var(--bg-yellow)', border: '2px solid var(--bg-dark-purple)', borderRadius: 8, marginBottom: 16, fontSize: 13, fontWeight: 900 }}>
-                        ⏳ بانتظار المشتبه به يكتب كلمته...
+                     <div style={{ padding: '12px 16px', background: 'var(--neo-yellow)', border: '3.5px solid #000', borderRadius: 0, marginBottom: 16, fontSize: 13, fontWeight: 900, direction: 'rtl' }}>
+                        ⏳ في انتظار الرد...
                      </div>
                    )}
-
+ 
                    {room.gameState.suspectAnswer && (
-                     <div style={{ padding: 16, background: '#FFF7ED', borderRadius: 0, border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-dark-purple)', marginBottom: 20 }}>
-                        <div style={{ fontSize: 13, color: 'var(--bg-dark-purple)', fontWeight: 900, marginBottom: 4, textAlign: 'right' }}>الكلمة التي فكر بها:</div>
-                        <div style={{ fontSize: 28, fontWeight: 900, color: suspectAnswerValid ? 'var(--bg-green)' : (isDuplicate ? 'var(--bg-pink)' : 'var(--bg-orange)'), textDecoration: (isDuplicate || !isInJSON) ? 'line-through' : 'none' }}>
+                     <div style={{ padding: 20, background: '#FFF', borderRadius: 0, border: '5px solid #000', boxShadow: '8px 8px 0 #000', marginBottom: 24 }}>
+                        <div style={{ fontSize: 12, color: '#666', fontWeight: 900, marginBottom: 8, textAlign: 'right', direction: 'rtl' }}>الكلمة:</div>
+                        <div style={{ fontSize: 32, fontWeight: 900, color: suspectAnswerValid ? 'var(--neo-green)' : (isDuplicate ? 'var(--neo-pink)' : '#000'), textDecoration: (isDuplicate || !isInJSON) ? 'line-through' : 'none' }}>
                          {room.gameState.suspectAnswer}
                         </div>
-                        <div style={{ fontSize: 12, marginTop: 10, fontWeight: 900, color: 'var(--bg-dark-purple)', textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={{ color: isInJSON ? 'var(--bg-green)' : 'red' }}>
-                            {isInJSON ? '✅ موجودة في القائمة' : '❌ غير موجودة في القائمة'}
+                        <div style={{ fontSize: 12, marginTop: 14, fontWeight: 900, color: '#000', textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 6, direction: 'rtl' }}>
+                          <span style={{ color: isInJSON ? 'var(--neo-green)' : 'var(--neo-pink)' }}>
+                            {isInJSON ? '✅ موجودة في القاموس' : '❌ غير موجودة في القاموس'}
                           </span>
-                          <span style={{ color: isDuplicate ? 'red' : 'var(--bg-green)' }}>
-                            {isDuplicate ? '⚠️ تم استخدامها مسبقاً!' : '✅ لم تُستخدم من قبل'}
+                          <span style={{ color: isDuplicate ? 'var(--neo-pink)' : 'var(--neo-green)' }}>
+                            {isDuplicate ? '⚠️ مكررة' : '✅ جديدة'}
                           </span>
                         </div>
                      </div>
                    )}
-
+ 
                    {isHost && room.gameState.suspectAnswer && (
-                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-pink)', marginBottom: 4, animation: 'pulse 1s infinite' }}>
-                           ⚠️ مطلوب قرارك كحكم!
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--neo-pink)', marginBottom: 6, direction: 'rtl' }}>
+                          ⚠️ حدد النتيجة!
                         </div>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                           <button onClick={() => room.status === 'suspect_question' ? resolveSuspect(false) : resolveFinishWord(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', border: '3px solid #EF4444' }}>❌ غلط</button>
-                           <button onClick={() => room.status === 'suspect_question' ? resolveSuspect(true) : resolveFinishWord(true)} className="btn btn-primary" style={{ flex: 1, padding: 14, border: '3px solid var(--bg-dark-purple)' }}>✅ صح</button>
+                        <div style={{ display: 'flex', gap: 14 }}>
+                           <button onClick={() => resolveSuspect(false)} className="btn btn-white" style={{ flex: 1, padding: 18, border: '4px solid #000', borderRadius: 0, fontWeight: 900 }}>خطأ ❌</button>
+                           <button onClick={() => resolveSuspect(true)} className="btn btn-yellow" style={{ flex: 1, padding: 18, border: '4px solid #000', borderRadius: 0, fontWeight: 900 }}>صحيح ✅</button>
                         </div>
                      </div>
                    )}
                    
                    {!isHost && (
-                      <div style={{ fontSize: 14, color: 'var(--bg-dark-purple)', fontWeight: 900, padding: 10, background: '#f3f4f6', border: '2px solid var(--bg-dark-purple)' }}>
-                         {room.gameState.suspectAnswer ? '⏳ بانتظار قرار الهوست...' : `⏳ ${room.players[room.gameState.suspectedUid]?.username} بيكتب...`}
+                      <div style={{ fontSize: 13, color: '#000', fontWeight: 900, padding: 14, background: '#EEE', border: '3.5px solid #000', borderRadius: 0, direction: 'rtl' }}>
+                         {room.gameState.suspectAnswer ? '⏳ في انتظار قرار المضيف...' : `⏳ ${room.players[room.gameState.suspectedUid]?.username} يكتب...`}
                       </div>
                    )}
                 </div>
-              )}
-          </div>
-        </div>
-      )}
+               )}
+           </div>
+         </div>
+       )}
 
-      {showExitConfirm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,16,63,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div className="card" style={{ padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
+       {showExitConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="card" style={{ padding: 24, width: '100%', maxWidth: 320, textAlign: 'center', borderRadius: 0, border: '5px solid #000', boxShadow: '10px 10px 0 #000' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
-            <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 12px' }}>تخرج من اللعبة؟</h3>
+            <h3 style={{ fontSize: 24, fontWeight: 900, color: '#000', margin: '0 0 12px', direction: 'rtl' }}>هل تريد الخروج؟</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <button 
+              <button
                 onClick={() => {
                   if (isHost) {
                     resetToLobby();
                   } else {
                     handleExit();
                   }
-                }} 
-                className="btn btn-yellow" 
-                style={{ padding: 14, fontSize: 18 }}
+                }}
+                className="btn btn-yellow"
+                style={{ padding: 14, fontSize: 18, borderRadius: 0, border: '3px solid #000', fontWeight: 900 }}
               >
-                {isHost ? '🏠 العودة للغرفة' : '🚪 خروج'}
+                {isHost ? 'العودة للقاعدة 🏠' : 'خروج 🚪'}
               </button>
-              
+
               {!isHost && (
-                 <button onClick={handleExit} className="btn btn-pink" style={{ padding: 14 }}>اخرج من الغرفة</button>
+                 <button onClick={handleExit} className="btn btn-pink" style={{ padding: 14, borderRadius: 0, border: '3px solid #000', fontWeight: 900 }}>مغادرة اللعبة 💨</button>
               )}
 
-              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ padding: 14 }}>رجوع للعب</button>
+              <button onClick={() => setShowExitConfirm(false)} className="btn btn-white" style={{ padding: 14, borderRadius: 0, border: '3px solid #000', fontWeight: 900 }}>متابعة اللعب 🎮</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {room.status === 'finish_confirmation' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,16,63,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div className="card slide-up" style={{ padding: 28, width: '100%', maxWidth: 360, textAlign: 'center', border: '5px solid var(--bg-dark-purple)', boxShadow: '8px 8px 0 var(--bg-dark-purple)' }}>
-             <div style={{ fontSize: 56, marginBottom: 16 }}>🏁</div>
-             <h3 style={{ fontSize: 24, fontWeight: 900, color: 'var(--bg-dark-purple)', margin: '0 0 8px' }}>تأكيد نهاية الدولة</h3>
-             
-             <div style={{ padding: 16, background: '#FFF7ED', borderRadius: 0, border: '4px solid var(--bg-dark-purple)', boxShadow: '6px 6px 0 var(--bg-dark-purple)', marginBottom: 20 }}>
-                <div style={{ fontSize: 13, color: 'var(--bg-dark-purple)', fontWeight: 900, marginBottom: 4, textAlign: 'right' }}>اللاعب بيقول الدولة خلصت:</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: suspectAnswerValid ? 'var(--bg-green)' : 'var(--bg-pink)' }}>
-                 {room.gameState.suspectAnswer}
-                </div>
-                <div style={{ fontSize: 11, color: '#666', marginTop: 4, fontWeight: 700 }}>
-                  {suspectAnswerValid 
-                    ? '(موجودة ومتاحة)' 
-                    : '(غير موجودة أو تم استخدامها سابقاً)'}
-                </div>
-             </div>
-
-             {isHost ? (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--bg-pink)', marginBottom: 4 }}>
-                     ⚠️ هل الدولة انتهت فعلاً؟
-                  </div>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                     <button onClick={() => resolveFinishWord(false)} className="btn btn-white" style={{ flex: 1, padding: 14, color: '#EF4444', border: '3px solid #EF4444' }}>❌ لسه</button>
-                     <button onClick={() => resolveFinishWord(true)} className="btn btn-primary" style={{ flex: 1, padding: 14, border: '3px solid var(--bg-dark-purple)' }}>✅ خلصت</button>
-                  </div>
-               </div>
-             ) : (
-                <div style={{ fontSize: 14, color: 'var(--bg-dark-purple)', fontWeight: 900, padding: 10, background: '#f3f4f6', border: '2px solid var(--bg-dark-purple)' }}>
-                   ⌛ بانتظار قرار الهوست...
-                </div>
-             )}
           </div>
         </div>
       )}
