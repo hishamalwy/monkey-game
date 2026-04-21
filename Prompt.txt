@@ -1,251 +1,31 @@
-You are acting as a senior game designer, real-time multiplayer architect, and product engineer working on the KLAX platform.
+## Buzzer Behavior Correction (Critical Fix)
 
-Your task is to design and integrate a NEW game mode into KLAX as the **5th game**, based on a **host-driven, real-time buzzer game**.
+The buzzer must follow this exact logic:
 
----
+* The buzzer is ALWAYS available (open) by default
 
-# GAME CORE CONCEPT
+* When ANY player presses:
+  → the FIRST player wins
+  → all other players are instantly locked
+  → buzzer becomes LOCKED
 
-This is a **real-time, multiplayer, host-controlled party game**.
+* While a player is answering:
+  → no one else can press
 
-The game is:
+* After the host makes a decision:
 
-* voice-based
-* reaction-based
-* category-driven
-* host-controlled
-* judgment-based
+  * if answer is CORRECT:
+    → round ends
+    → buzzer resets to OPEN for next round
 
-The system does NOT validate answers automatically.
-The Host (Judge) is fully responsible for controlling gameplay.
+  * if answer is WRONG:
+    → apply minus / penalty
+    → buzzer immediately returns to OPEN
+    → remaining players can press again
 
----
+IMPORTANT:
 
-# MAIN IDEA
+* The buzzer MUST NOT reopen automatically
+* It must reopen ONLY after the host decision
 
-The host selects a category and controls how the question is presented.
-
-There are TWO types of rounds:
-
----
-
-## TYPE 1 — VISUAL ROUND (Example: Flags)
-
-Flow:
-
-1. Host selects category (e.g. "Flags / أعلام")
-2. A visual item is prepared (e.g. flag image)
-3. The host clicks "Reveal"
-4. The image is shown to all players
-5. Players race to press the buzzer
-6. First player answers verbally
-7. Host judges
-
----
-
-## TYPE 2 — VOICE ROUND (Example: Movies)
-
-Flow:
-
-1. Host selects category (e.g. "Movies / أفلام")
-2. A question is generated for the host ONLY
-3. The question is NOT shown to players
-4. The host reads the question aloud
-5. Players race to press the buzzer
-6. First player answers verbally
-7. Host judges
-
----
-
-# HOST CONTROL PANEL (CRITICAL)
-
-The host must have full control over the round.
-
-## Category Selection
-
-* A horizontal list of categories:
-
-  * Flags
-  * Movies
-  * Songs
-  * General Knowledge
-  * etc.
-
----
-
-## Question Control
-
-For each category:
-
-### 1. Change Question
-
-* Button: "Change"
-* Loads a new question within the SAME category
-* Must be instant
-
-### 2. Reveal (for visual rounds)
-
-* Button: "Reveal"
-* Shows content to all players
-
-### 3. Start Round
-
-* Enables buzzer for players
-
-### 4. Judge Controls
-
-* Correct
-* Wrong
-* Add Time
-* Skip / Cancel
-
----
-
-# PLAYER EXPERIENCE
-
-## Player Screen
-
-Players see:
-
-* Large central **buzzer button**
-* Timer
-* Category indicator
-* Status messages:
-
-  * "Press now!"
-  * "You pressed first"
-  * "Another player pressed"
-
-For visual rounds:
-
-* they see the revealed image
-
-For voice rounds:
-
-* they only hear the host
-
----
-
-# REAL-TIME BUZZER SYSTEM (CRITICAL)
-
-You MUST implement:
-
-* server-authoritative buzzer system
-* atomic "first press wins"
-* all other players instantly locked
-* real-time broadcast to all players
-
-No client-side trust allowed.
-
----
-
-# GAME STATES
-
-Define clear states:
-
-* waiting_for_host
-* preparing_question
-* ready
-* revealed (visual only)
-* buzzer_open
-* buzzer_locked
-* answering
-* judging
-* result
-* next_round
-
----
-
-# EDGE CASES
-
-Handle:
-
-* host presses change repeatedly
-* host changes question after reveal
-* player disconnects after winning buzzer
-* no one presses buzzer
-* two players press at same time
-* host disconnects
-* rapid spam clicking
-
----
-
-# AUDIO & FEEL
-
-Game must feel like an **arcade experience**:
-
-* buzzer press sound (strong, punchy)
-* countdown tension sound
-* reveal sound
-* win / lose sounds
-* mechanical UI sounds
-
----
-
-# UX REQUIREMENTS
-
-* ultra-fast interaction
-* no lag feeling
-* immediate feedback
-* clean transitions
-* minimal clutter for reaction speed
-
----
-
-# INTEGRATION WITH KLAX
-
-You must:
-
-* integrate as the 5th game mode
-* reuse existing room system
-* reuse scoring system
-* extend game state logic
-* extend real-time communication
-
----
-
-# OUTPUT REQUIREMENTS
-
-Produce:
-
-## 1. Game Design Summary
-
-## 2. Full System Architecture
-
-* real-time flow
-* server logic
-* state transitions
-
-## 3. Data Model
-
-* room state
-* question state
-* buzzer state
-
-## 4. Event System
-
-* player actions
-* host actions
-
-## 5. UI/UX Design
-
-* host panel
-* player screen
-
-## 6. Edge Case Handling
-
-## 7. Step-by-Step Implementation Plan
-
----
-
-# IMPORTANT RULES
-
-* Do NOT convert this into a text quiz
-* Do NOT auto-validate answers
-* Host is always the authority
-* Prioritize speed, fairness, and game feel
-* Treat this as production-level multiplayer design
-
----
-
-Start designing this KLAX 5th game now.
+This logic is mandatory and must override any previous implementation.

@@ -29,7 +29,7 @@ export default function OnlineSetupScreen() {
   const [toast, setToast]             = useState('');
   const [modeOpen, setModeOpen]       = useState(false);
   const [isPublic, setIsPublic]       = useState(true);
-  const [charadesScoreTarget, setCharadesScoreTarget] = useState(20);
+  const [pointsGoal, setPointsGoal]   = useState(10);
   const [charadesTime, setCharadesTime] = useState(60);
 
   const currentCategories = mode === 'draw' ? drawCategories : appCategories;
@@ -46,9 +46,14 @@ export default function OnlineSetupScreen() {
   const handleCreate = async () => {
     setLoading(true);
     try {
+      let finalScoreTarget = scoreTarget;
+      if (mode === 'charades' || mode === 'buzzer') {
+        finalScoreTarget = pointsGoal;
+      }
+
       const settings = {
         mode, category, timeLimit, maxPlayers,
-        scoreTarget: mode === 'charades' ? charadesScoreTarget : scoreTarget,
+        scoreTarget: finalScoreTarget,
         drawTime, entryFee, isPublic, wordChoices: 3,
         charadesTime: mode === 'charades' ? charadesTime : undefined,
       };
@@ -175,7 +180,7 @@ export default function OnlineSetupScreen() {
               <div style={{ fontSize: 11, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-pink)', display: 'inline-block', padding: '2px 10px', border: '2.5px solid #000' }}>هدف النقاط 🏆</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[10, 20, 30, 50].map(n => (
-                  <button key={n} onClick={() => setCharadesScoreTarget(n)} className={`btn ${charadesScoreTarget === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 14, boxShadow: charadesScoreTarget === n ? 'none' : '3px 3px 0 #000', border: '3px solid #000', borderRadius: 0, color: '#000', fontWeight: 900 }}>{n}</button>
+                  <button key={n} onClick={() => setPointsGoal(n)} className={`btn ${pointsGoal === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 14, boxShadow: pointsGoal === n ? 'none' : '3px 3px 0 #000', border: '3px solid #000', borderRadius: 0, color: '#000', fontWeight: 900 }}>{n}</button>
                 ))}
               </div>
             </div>
@@ -218,7 +223,7 @@ export default function OnlineSetupScreen() {
               <div style={{ fontSize: 11, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-pink)', display: 'inline-block', padding: '2px 10px', border: '2.5px solid #000' }}>هدف النقاط 🏆</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[5, 10, 15, 20].map(n => (
-                  <button key={n} onClick={() => setCharadesScoreTarget(n)} className={`btn ${charadesScoreTarget === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 14, boxShadow: charadesScoreTarget === n ? 'none' : '3px 3px 0 #000', border: '3px solid #000', borderRadius: 0, color: '#000', fontWeight: 900 }}>{n}</button>
+                  <button key={n} onClick={() => setPointsGoal(n)} className={`btn ${pointsGoal === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 14, boxShadow: pointsGoal === n ? 'none' : '3px 3px 0 #000', border: '3px solid #000', borderRadius: 0, color: '#000', fontWeight: 900 }}>{n}</button>
                 ))}
               </div>
             </div>

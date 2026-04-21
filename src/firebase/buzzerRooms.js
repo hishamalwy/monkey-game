@@ -60,11 +60,11 @@ async function _loadNewQuestion(roomCode, categoryId, usedItems) {
     'buzzerState.currentItem': result.item,
     'buzzerState.currentItemIdx': result.idx,
     'buzzerState.revealed': false,
-    'buzzerState.buzzerOpen': false,
+    'buzzerState.buzzerOpen': true,
     'buzzerState.buzzedUid': null,
     'buzzerState.buzzedAt': null,
     'buzzerState.buzzLocked': false,
-    'buzzerState.phase': 'ready',
+    'buzzerState.phase': 'buzzer_open',
   });
 }
 
@@ -75,7 +75,7 @@ export async function buzzerChangeQuestion(roomCode, callerUid) {
   if (room.hostUid !== callerUid) return;
   const bs = room.buzzerState;
   if (!bs || !bs.currentCategory) return;
-  if (bs.phase !== 'ready' && bs.phase !== 'preparing') return;
+  if (bs.phase !== 'ready' && bs.phase !== 'preparing' && bs.phase !== 'revealed' && bs.phase !== 'buzzer_open') return;
 
   await _loadNewQuestion(roomCode, bs.currentCategory, bs.usedItems || {});
 }
@@ -91,7 +91,8 @@ export async function buzzerReveal(roomCode, callerUid) {
 
   await updateDoc(doc(db, 'rooms', roomCode), {
     'buzzerState.revealed': true,
-    'buzzerState.phase': 'revealed',
+    'buzzerState.buzzerOpen': true,
+    'buzzerState.phase': 'buzzer_open',
   });
 }
 
@@ -173,11 +174,21 @@ export async function buzzerJudgeWrong(roomCode, callerUid) {
     usedItems[bs.currentCategory] = [...(usedItems[bs.currentCategory] || []), bs.currentItemIdx];
   }
 
+  const newScores = { ...bs.scores };
+  if (newScores[bs.buzzedUid] !== undefined) {
+    newScores[bs.buzzedUid] = Math.max(0, newScores[bs.buzzedUid] - 1);
+  }
+
   await updateDoc(doc(db, 'rooms', roomCode), {
+    'buzzerState.scores': newScores,
     'buzzerState.roundNumber': bs.roundNumber + 1,
     'buzzerState.usedItems': usedItems,
-    'buzzerState.phase': 'round_result',
     'buzzerState.lastResult': 'wrong',
+    'buzzerState.buzzedUid': null,
+    'buzzerState.buzzedAt': null,
+    'buzzerState.buzzLocked': false,
+    'buzzerState.buzzerOpen': true,
+    'buzzerState.phase': 'buzzer_open',
   });
 }
 
@@ -190,12 +201,19 @@ export async function buzzerSkipRound(roomCode, callerUid) {
   if (!bs) return;
   if (bs.phase !== 'answering' && bs.phase !== 'buzzer_open' && bs.phase !== 'ready' && bs.phase !== 'revealed') return;
 
+  const usedItems = { ...bs.usedItems };
+  if (bs.currentCategory && bs.currentItemIdx >= 0) {
+    usedItems[bs.currentCategory] = [...(usedItems[bs.currentCategory] || []), bs.currentItemIdx];
+  }
+
   await updateDoc(doc(db, 'rooms', roomCode), {
-    'buzzerState.phase': 'round_result',
+    'buzzerState.usedItems': usedItems,
     'buzzerState.lastResult': 'skipped',
     'buzzerState.buzzerOpen': false,
     'buzzerState.buzzLocked': true,
   });
+
+  await _loadNewQuestion(roomCode, bs.currentCategory, usedItems);
 }
 
 export async function buzzerEndGame(roomCode, callerUid) {

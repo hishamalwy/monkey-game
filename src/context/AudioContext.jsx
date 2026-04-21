@@ -204,6 +204,40 @@ export function AudioProvider({ children }) {
       g.gain.setValueAtTime(vol * 0.2, now);
       g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
       o.start(now); o.stop(now + 0.15);
+    } else if (type === 'buzzer') {
+      const bellFreqs = [1200, 1600, 2000];
+      bellFreqs.forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'square';
+        const t = now + i * 0.04;
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(0, now);
+        g.gain.setValueAtTime(vol * 0.4, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        o.start(t); o.stop(t + 0.18);
+      });
+      const oSub = ctx.createOscillator();
+      const gSub = ctx.createGain();
+      oSub.connect(gSub); gSub.connect(ctx.destination);
+      oSub.type = 'sine';
+      oSub.frequency.setValueAtTime(200, now);
+      oSub.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+      gSub.gain.setValueAtTime(vol * 0.35, now);
+      gSub.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      oSub.start(now); oSub.stop(now + 0.2);
+      const bufferSize = ctx.sampleRate * 0.08;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const gn = ctx.createGain();
+      noise.connect(gn); gn.connect(ctx.destination);
+      gn.gain.setValueAtTime(vol * 0.15, now);
+      gn.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      noise.start(now); noise.stop(now + 0.06);
     }
   }, [initOnce]);
 
@@ -353,6 +387,7 @@ export function AudioProvider({ children }) {
   const playTick = useCallback(() => playSfx('tick'), [playSfx]);
   const playTurnChange = useCallback(() => playSfx('turnChange'), [playSfx]);
   const playJoin = useCallback(() => playSfx('join'), [playSfx]);
+  const playBuzzer = useCallback(() => playSfx('buzzer'), [playSfx]);
 
   return (
     <AudioCtx.Provider value={{
@@ -360,7 +395,7 @@ export function AudioProvider({ children }) {
       setMusicVolume, setSfxVolume,
       playClick, playWin, playLose, playPenalty,
       playTimeup, playCorrect, playIncorrect, playBonus,
-      playTick, playTurnChange, playJoin,
+      playTick, playTurnChange, playJoin, playBuzzer,
       playBgm, stopBgm, playTension, stopTension,
     }}>
       <div onClickCapture={initOnce} style={{ display: 'contents' }}>
