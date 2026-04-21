@@ -6,7 +6,7 @@ export async function findActiveRoom(uid) {
     collection(db, 'rooms'),
     where('status', 'in', [
       'playing', 'suspect_question', 'round_result', 'game_over',
-      'draw_over', 'charades_over',
+      'draw_over', 'charades_over', 'buzzer_over',
     ]),
     limit(100)
   );
@@ -32,8 +32,10 @@ export function getGameRoute(room) {
   }
   if (status === 'draw_over') return `/draw-over/${room.code}`;
   if (status === 'charades_over') return `/charades-over/${room.code}`;
+  if (status === 'buzzer_over') return `/buzzer-over/${room.code}`;
   if (mode === 'draw') return `/draw/${room.code}`;
   if (mode === 'survival') return `/survival/${room.code}`;
   if (mode === 'charades') return `/charades/${room.code}`;
+  if (mode === 'buzzer') return `/buzzer/${room.code}`;
   return `/game/${room.code}`;
 }

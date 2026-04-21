@@ -5,6 +5,7 @@ import { listenToRoom, setReady, startGame, leaveRoom, updateRoomSettings, kickP
 import { startDrawGame } from '../firebase/drawRooms';
 import { startSurvivalGame } from '../firebase/survivalRooms';
 import { startCharadesGame } from '../firebase/charadesRooms';
+import { startBuzzerGame } from '../firebase/buzzerRooms';
 import { blockUser } from '../firebase/blocklist';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
@@ -142,6 +143,10 @@ export default function LobbyScreen() {
         if (data.mode === 'draw') nav.toDrawGame();
         else if (data.mode === 'survival') nav.toSurvivalGame();
         else if (data.mode === 'charades') nav.toCharadesGame();
+        else if (data.mode === 'buzzer') {
+          if (data.hostUid === userProfile?.uid) nav.toBuzzerHost();
+          else nav.toBuzzerPlayer();
+        }
         else nav.toGame();
       }
     });
@@ -188,6 +193,7 @@ export default function LobbyScreen() {
       if (room.mode === 'draw') await startDrawGame(roomCode, userProfile.uid);
       else if (room.mode === 'survival') await startSurvivalGame(roomCode, userProfile.uid);
       else if (room.mode === 'charades') await startCharadesGame(roomCode, userProfile.uid);
+      else if (room.mode === 'buzzer') await startBuzzerGame(roomCode, userProfile.uid);
       else await startGame(roomCode);
     }
     catch (e) { setToast(e.message); setStarting(false); }
@@ -284,11 +290,11 @@ export default function LobbyScreen() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '4px 4px 0 #000'
               }}>
-                {room.mode === 'draw' ? '🎨' : room.mode === 'survival' ? '⚔️' : room.mode === 'charades' ? '🎭' : '🔊'}
+                {room.mode === 'draw' ? '🎨' : room.mode === 'survival' ? '⚔️' : room.mode === 'charades' ? '🎭' : room.mode === 'buzzer' ? '🔔' : '🔊'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <h1 style={{ fontSize: 18, fontWeight: 900, color: 'var(--neo-black)', margin: '0 0 4px' }}>
-                  {room.mode === 'draw' ? 'ارسم وخمن 🎨' : room.mode === 'survival' ? 'البقاء للأقوى ⚔️' : room.mode === 'charades' ? 'بدون كلام 🎭' : 'كلكس 🔊'}
+                  {room.mode === 'draw' ? 'ارسم وخمن 🎨' : room.mode === 'survival' ? 'البقاء للأقوى ⚔️' : room.mode === 'charades' ? 'بدون كلام 🎭' : room.mode === 'buzzer' ? 'البازر 🔔' : 'كلكس 🔊'}
                 </h1>
                 <span style={{
                   fontSize: 10, background: 'var(--neo-pink)', color: '#000',
@@ -333,7 +339,8 @@ export default function LobbyScreen() {
                   { id: 'monkey', emoji: '🔊', label: 'كلكس' },
                   { id: 'draw', emoji: '🎨', label: 'رسم' },
                   { id: 'survival', emoji: '⚔️', label: 'بقاء' },
-                  { id: 'charades', emoji: '🎭', label: 'تمثيل' }
+                  { id: 'charades', emoji: '🎭', label: 'تمثيل' },
+                  { id: 'buzzer', emoji: '🔔', label: 'بازر' }
                 ].map(m => {
                   const active = room.mode === m.id;
                   return (

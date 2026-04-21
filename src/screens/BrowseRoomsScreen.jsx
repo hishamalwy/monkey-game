@@ -51,6 +51,7 @@ export default function BrowseRoomsScreen() {
     if (mode === 'draw') return '🎨 ارسم وخمن';
     if (mode === 'survival') return '⚔️ البقاء';
     if (mode === 'charades') return '🎭 بدون كلام';
+    if (mode === 'buzzer') return '🔔 البازر';
     return '🔊 كلكس';
   };
 
@@ -58,12 +59,14 @@ export default function BrowseRoomsScreen() {
     if (mode === 'draw') return 'var(--neo-cyan)';
     if (mode === 'survival') return 'var(--neo-pink)';
     if (mode === 'charades') return 'var(--neo-purple)';
+    if (mode === 'buzzer') return 'var(--neo-cyan)';
     return 'var(--neo-yellow)';
   };
 
   const getCatName = (room) => {
     if (room.mode === 'survival') return 'ثقافة عامة';
     if (room.mode === 'charades') return 'أفلام ومسلسلات';
+    if (room.mode === 'buzzer') return 'سباق البازر';
     const cats = room.mode === 'draw' ? drawCategories : appCategories;
     return cats.find(c => c.id === room.category)?.name || room.category;
   };
@@ -186,6 +189,7 @@ export default function BrowseRoomsScreen() {
             { id: 'draw', emoji: '🎨', label: 'رسم' },
             { id: 'survival', emoji: '⚔️', label: 'بقاء' },
             { id: 'charades', emoji: '🎭', label: 'تمثيل' },
+            { id: 'buzzer', emoji: '🔔', label: 'بازر' },
           ].map(f => (
             <button
               key={f.id}
@@ -249,7 +253,7 @@ export default function BrowseRoomsScreen() {
                     border: '3px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 22, flexShrink: 0, borderRadius: 0, boxShadow: '2px 2px 0 #000'
                   }}>
-                    {room.mode === 'survival' ? '⚔️' : room.mode === 'draw' ? '🎨' : room.mode === 'charades' ? '🎭' : '🔊'}
+                    {room.mode === 'survival' ? '⚔️' : room.mode === 'draw' ? '🎨' : room.mode === 'charades' ? '🎭' : room.mode === 'buzzer' ? '🔔' : '🔊'}
                   </div>
 
                   <div style={{ flex: 1 }}>

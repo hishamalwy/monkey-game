@@ -10,6 +10,7 @@ import { recordRecentPlayers } from '../firebase/recentPlayers';
 import { trackModePlayed } from '../firebase/achievements';
 import { COIN_REWARDS } from '../utils/store';
 import { XP_REWARDS } from '../utils/xp';
+import { logEvent, EVENTS } from '../firebase/analytics';
 import UserAvatar from '../components/ui/UserAvatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Toast from '../components/ui/Toast';
@@ -76,6 +77,7 @@ export default function SurvivalGameOverScreen() {
     recordMatch(userProfile.uid, { mode: 'survival', won: isWinner, rounds: survivalState?.currentQuestionIndex + 1 || 0 }).catch(() => {});
     recordRecentPlayers(userProfile.uid, room.playerOrder || []).catch(() => {});
     trackModePlayed(userProfile.uid, 'survival').catch(() => {});
+    logEvent(EVENTS.GAME_COMPLETED, { uid: userProfile.uid, mode: 'survival', won: isWinner, players: (room.playerOrder || []).length });
   }
 
   const handleReturnAction = async () => {

@@ -6,6 +6,8 @@ import SplashScreen from './screens/SplashScreen';
 import AuthScreen from './screens/AuthScreen';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import InviteHandler from './components/shared/InviteHandler';
+import ErrorBoundary from './components/shared/ErrorBoundary';
+import { initSession, endSession, logEvent, EVENTS } from './firebase/analytics';
 
 const HomeScreen = lazy(() => import('./screens/HomeScreen'));
 const OnlineSetupScreen = lazy(() => import('./screens/OnlineSetupScreen'));
@@ -25,12 +27,26 @@ const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
 const StoreScreen = lazy(() => import('./screens/StoreScreen'));
 const DailyRewardsScreen = lazy(() => import('./screens/DailyRewardsScreen'));
 const ProfileStatsScreen = lazy(() => import('./screens/ProfileStatsScreen'));
+const BuzzerHostScreen = lazy(() => import('./screens/BuzzerHostScreen'));
+const BuzzerPlayerScreen = lazy(() => import('./screens/BuzzerPlayerScreen'));
+const BuzzerGameOverScreen = lazy(() => import('./screens/BuzzerGameOverScreen'));
 
 function LazyFallback() {  return (
     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)' }}>
       <LoadingSpinner />
     </div>
   );
+}
+
+function SessionTracker() {
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user) {
+      initSession(user.uid);
+      return () => endSession(user.uid);
+    }
+  }, [user?.uid]);
+  return null;
 }
 
 function AuthGate({ children }) {
@@ -57,7 +73,7 @@ function GlobalAudioOrchestrator() {
   const { playBgm, stopBgm } = useAudio();
 
   useEffect(() => {
-    const isGamePlay = /^\/(game|round-result|draw|survival|charades)\//.test(location.pathname);
+    const isGamePlay = /^\/(game|round-result|draw|survival|charades|buzzer|buzzer-play)\//.test(location.pathname);
     if (!isGamePlay) {
       playBgm();
     } else {
@@ -73,12 +89,26 @@ export default function App() {
     if (localStorage.getItem('darkMode') === 'true') {
       document.documentElement.classList.add('dark');
     }
+    const handleUnhandled = (event) => {
+      logEvent(EVENTS.ERROR, { message: 'unhandled_promise', detail: event?.reason?.message?.slice(0, 200) || '' });
+    };
+    const handleGlobalError = (event) => {
+      logEvent(EVENTS.ERROR, { message: 'global_error', detail: event?.message?.slice(0, 200) || '' });
+    };
+    window.addEventListener('unhandledrejection', handleUnhandled);
+    window.addEventListener('error', handleGlobalError);
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandled);
+      window.removeEventListener('error', handleGlobalError);
+    };
   }, []);
 
   return (
+    <ErrorBoundary>
     <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, width: '100%', overflow: 'hidden' }}>
       <GlobalAudioOrchestrator />
       <InviteHandler />
+      <SessionTracker />
       <Suspense fallback={<LazyFallback />}>
         <Routes>
           <Route path="/auth" element={<PublicGate><AuthScreen /></PublicGate>} />
@@ -95,6 +125,9 @@ export default function App() {
           <Route path="/survival-over/:roomCode" element={<AuthGate><SurvivalGameOverScreen /></AuthGate>} />
           <Route path="/charades/:roomCode" element={<AuthGate><CharadesGameScreen /></AuthGate>} />
           <Route path="/charades-over/:roomCode" element={<AuthGate><CharadesGameOverScreen /></AuthGate>} />
+          <Route path="/buzzer/:roomCode" element={<AuthGate><BuzzerHostScreen /></AuthGate>} />
+          <Route path="/buzzer-play/:roomCode" element={<AuthGate><BuzzerPlayerScreen /></AuthGate>} />
+          <Route path="/buzzer-over/:roomCode" element={<AuthGate><BuzzerGameOverScreen /></AuthGate>} />
           <Route path="/leaderboard" element={<AuthGate><LeaderboardScreen /></AuthGate>} />
           <Route path="/settings" element={<AuthGate><SettingsScreen /></AuthGate>} />
           <Route path="/store" element={<AuthGate><StoreScreen /></AuthGate>} />
@@ -104,5 +137,6 @@ export default function App() {
         </Routes>
       </Suspense>
     </div>
+    </ErrorBoundary>
   );
 }

@@ -15,6 +15,7 @@ import { recordRecentPlayers } from '../firebase/recentPlayers';
 import { trackModePlayed } from '../firebase/achievements';
 import { COIN_REWARDS } from '../utils/store';
 import { XP_REWARDS } from '../utils/xp';
+import { logEvent, EVENTS } from '../firebase/analytics';
 
 export default function DrawGameOverScreen() {
   const roomCode = useRoomCode();
@@ -65,6 +66,7 @@ export default function DrawGameOverScreen() {
     recordMatch(userProfile.uid, { mode: 'draw', won: won, players: (room.playerOrder || []).length }).catch(() => {});
     recordRecentPlayers(userProfile.uid, room.playerOrder || []).catch(() => {});
     trackModePlayed(userProfile.uid, 'draw').catch(() => {});
+    logEvent(EVENTS.GAME_COMPLETED, { uid: userProfile.uid, mode: 'draw', won, players: (room.playerOrder || []).length });
   }, [!!room?.drawState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResetToLobby = async () => {

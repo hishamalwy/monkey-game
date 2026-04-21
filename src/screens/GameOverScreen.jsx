@@ -16,6 +16,7 @@ import { createRoom } from '../firebase/rooms';
 import { COIN_REWARDS } from '../utils/store';
 import { useConfetti } from '../components/shared/Confetti';
 import { XP_REWARDS } from '../utils/xp';
+import { logEvent, EVENTS } from '../firebase/analytics';
 
 export default function GameOverScreen() {
   const roomCode = useRoomCode();
@@ -54,6 +55,7 @@ export default function GameOverScreen() {
     recordMatch(userProfile.uid, { mode: mode, won: iWon, players: players.length }).catch(() => {});
     recordRecentPlayers(userProfile.uid, players.map(p => p.uid)).catch(() => {});
     trackModePlayed(userProfile.uid, 'monkey').catch(() => {});
+    logEvent(EVENTS.GAME_COMPLETED, { uid: userProfile.uid, mode: 'monkey', won: iWon, players: players.length });
   }, [!!winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync lobby redirect
@@ -76,6 +78,7 @@ export default function GameOverScreen() {
     if (rematching) return;
     playClick();
     setRematching(true);
+    logEvent(EVENTS.QUICK_REMATCH, { uid: userProfile.uid, mode: room?.mode || 'monkey' });
     try {
       await leaveRoom();
       const settings = {
@@ -97,6 +100,7 @@ export default function GameOverScreen() {
 
   const shareResult = async () => {
     playClick();
+    logEvent(EVENTS.SHARE, { uid: userProfile.uid, mode: room?.mode || 'monkey', won: iWon });
     const modeName = room?.mode === 'draw' ? 'ارسم وخمن' : room?.mode === 'charades' ? 'بدون كلام' : room?.mode === 'survival' ? 'البقاء للأقوى' : 'كلكس';
     const text = iWon 
       ? `فزت للتو في لعبة ${modeName} ضد ${players.length - 1} لاعبين! 🏆\nمن يتحداك في كلكس؟ 🐒`

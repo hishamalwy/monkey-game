@@ -9,6 +9,7 @@ import { normalizeArabic } from '../utils/textUtils';
 import { checkRateLimit } from '../utils/rateLimit';
 import { appCategories } from '../data/categories';
 import { drawCategories } from '../data/drawCategories';
+import { logEvent, EVENTS } from './analytics';
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -46,7 +47,7 @@ export async function createRoom(userProfile, settings = {}) {
     hostName: userProfile.username,
     status: 'lobby',
     mode: settings.mode || 'monkey',
-    category: settings.category || 'countries',
+    category: settings.category || (settings.mode === 'buzzer' ? '' : 'countries'),
     maxPlayers: settings.maxPlayers || 5,
     isPublic: settings.isPublic ?? true,
     timeLimit: settings.timeLimit || 15,
@@ -76,6 +77,7 @@ export async function createRoom(userProfile, settings = {}) {
   };
 
   await setDoc(roomRef, roomData);
+  logEvent(EVENTS.ROOM_CREATED, { uid: userProfile.uid, mode: roomData.mode, isPublic: roomData.isPublic });
   return code;
 }
 
@@ -107,6 +109,7 @@ export async function joinRoom(code, userProfile) {
       playerOrder: arrayUnion(userProfile.uid),
     });
   });
+  logEvent(EVENTS.ROOM_JOINED, { uid: userProfile.uid, code });
 }
 
 export async function setReady(code, uid, isReady) {
@@ -141,6 +144,7 @@ export async function startGame(code) {
       lastResult: null,
     });
   });
+  logEvent(EVENTS.GAME_STARTED, { code });
 }
 
 export async function updateGameState(code, patch) {
@@ -184,6 +188,7 @@ export async function leaveRoom(code, uid) {
       playerOrder: arrayRemove(uid),
     });
   });
+  logEvent(EVENTS.ROOM_LEFT, { uid, code });
 }
 
 export async function kickPlayer(code, hostUid, targetUid) {
@@ -218,6 +223,7 @@ export async function resetRoomToLobby(code, hostUid) {
     drawState: deleteField(),
     survivalState: deleteField(),
     charadesState: deleteField(),
+    buzzerState: deleteField(),
     lastResult: deleteField(),
     currentWord: '',
   };
@@ -304,6 +310,7 @@ export async function quickPlay(userProfile, mode = 'monkey') {
     entryFee: 0,
     wordChoices: 3,
   };
+  logEvent(EVENTS.QUICK_PLAY, { uid: userProfile.uid, mode });
   return createRoom(userProfile, settings);
 }
 

@@ -90,5 +90,13 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
+    // ── Analytics ─────────────────────────────────────────────
+    match /analytics/{eventId} {
+      allow create: if isAuth();
+      allow read: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
   }
 }

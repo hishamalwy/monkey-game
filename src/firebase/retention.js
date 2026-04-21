@@ -2,6 +2,7 @@ import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore';
 import { db } from './config';
 import { awardCoins } from './store';
 import { getTodayStr, calcStreak, getStreakBonus, getDailyChallenges, isChallengeComplete, isChallengeClaimed } from '../utils/retention';
+import { logEvent, EVENTS } from './analytics';
 
 export async function claimDailyBonus(uid, profile) {
   const { streak, isNewDay } = calcStreak(profile.lastLoginDate, profile.loginStreak);
@@ -13,6 +14,7 @@ export async function claimDailyBonus(uid, profile) {
     loginStreak: streak,
     coins: bonus,
   });
+  logEvent(EVENTS.DAILY_BONUS_CLAIMED, { uid, streak, bonus });
 
   return { claimed: true, streak, bonus };
 }

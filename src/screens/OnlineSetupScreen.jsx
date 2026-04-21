@@ -12,6 +12,7 @@ const MODES = [
   { id: 'draw',   emoji: '🎨', label: 'ارسم',    active: true, desc: 'خمن وارسم' },
   { id: 'survival', emoji: '⚔️', label: 'بقاء', active: true, desc: 'بقاء وأقوى' },
   { id: 'charades', emoji: '🎭', label: 'تمثيل', active: true, desc: 'تمثيل صامت' },
+  { id: 'buzzer', emoji: '🔔', label: 'بازر', active: true, desc: 'سباق البازر' },
 ];
 
 export default function OnlineSetupScreen() {
@@ -208,6 +209,17 @@ export default function OnlineSetupScreen() {
                     <button key={t} onClick={() => setDrawTime(t)} className={`btn ${drawTime === t ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 12, borderRadius: 0, border: '3px solid #000', fontWeight: 900 }}>{t}ث</button>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {mode === 'buzzer' && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 900, marginBottom: 8, color: '#000', background: 'var(--neo-pink)', display: 'inline-block', padding: '2px 10px', border: '2.5px solid #000' }}>هدف النقاط 🏆</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[5, 10, 15, 20].map(n => (
+                  <button key={n} onClick={() => setCharadesScoreTarget(n)} className={`btn ${charadesScoreTarget === n ? 'btn-yellow' : 'btn-white'}`} style={{ flex: 1, padding: '10px 0', fontSize: 14, boxShadow: charadesScoreTarget === n ? 'none' : '3px 3px 0 #000', border: '3px solid #000', borderRadius: 0, color: '#000', fontWeight: 900 }}>{n}</button>
+                ))}
               </div>
             </div>
           )}

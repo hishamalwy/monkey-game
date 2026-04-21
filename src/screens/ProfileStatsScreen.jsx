@@ -17,6 +17,7 @@ const MODE_LABELS = {
   draw: { label: 'ارسم وخمن', emoji: '🎨', color: 'var(--neo-yellow)' },
   survival: { label: 'البقاء', emoji: '💀', color: 'var(--neo-green)' },
   charades: { label: 'بدون كلام', emoji: '🎭', color: 'var(--neo-cyan)' },
+  buzzer: { label: 'البازر', emoji: '🔔', color: 'var(--neo-cyan)' },
 };
 
 export default function ProfileStatsScreen() {
@@ -45,6 +46,7 @@ export default function ProfileStatsScreen() {
   const drawPlayed = p.drawPlayed || 0;
   const survivalPlayed = p.survivalPlayed || 0;
   const charadesPlayed = p.charadesPlayed || 0;
+  const buzzerPlayed = p.buzzerPlayed || 0;
   const { streak } = calcStreak(p.lastLoginDate, p.loginStreak);
   const level = getLevel(p.xp || 0);
 
@@ -110,8 +112,8 @@ export default function ProfileStatsScreen() {
         {/* Per-Mode */}
         <div style={{ fontSize: 13, fontWeight: 900, color: '#000', background: 'var(--neo-green)', display: 'inline-block', padding: '2px 8px', border: '2px solid #000', marginTop: 10 }}>إحصائيات الأوضاع</div>
         {Object.entries(MODE_LABELS).map(([mode, info]) => {
-          const played = mode === 'monkey' ? monkeyPlayed : mode === 'draw' ? drawPlayed : mode === 'survival' ? survivalPlayed : charadesPlayed;
-          const modeWins = mode === 'draw' ? (p.wins_draw || 0) : mode === 'survival' ? (p.wins_survival || 0) : mode === 'charades' ? (p.wins_charades || 0) : Math.max(0, wins - (p.wins_draw || 0) - (p.wins_survival || 0) - (p.wins_charades || 0));
+          const played = mode === 'monkey' ? monkeyPlayed : mode === 'draw' ? drawPlayed : mode === 'survival' ? survivalPlayed : mode === 'charades' ? charadesPlayed : buzzerPlayed;
+          const modeWins = mode === 'draw' ? (p.wins_draw || 0) : mode === 'survival' ? (p.wins_survival || 0) : mode === 'charades' ? (p.wins_charades || 0) : mode === 'buzzer' ? (p.wins_buzzer || 0) : Math.max(0, wins - (p.wins_draw || 0) - (p.wins_survival || 0) - (p.wins_charades || 0) - (p.wins_buzzer || 0));
           const rate = played > 0 ? Math.round((modeWins / played) * 100) : 0;
 
           return (

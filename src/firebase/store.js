@@ -1,5 +1,6 @@
 import { doc, updateDoc, increment, runTransaction, arrayUnion } from 'firebase/firestore';
 import { db } from './config';
+import { logEvent, EVENTS } from './analytics';
 
 export async function purchaseItem(uid, itemId, price) {
   const userRef = doc(db, 'users', uid);
@@ -23,6 +24,7 @@ export async function purchaseItem(uid, itemId, price) {
 
     txn.set(itemRef, { uid, itemId, price, purchasedAt: new Date() });
   });
+  logEvent(EVENTS.PURCHASE, { uid, itemId, price });
 }
 
 export async function awardCoins(uid, amount) {

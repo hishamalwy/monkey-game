@@ -1,270 +1,251 @@
-You are acting as a principal game product designer, senior frontend engineer, senior UX designer, senior audio experience designer, and implementation-focused feature architect.
+You are acting as a senior game designer, real-time multiplayer architect, and product engineer working on the KLAX platform.
 
-Your job is to take the following feature backlog, organize it into logical implementation phases, and then EXECUTE ONLY THE FIRST PHASE completely.
-
-## Product Context
-
-This is a multiplayer Arabic party game with multiple game modes. The game already has a strong visual identity and now needs to become more complete as a real product.
-
-## Critical execution rule
-
-You MUST:
-
-1. understand all requested features,
-2. organize them into logical phases,
-3. explain the phase structure briefly,
-4. then implement **Phase 1 only**,
-5. complete Phase 1 fully before moving on,
-6. stop after finishing Phase 1,
-7. then ask exactly: **"Shall we start Phase 2?"**
-
-Do NOT jump to later phases.
-Do NOT partially implement all phases.
-Do NOT keep asking for clarification.
-Make reasonable product and implementation decisions yourself.
+Your task is to design and integrate a NEW game mode into KLAX as the **5th game**, based on a **host-driven, real-time buzzer game**.
 
 ---
 
-# FEATURE BACKLOG TO ORGANIZE
+# GAME CORE CONCEPT
 
-## Audio & SFX
+This is a **real-time, multiplayer, host-controlled party game**.
 
-* Full game audio experience
-* Background music for home screen and lobby
-* Tension music during gameplay when time is running out
-* Strong arcade-style music direction
-* Mechanical click sounds for buttons to match Neo-Brutalist style
-* Event sounds:
+The game is:
 
-  * time up
-  * win fanfare
-  * lose / disappointment
-  * penalty / quarter monkey
-* Existing horn/store sounds are not enough
-* Need global sound controls
-* Need music volume and SFX volume controls
+* voice-based
+* reaction-based
+* category-driven
+* host-controlled
+* judgment-based
 
-Important music direction:
-**The music should feel like a real arcade game**.
-It should feel energetic, playful, punchy, game-like, and memorable — not ambient corporate music.
-The whole audio direction should fit a bold Neo-Brutalist arcade identity.
-
-## Social & Invite System
-
-* private invite system
-* invite link
-* share button
-* direct join from link
-* resume room easily
-* share room message like:
-  "Join me in Kalks room 1234! [link]"
-* share score/result from game over screen
-* quick play
-* matchmaking
-* filter by mode and player count
-* recent players
-* invite friends
-* party system
-
-## Advanced Settings / Compliance
-
-* music volume
-* SFX volume
-* delete account
-* clearer settings UX
-
-## Moderation / Anti-Cheat / Protection
-
-* report player
-* mute player
-* block player
-* anti-spam
-* nickname filtering
-* profanity filter
-* stronger anti-cheat
-* server-controlled sensitive results
-* rewards/stats not client-controlled
-* rate limits / abuse detection
-
-## Progression / Retention
-
-* deeper progression
-* levels
-* ranks
-* leagues
-* achievements
-* daily/weekly missions
-* meaningful unlockables
-* badges
-* seasonal content
-* Ramadan season
-* weekly challenges
-* seasonal leaderboard
-* temporary rewards
-
-## Social Features
-
-* add friend
-* recent players
-* invite friends
-* party system
-* stronger player cards/profile
-
-## UX / Product Completion
-
-* clearer feedback during play
-* smoother transitions between rounds
-* clearer summary after each game
-* faster rematch flow
-* calmer / cleaner reconnect UX
-* better settings UX
-* empty states
-* dark mode completion
-* accessibility improvements
-
-## Analytics / Operations
-
-* analytics for key events
-* retention tracking
-* funnel analysis
-* crash reporting
-* balance dashboards
-* player drop reasons
+The system does NOT validate answers automatically.
+The Host (Judge) is fully responsible for controlling gameplay.
 
 ---
 
-# REQUIRED PHASE STRUCTURE
+# MAIN IDEA
 
-You must organize the work into implementation phases in a smart product order.
+The host selects a category and controls how the question is presented.
 
-Use this exact kind of logic:
-
-* early phases = high player impact and immediate product quality
-* later phases = scale, moderation, live ops, analytics
-
-For each phase include:
-
-* phase name
-* goal
-* included features
-* why it comes in this order
+There are TWO types of rounds:
 
 ---
 
-# AFTER PHASE PLANNING: IMPLEMENT PHASE 1 ONLY
+## TYPE 1 — VISUAL ROUND (Example: Flags)
 
-## Phase 1 must focus on:
+Flow:
 
-**Core Feel & Player Experience**
-
-This phase should include the most important features that make the game feel immediately better and more complete.
-
-It should prioritize:
-
-* full audio foundation
-* arcade-style music direction
-* core button / event SFX
-* global sound controls
-* music + SFX volume settings
-* clearer in-game feedback
-* smoother round transitions
-* better end-of-game summary
-* faster rematch flow if feasible
-* calmer reconnect UX if feasible
-* better empty states and settings clarity where directly relevant
+1. Host selects category (e.g. "Flags / أعلام")
+2. A visual item is prepared (e.g. flag image)
+3. The host clicks "Reveal"
+4. The image is shown to all players
+5. Players race to press the buzzer
+6. First player answers verbally
+7. Host judges
 
 ---
 
-# IMPLEMENTATION REQUIREMENTS FOR PHASE 1
+## TYPE 2 — VOICE ROUND (Example: Movies)
 
-You must not only describe the phase.
+Flow:
 
-You must actually execute Phase 1:
-
-* inspect the codebase
-* identify relevant files
-* implement the Phase 1 features directly
-* keep the work cohesive
-* do not break working flows
-* validate imports and logic
-* keep design aligned with the existing Neo-Brutalist style
-
-## Audio direction requirements
-
-The audio system must be designed around:
-
-* arcade energy
-* punchy UI interaction
-* strong game feedback
-* not overcomplicated
-* easy future expansion
-* separate channels for music and SFX
-* mute / volume control support
-* safe fallbacks if audio files are missing
-
-If real audio assets do not exist yet:
-
-* implement the audio system architecture
-* wire placeholder assets or procedural fallback sounds
-* define clear extension points
-* make the system usable immediately
+1. Host selects category (e.g. "Movies / أفلام")
+2. A question is generated for the host ONLY
+3. The question is NOT shown to players
+4. The host reads the question aloud
+5. Players race to press the buzzer
+6. First player answers verbally
+7. Host judges
 
 ---
 
-# IMPORTANT PRODUCT DIRECTION
+# HOST CONTROL PANEL (CRITICAL)
 
-The game should feel like:
+The host must have full control over the round.
 
-* a bold Arabic arcade party game
-* high-energy
-* playful
-* competitive
-* memorable
-* satisfying to press, win, lose, and transition through
+## Category Selection
 
-Do NOT make the music direction soft or generic.
-It must feel like an arcade game.
+* A horizontal list of categories:
 
----
-
-# OUTPUT FORMAT
-
-Your response must have exactly these sections:
-
-# PHASE PLAN
-
-* list all phases clearly
-
-# PHASE 1 EXECUTION
-
-* what you implemented
-* files changed
-* why each file changed
-* key design/UX/audio decisions
-
-# PHASE 1 VALIDATION
-
-* what you checked
-* what works now
-* any limitations
-
-# PHASE 1 COMPLETION STATUS
-
-* done / partial
-* remaining minor items if any
-
-At the end, if Phase 1 is fully completed, ask exactly:
-**Shall we start Phase 2?**
+  * Flags
+  * Movies
+  * Songs
+  * General Knowledge
+  * etc.
 
 ---
 
-# STRICT RULES
+## Question Control
 
-* Implement only Phase 1
-* Do not ask for confirmation before Phase 1
-* Do not move to Phase 2 automatically
-* Do not stop at planning
-* Do not return only recommendations
-* Actually perform the first phase implementation
+For each category:
 
-Start now.
+### 1. Change Question
+
+* Button: "Change"
+* Loads a new question within the SAME category
+* Must be instant
+
+### 2. Reveal (for visual rounds)
+
+* Button: "Reveal"
+* Shows content to all players
+
+### 3. Start Round
+
+* Enables buzzer for players
+
+### 4. Judge Controls
+
+* Correct
+* Wrong
+* Add Time
+* Skip / Cancel
+
+---
+
+# PLAYER EXPERIENCE
+
+## Player Screen
+
+Players see:
+
+* Large central **buzzer button**
+* Timer
+* Category indicator
+* Status messages:
+
+  * "Press now!"
+  * "You pressed first"
+  * "Another player pressed"
+
+For visual rounds:
+
+* they see the revealed image
+
+For voice rounds:
+
+* they only hear the host
+
+---
+
+# REAL-TIME BUZZER SYSTEM (CRITICAL)
+
+You MUST implement:
+
+* server-authoritative buzzer system
+* atomic "first press wins"
+* all other players instantly locked
+* real-time broadcast to all players
+
+No client-side trust allowed.
+
+---
+
+# GAME STATES
+
+Define clear states:
+
+* waiting_for_host
+* preparing_question
+* ready
+* revealed (visual only)
+* buzzer_open
+* buzzer_locked
+* answering
+* judging
+* result
+* next_round
+
+---
+
+# EDGE CASES
+
+Handle:
+
+* host presses change repeatedly
+* host changes question after reveal
+* player disconnects after winning buzzer
+* no one presses buzzer
+* two players press at same time
+* host disconnects
+* rapid spam clicking
+
+---
+
+# AUDIO & FEEL
+
+Game must feel like an **arcade experience**:
+
+* buzzer press sound (strong, punchy)
+* countdown tension sound
+* reveal sound
+* win / lose sounds
+* mechanical UI sounds
+
+---
+
+# UX REQUIREMENTS
+
+* ultra-fast interaction
+* no lag feeling
+* immediate feedback
+* clean transitions
+* minimal clutter for reaction speed
+
+---
+
+# INTEGRATION WITH KLAX
+
+You must:
+
+* integrate as the 5th game mode
+* reuse existing room system
+* reuse scoring system
+* extend game state logic
+* extend real-time communication
+
+---
+
+# OUTPUT REQUIREMENTS
+
+Produce:
+
+## 1. Game Design Summary
+
+## 2. Full System Architecture
+
+* real-time flow
+* server logic
+* state transitions
+
+## 3. Data Model
+
+* room state
+* question state
+* buzzer state
+
+## 4. Event System
+
+* player actions
+* host actions
+
+## 5. UI/UX Design
+
+* host panel
+* player screen
+
+## 6. Edge Case Handling
+
+## 7. Step-by-Step Implementation Plan
+
+---
+
+# IMPORTANT RULES
+
+* Do NOT convert this into a text quiz
+* Do NOT auto-validate answers
+* Host is always the authority
+* Prioritize speed, fairness, and game feel
+* Treat this as production-level multiplayer design
+
+---
+
+Start designing this KLAX 5th game now.

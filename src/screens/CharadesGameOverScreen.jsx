@@ -10,6 +10,7 @@ import { recordRecentPlayers } from '../firebase/recentPlayers';
 import { trackModePlayed } from '../firebase/achievements';
 import { COIN_REWARDS } from '../utils/store';
 import { XP_REWARDS } from '../utils/xp';
+import { logEvent, EVENTS } from '../firebase/analytics';
 import UserAvatar from '../components/ui/UserAvatar';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Toast from '../components/ui/Toast';
@@ -68,6 +69,7 @@ export default function CharadesGameOverScreen() {
     recordMatch(userProfile.uid, { mode: 'charades', won: isWinner, rounds: charadesState.roundNumber || 0 }).catch(() => {});
     recordRecentPlayers(userProfile.uid, room.playerOrder || []).catch(() => {});
     trackModePlayed(userProfile.uid, 'charades').catch(() => {});
+    logEvent(EVENTS.GAME_COMPLETED, { uid: userProfile.uid, mode: 'charades', won: isWinner, players: (room.playerOrder || []).length });
   }
 
   const handleReturnHome = async () => {

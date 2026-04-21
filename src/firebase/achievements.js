@@ -1,6 +1,7 @@
 import { doc, updateDoc, arrayUnion, runTransaction } from 'firebase/firestore';
 import { db } from './config';
 import { increment } from 'firebase/firestore';
+import { logEvent, EVENTS } from './analytics';
 
 export async function claimAchievement(uid, achievementId, reward) {
   const userRef = doc(db, 'users', uid);
@@ -15,6 +16,7 @@ export async function claimAchievement(uid, achievementId, reward) {
       coins: increment(reward),
     });
   });
+  logEvent(EVENTS.ACHIEVEMENT_CLAIMED, { uid, achievementId, reward });
 }
 
 export async function trackModePlayed(uid, mode) {
